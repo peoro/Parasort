@@ -137,6 +137,8 @@ main(int argc, char **argv)
 
     startT = MPI_Wtime();
 
+
+
 /**************************** master task ************************************/
     if(id == MASTER)
     {

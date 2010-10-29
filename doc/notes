@@ -1,0 +1,85 @@
+Algoritmi parallelizzabili:
+
+- quicksort (paolo, 2 versioni)
+- mergesort (fabio)
+- mergesort via mapreduce library (fabio) oppure hadoop?? mbho...
+- samplesort (nicola)
+- bitonicsort 
+- bucketsort (una versione trovata da Nicola)
+
+ip:
+- distribuzione uniforme degli items ?
+- items distribuiti Vs centralizzati in un nodo
+- confronto fra il nostro framework "special purpose" con il framework "general purpose" del vespa
+- INTERFACE:
+	sort ( data, rete )
+	generate ( )
+	load ( )
+	store ( )
+	
+- possibilità di sfruttare la memoria condivisa dei nodi
+	openMPI (ci fidiamo del supporto che utilizzi la memoria condivisa?)
+	libreria a memoria condivisa "multithread" (openMP, fastflow,...)
+	
+
+
+
+main:
+	if rank0:
+		parse arguments
+		broadcast a struct describing what to do
+	else:
+		get the struct from rank0
+
+	if op == sort:
+		start sort
+	elif op == gen:
+		generate random data
+	else ...
+		...
+
+
+processes need to know:
+	algorithm to use
+	its ID and how many processes are working (MPI)
+	how much data, global and per process
+	where to load and store data
+
+
+***********************************************************************************************************************
+sintassi:
+//variabili pubbliche solo nelle strutture "record"
+
+	class PrimaLetteraMaiuscola 
+	{
+		private: 
+			_nomeVar
+			
+		public:
+			PrimaLetteraMaiuscola( );
+			~PrimaLetteraMaiuscola( );
+			primaLetteraMinuscola( );
+				
+	};
+	
+	namespace tuttoattaccatoetuttominuscolo 
+	{ 
+	
+	};
+	
+	/*!
+	 * \brief
+	 *
+	 * descrizione per esteso
+	 * ricordarsi di mettere il const ovunque possibile 
+	 * riferimenti (&) sempre costanti, se una struttura va modificata si passa invece il pointer
+	 */
+	void foo( ) const 
+	{
+		int var; //senza underscore davanti
+	}
+	
+***********************************************************************************************************************
+
+function generate ( )	
+	
