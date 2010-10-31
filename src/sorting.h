@@ -1,12 +1,18 @@
 #ifndef _SORTING_H_
 #define _SORTING_H_
 
-#include "mpi.h"
+#include <mpi.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 //coppola's: 3483962622
 
 
-typedef struct {
+typedef struct
+{
+	bool verbose;
+	bool threaded; // use multithread between cores
+	
     long M; //data count
     long seed;
     char algo[64];
@@ -43,28 +49,69 @@ inline long GET_SEED ( const TestInfo *ti ) {
     return ti->seed;
 }
 
+inline char * GET_ALGORITHM_PATH( const char *algo, char *path, int pathLen )
+{
+	snprintf( path, pathLen, "%s/.spd/algorithms/lib%s.so", getenv("HOME"), algo );
+	return path;
+}
+
+inline char * GET_UNSORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen )
+{
+	snprintf( path, pathLen, "%s/.spd/data/id%d_n%d_M%d_s%d.unsorted",
+							 getenv("HOME"), GET_ID(ti), GET_N(ti), GET_M(ti), GET_SEED(ti) );
+	return path;
+}
+inline char * GET_SORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen )
+{
+	snprintf( path, pathLen, "%s/.spd/data/id%d_n%d_M%d_s%d.sorted",
+							 getenv("HOME"), GET_ID(ti), GET_N(ti), GET_M(ti), GET_SEED(ti) );
+	return path;
+}
+
+long GET_FILE_SIZE( const char *path )
+{
+	FILE *f;
+	long len;
+	
+	f = fopen( path, "rb" );
+	if( ! f ) {
+		return -1;
+	}
+	
+	fseek( f, 0, SEEK_END );
+	len = ftell( f );
+	// rewind( f );
+	
+	fclose( f );
+	
+	return len;
+}
 
 
 
 /*!
-* sorta  
+* sorts data.
+* this function will be implemented in several flavours (using several different
+* algorithms or strategies), by a number of shared libraries dinamically loaded.
 */
-void sort ( int *data, int size );
+void sort( const TestInfo *ti, int *data, long size );
+typedef void (*SortFunction) ( const TestInfo *ti, int *data, long size );
 
 /*!
-* generate the unsorted data file for the current scenario 
+* generates the unsorted data file for the current scenario
 */
-void generate ( );
+int generate( const TestInfo *ti );
 
 /*!
-* apre il file il cui nome è ricavato da f(M,seed)  
+* loads unsorted data file
 */
-void loadData ( );
+int loadData( const TestInfo *ti, int **data, long *size );
 
 /*!
-* dato l'array data, ne salva il contenuto in un file il cui nome è g(M,seed)
+* stores the result to our sorted data file
 */
-void storeData ( int *data, int size );
+int storeData( const TestInfo *ti, int *data, long size );
 
 
 #endif
+
