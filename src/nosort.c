@@ -1,6 +1,6 @@
 
 /* compile with
-   export ALGO=nosort && gcc -g -I.. -L.. -L/usr/lib/openmpi -lmpi -shared -O2 -Wl,-soname,$ALGO -o lib$ALGO.so $ALGO.c && cp lib$ALGO.so ~/.spd/algorithms/
+   export ALGO=nosort && mpicc -g -I.. -L.. -L/usr/lib/openmpi -lmpi -shared -O2 -Wl,-soname,$ALGO -o lib$ALGO.so $ALGO.c && cp lib$ALGO.so ~/.spd/algorithms/
  */
 
 #include "sorting.h"

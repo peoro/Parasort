@@ -51,19 +51,19 @@ inline long GET_SEED ( const TestInfo *ti ) {
 
 inline char * GET_ALGORITHM_PATH( const char *algo, char *path, int pathLen )
 {
-	snprintf( path, pathLen, "%s/.spd/algorithms/lib%s.so", getenv("HOME"), algo );
+	snprintf( path, pathLen, "%d/.spd/algorithms/lib%s.so", getenv("HOME"), algo );
 	return path;
 }
 
 inline char * GET_UNSORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen )
 {
-	snprintf( path, pathLen, "%s/.spd/data/id%d_n%d_M%d_s%d.unsorted",
+	snprintf( path, pathLen, "%d/.spd/data/id%d_n%d_M%ld_s%ld.unsorted",
 							 getenv("HOME"), GET_ID(ti), GET_N(ti), GET_M(ti), GET_SEED(ti) );
 	return path;
 }
 inline char * GET_SORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen )
 {
-	snprintf( path, pathLen, "%s/.spd/data/id%d_n%d_M%d_s%d.sorted",
+	snprintf( path, pathLen, "%d/.spd/data/id%d_n%d_M%ld_s%ld.sorted",
 							 getenv("HOME"), GET_ID(ti), GET_N(ti), GET_M(ti), GET_SEED(ti) );
 	return path;
 }
