@@ -3,6 +3,7 @@
 
 #include <mpi.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 //coppola's: 3483962622
@@ -12,7 +13,7 @@ typedef struct
 {
 	bool verbose;
 	bool threaded; // use multithread between cores
-	
+
     long M; //data count
     long seed;
     char algo[64];
@@ -51,19 +52,19 @@ inline long GET_SEED ( const TestInfo *ti ) {
 
 inline char * GET_ALGORITHM_PATH( const char *algo, char *path, int pathLen )
 {
-	snprintf( path, pathLen, "%d/.spd/algorithms/lib%s.so", getenv("HOME"), algo );
+	snprintf( path, pathLen, "%s/.spd/algorithms/lib%s.so", getenv("HOME"), algo );
 	return path;
 }
 
 inline char * GET_UNSORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen )
 {
-	snprintf( path, pathLen, "%d/.spd/data/id%d_n%d_M%ld_s%ld.unsorted",
+	snprintf( path, pathLen, "%s/.spd/data/id%d_n%d_M%ld_s%ld.unsorted",
 							 getenv("HOME"), GET_ID(ti), GET_N(ti), GET_M(ti), GET_SEED(ti) );
 	return path;
 }
 inline char * GET_SORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen )
 {
-	snprintf( path, pathLen, "%d/.spd/data/id%d_n%d_M%ld_s%ld.sorted",
+	snprintf( path, pathLen, "%s/.spd/data/id%d_n%d_M%ld_s%ld.sorted",
 							 getenv("HOME"), GET_ID(ti), GET_N(ti), GET_M(ti), GET_SEED(ti) );
 	return path;
 }
@@ -72,18 +73,18 @@ long GET_FILE_SIZE( const char *path )
 {
 	FILE *f;
 	long len;
-	
+
 	f = fopen( path, "rb" );
 	if( ! f ) {
 		return -1;
 	}
-	
+
 	fseek( f, 0, SEEK_END );
 	len = ftell( f );
 	// rewind( f );
-	
+
 	fclose( f );
-	
+
 	return len;
 }
 
