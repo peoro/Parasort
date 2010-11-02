@@ -221,7 +221,7 @@ int generate( const TestInfo *ti )
 
 	for( i = 0; i < localM; ++ i ) {
 		int x = rand();
-		if( ! fwrite( &x, sizeof(x), 1, f ) ) {
+		if( ! fwrite( &x, sizeof(int), 1, f ) ) {
 			printf( "Couldn't write %d in %s\n", x, path );
 			return 0;
 		}
@@ -363,7 +363,7 @@ int main( int argc, char **argv )
 			}
 
 			// our main sort function!
-			sort( &ti, data, size );
+			sort( &ti, data, size / sizeof(int) );
 
 			dlclose( handle );
 		}
