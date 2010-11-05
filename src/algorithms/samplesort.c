@@ -71,7 +71,7 @@ int getBucketIndex( const int* ele, int* splitters, int size ) {
  * @param[in] data	 	Data to be sorted
  * @param[in] size 		Size (in bytes) of data
  */
-void sort( const TestInfo *ti, int *data, long size )
+void mainSort( const TestInfo *ti, int *data, long size )
 {
 	const int		root = 0;							//Rank (ID) of the root process
 	const int 		id = GET_ID( ti );					//Rank (ID) of the process

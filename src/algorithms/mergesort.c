@@ -8,12 +8,13 @@
  * @version 0.0.01
  */
 
-#include "sorting.h"
-#include "utils.h"
-#include "string.h"
+#include <string.h>
+
+#include <sorting.h>
+#include <utils.h>
 
 //TODO: sort should return an int* to the sorted array (and even its size, of course) 
-void sort( const TestInfo *ti, int *array, long size )
+void mainSort( const TestInfo *ti, int *array, long size )
 {
 	MPI_Status stat;
 	

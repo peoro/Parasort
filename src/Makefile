@@ -1,23 +1,30 @@
 MPICC = mpicc
-CFLAGS = -Wall 
-LIBDIR = ~/.spd/algorithms/
-ALGO_MERGESORT = mergesort
-ALGO_SAMPLESORT = samplesort
+CFLAGS = -Wall -Wextra
+ALGOCFLAGS = -I.. -I. -L.. -fPIC -O2 -shared -g
 
-all: clean mergesort samplesort main 
+INSTALLDIR = ~/.spd
+DATADIR = $(INSTALLDIR)/data
+LIBDIR = $(INSTALLDIR)/algorithms
+ALGODIR = algorithms
+ALGOS = mergesort samplesort nosort
+
+all: clean $(ALGOS) main maindbg
 	
-mergesort:
-	@echo "Compiling lib-mergesort..."
-	@$(MPICC) -g -I.. -L.. -L/usr/lib/openmpi -lmpi -shared -O2 -Wl,-soname,$(ALGO_MERGESORT) -o lib$(ALGO_MERGESORT).so $(ALGO_MERGESORT).c && mv lib$(ALGO_MERGESORT).so $(LIBDIR)
+$(ALGOS):
+	@echo "Compiling mergesort..."
+	$(MPICC) $(ALGOCFLAGS) -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c
 
-samplesort:
-	@echo "Compiling lib-samplesort..."
-	@$(MPICC) -fPIC -O2 -shared -Wl,-soname,lib$(ALGO_SAMPLESORT).so -o lib$(ALGO_SAMPLESORT).so $(ALGO_SAMPLESORT).c && mv lib$(ALGO_SAMPLESORT).so $(LIBDIR)
+install:
+	mkdir -p $(LIBDIR) $(DATADIR)
+	cp $(ALGODIR)/lib*.so $(LIBDIR)
 
 main: 
 	@echo "Compiling main..."
-	@$(MPICC) $(CFLAGS) main.c -o main
-	
+	$(MPICC) $(CFLAGS) -ldl main.c -o spd
+
+maindbg:
+	@echo "Compiling main (debug mode)..."
+	$(MPICC) $(CFLAGS) -ldl main.c -DDEBUG -o spddbg
+
 clean:
-	clear
-	@rm -f *~ *.o main 
+	@rm -f *~ *.o spd spddbg

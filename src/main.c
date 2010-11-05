@@ -208,7 +208,7 @@ int generate( const TestInfo *ti )
 
 	FILE *f;
 	char path[1024];
-	long localM = GET_LOCAL_M(ti), i;
+	long M = GET_M(ti), i;
 
 	// TODO: check if file is already existing and if it's valid
 
@@ -219,14 +219,18 @@ int generate( const TestInfo *ti )
 		return 0;
 	}
 
-	for( i = 0; i < localM; ++ i ) {
+	for( i = 0; i < M; ++ i ) {
 		int x = rand();
+#ifndef DEBUG
 		if( ! fwrite( &x, sizeof(int), 1, f ) ) {
-			printf( "Couldn't write %d in %s\n", x, path );
+#else
+		if( fprintf( f, "%d ", x ) < 0 ) {
+#endif
+			printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, x, path );
 			return 0;
 		}
 	}
-
+	
 	fclose( f );
 
 	return 1;
@@ -235,6 +239,10 @@ int loadData( const TestInfo *ti, int **data, long *size )
 {
 	FILE *f;
 	char path[1024];
+#ifndef DEBUG
+#else
+	long i;
+#endif
 
 	GET_UNSORTED_DATA_PATH( ti, path, sizeof(path) );
 	f = fopen( path, "rb" );
@@ -243,10 +251,11 @@ int loadData( const TestInfo *ti, int **data, long *size )
 		return 0;
 	}
 
+#ifndef DEBUG
 	*size = GET_FILE_SIZE( path );
-	if( *size != GET_LOCAL_M(ti)*sizeof(int) ) {
+	if( (unsigned long) *size != GET_M(ti)*sizeof(int) ) {
 		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
-				path, GET_LOCAL_M(ti)*sizeof(int), GET_LOCAL_M(ti), *size );
+				path, GET_M(ti)*sizeof(int), GET_M(ti), *size );
 		fclose( f );
 		return 0;
 	}
@@ -257,6 +266,17 @@ int loadData( const TestInfo *ti, int **data, long *size )
 		fclose( f );
 		return 0;
 	}
+#else
+	*size = GET_M(ti)*sizeof(int);
+	*data = (int*) malloc( *size );
+	for( i = 0; i < GET_M(ti); ++ i ) {
+		if( fscanf( f, "%d ", & (*data)[i] ) == EOF ) {
+			printf( "Couldn't read %ld-th element (of value %d) from %s\n", i, (*data)[i], path );
+			fclose( f );
+			return 0;
+		}
+	}
+#endif
 
 	fclose( f );
 
@@ -266,6 +286,11 @@ int storeData( const TestInfo *ti, int *data, long size )
 {
 	FILE *f;
 	char path[1024];
+#ifndef DEBUG
+#else
+	(void) size;
+	long i;
+#endif
 
 	GET_SORTED_DATA_PATH( ti, path, sizeof(path) );
 	f = fopen( path, "wb" );
@@ -274,11 +299,21 @@ int storeData( const TestInfo *ti, int *data, long size )
 		return 0;
 	}
 
+#ifndef DEBUG
 	if( ! fwrite( data, size, 1, f ) ) {
-		printf( "Couldn't write %ld bytes from %s\n", size, path );
+		printf( "Couldn't write %ld bytes to %s\n", size, path );
 		fclose( f );
 		return 0;
 	}
+#else
+	for( i = 0; i < GET_M(ti); ++ i ) {
+		if( fprintf( f, "%d ", data[i] ) < 0 ) {
+			printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, data[i], path );
+			fclose( f );
+			return 0;
+		}
+	}
+#endif
 
 	fclose( f );
 
@@ -317,34 +352,71 @@ int main( int argc, char **argv )
 
 		// broadcasting ti
 		// MPI_Bcast( &ti, sizeof(TestInfo), MPI_CHAR, 0, MPI_COMM_WORLD );
-	}
-	else {
-		// receive ti
-		// MPI_Status status;
-		// MPI_Recv( &ti, sizeof(TestInfo), MPI_CHAR, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status );
-	}
 
-	r = generate( &ti );
-	if( ! r ) {
-		printf( "Error generating data for task %d: %s\n", GET_ID(&ti), strerror(errno) );
-		MPI_Finalize( );
-		return 1;
-	}
-
-	{
-		int *data;
-		long size;
-
-		r = loadData( &ti, &data, &size );
+		r = generate( &ti );
 		if( ! r ) {
-			printf( "Error loading data for task %d\n", GET_ID(&ti) );
+			printf( "Error generating data for task %d: %s\n", GET_ID(&ti), strerror(errno) );
 			MPI_Finalize( );
 			return 1;
 		}
 
 		{
+			int *data;
+			long size;
+
+			r = loadData( &ti, &data, &size );
+			if( ! r ) {
+				printf( "Error loading data for task %d\n", GET_ID(&ti) );
+				MPI_Finalize( );
+				return 1;
+			}
+
+			{
+				char path[1024];
+				MainSortFunction mainSort;
+			
+				void *handle = dlopen( GET_ALGORITHM_PATH(ti.algo, path, sizeof(path)), RTLD_LAZY | RTLD_GLOBAL );
+				if( ! handle ) {
+					printf( "Task %d couldn't load %s (%s): %s\n"
+							"%s\n", GET_ID(&ti), ti.algo, path, strerror(errno), dlerror() );
+					MPI_Finalize( );
+					return 1;
+				}
+
+				// sorting!
+				mainSort = (MainSortFunction) dlsym( handle, "mainSort" );
+				if( ! mainSort ) {
+					printf( "Task %d couldn't load %s (%s)'s mainSort() function: %s\n"
+							"%s\n", GET_ID(&ti), ti.algo, path, strerror(errno), dlerror() );
+					dlclose( handle );
+					MPI_Finalize( );
+					return 1;
+				}
+			
+				mainSort( &ti, data, size / sizeof(int) );
+
+				dlclose( handle );
+			}
+
+			r = storeData( &ti, data, size );
+			if( ! r ) {
+				printf( "Error storing data for task %d\n", GET_ID(&ti) );
+				MPI_Finalize( );
+				return 1;
+			}
+		}
+		
+		
+	}
+	else {
+		// receive ti
+		// MPI_Status status;
+		// MPI_Recv( &ti, sizeof(TestInfo), MPI_CHAR, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status );
+		
+		{
 			char path[1024];
 			SortFunction sort;
+			
 			void *handle = dlopen( GET_ALGORITHM_PATH(ti.algo, path, sizeof(path)), RTLD_LAZY | RTLD_GLOBAL );
 			if( ! handle ) {
 				printf( "Task %d couldn't load %s (%s): %s\n"
@@ -353,6 +425,7 @@ int main( int argc, char **argv )
 				return 1;
 			}
 
+			// sorting!
 			sort = (SortFunction) dlsym( handle, "sort" );
 			if( ! sort ) {
 				printf( "Task %d couldn't load %s (%s)'s sort() function: %s\n"
@@ -361,19 +434,12 @@ int main( int argc, char **argv )
 				MPI_Finalize( );
 				return 1;
 			}
-
-			// our main sort function!
-			sort( &ti, data, size / sizeof(int) );
+		
+			sort( &ti );
 
 			dlclose( handle );
 		}
-
-		r = storeData( &ti, data, size );
-		if( ! r ) {
-			printf( "Error storing data for task %d\n", GET_ID(&ti) );
-			MPI_Finalize( );
-			return 1;
-		}
+		
 	}
 
 	MPI_Finalize( );

@@ -5,7 +5,11 @@
 
 #include "sorting.h"
 
-void sort( const TestInfo *ti, int *array, long size )
+void mainSort( const TestInfo *ti, int *array, long size )
 {
 	printf( "Should sort an array of %ld elements...\n", size );
+}
+void sort( const TestInfo *ti )
+{
+	printf( "Should sort an array...\n" );
 }
