@@ -1,28 +1,27 @@
 Algoritmi parallelizzabili:
 
 - quicksort (paolo, 2 versioni)
-- mergesort (fabio)
-- mergesort via mapreduce library (fabio) oppure hadoop?? mbho...
-- samplesort (nicola)
+- mergesort (fabio) + mergesort with load balancing
+- samplesort (nicola) (in cui è incluso il bucketsort)
 - bitonicsort 
-- bucketsort (una versione trovata da Nicola)
 
 ip:
 - distribuzione uniforme degli items ?
-- items distribuiti Vs centralizzati in un nodo
-- confronto fra il nostro framework "special purpose" con il framework "general purpose" del vespa
+- items DISTRIBUITI VS CENTRALIZZATI in un nodo -> soluzione: file unico all'inizio e alla fine, magari misuriamo anche il tempo di scattering del file...
 - INTERFACE:
-	sort ( data, rete )
+	sort ( data, rete )s
 	generate ( )
 	load ( )
 	store ( )
 	
 - possibilità di sfruttare la memoria condivisa dei nodi
-	openMPI (ci fidiamo del supporto che utilizzi la memoria condivisa?)
-	libreria a memoria condivisa "multithread" (openMP, fastflow,...)
+	openMPI (ci fidiamo del supporto che utilizzi la memoria condivisa?) "FLAT VERSION" (piazzare i communicator dei processi sui vari core..see http://www.mcs.anl.gov/research/projects/mpich2/index.php)
+	libreria a memoria condivisa "multithread" (openMP, fastflow,...) "DUE LIVELLI: parallelo mpi e sotto altro meccanismo ( openmp, fastflow, posixthread, liblc)" (dedicare un processo al dispatching per ogni macchina...? (una sorta di kp...))
 	
+- sort sotto la dimensione della cahce L1 ? eventuale switching to another algorithm
 
-
+TPIE? peter sanders... sequenziale..
+FG thomas kormen
 
 main:
 	if rank0:
@@ -31,12 +30,11 @@ main:
 	else:
 		get the struct from rank0
 
-	if op == sort:
-		start sort
-	elif op == gen:
+	if rank == 0
 		generate random data
-	else ...
-		...
+	start sort
+	if rank == 0 
+		collect results...
 
 
 processes need to know:
@@ -44,6 +42,10 @@ processes need to know:
 	its ID and how many processes are working (MPI)
 	how much data, global and per process
 	where to load and store data
+
+
+
+
 
 
 ***********************************************************************************************************************
