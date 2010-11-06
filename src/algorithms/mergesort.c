@@ -37,37 +37,29 @@ int do_i_send ( int rank, int active_proc )
 }
 
 
-//TODO: sort should return an int* to the sorted array (and even its size, of course) 
-void mainSort( const TestInfo *ti, int *array, long size )
+void mergesort ( const TestInfo *ti, int *sorting )
 {
 	MPI_Status stat;
-	
-	int total_size = GET_M ( ti );
-	int rank = GET_ID ( ti );
+	int total_size 	= GET_M ( ti );
+	int size 		= GET_LOCAL_M ( ti );
+	int rank 		= GET_ID ( ti );
 	int active_proc = GET_N ( ti );
 	
-	int *sorting = (int*) malloc ( sizeof(int) * total_size ); //TODO..it is not necessary to allocate total_size memory for ALL nodes..
-	int *merging = (int*) malloc ( sizeof(int) * total_size ); 
-	
-	qsort ( array, size, sizeof(int), compare );
-	
-	memcpy ( sorting, array, size * sizeof(int) ); //in teoria potrei farne a meno ma il codice diviene più verboso...
-	//free ( array );
+	int *merging 	= (int*) malloc ( sizeof(int) * total_size ); 
 
 	int j;
 	for ( j = 0; j < _log2(GET_N(ti)); ++ j ) {
-		if ( do_i_receive( rank, active_proc ) )	{
+		if ( do_i_receive( rank, active_proc ) ) {
 		
-			MPI_Recv ( (int*)sorting + size, total_size / active_proc, MPI_INT, from_who ( rank, active_proc ), 0, MPI_COMM_WORLD, &stat );
+			MPI_Recv ( (int*)sorting + size, total_size / active_proc, MPI_INT, from_who( rank, active_proc ) , 0, MPI_COMM_WORLD, &stat );
 								
 			//fusion phase
 			int left = 0, center = size, right = size + total_size/active_proc, k = 0;
 			while ( left < size && center < right ) {
 				if ( sorting[left] <= sorting[center] )
-					merging[k] = sorting[left++];
+					merging[k++] = sorting[left++];
 				else
-					merging[k] = sorting[center++];
-				k++;
+					merging[k++] = sorting[center++];
 			} 
 			
 			for ( ; left < size; left++, k++ )
@@ -80,11 +72,36 @@ void mainSort( const TestInfo *ti, int *array, long size )
 			size += ( total_size / active_proc ); //size of the ordered sequence
 			
 		}
-		if ( do_i_send( rank, active_proc ) )
-			MPI_Send ( sorting, size, MPI_INT, to_who ( rank, active_proc), 0, MPI_COMM_WORLD );
+		if ( do_i_send ( rank, active_proc ) )
+			MPI_Send ( sorting, size, MPI_INT, to_who( rank, active_proc ), 0, MPI_COMM_WORLD );
 		
 		active_proc /= 2;
-		
 	}
+}
+
+void sort ( const TestInfo *ti )
+{
+	int *sorting = (int*) malloc ( sizeof(int) * GET_M ( ti )); 
+	int partition_size = GET_LOCAL_M ( ti );
+	
+	//receiving data partitions
+	MPI_Scatter ( sorting, partition_size, MPI_INT, sorting, partition_size, MPI_INT, 0, MPI_COMM_WORLD );
+	//sorting local partition
+	qsort ( sorting, partition_size, sizeof(int), compare );
+	
+	mergesort ( ti, sorting );
 	
 }
+
+void mainSort( const TestInfo *ti, int *sorting, long size )
+{	
+	int partition_size = GET_LOCAL_M ( ti );
+
+	//scattering data partitions
+	MPI_Scatter ( sorting, partition_size, MPI_INT, sorting, partition_size, MPI_INT, 0, MPI_COMM_WORLD );
+	//sorting local partition
+	qsort ( sorting, partition_size, sizeof(int), compare );
+			
+	mergesort ( ti, sorting );	
+}
+
