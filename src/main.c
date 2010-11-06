@@ -351,7 +351,7 @@ int main( int argc, char **argv )
 		}
 
 		// broadcasting ti
-		// MPI_Bcast( &ti, sizeof(TestInfo), MPI_CHAR, 0, MPI_COMM_WORLD );
+		MPI_Bcast( &ti, sizeof(TestInfo), MPI_CHAR, 0, MPI_COMM_WORLD );
 
 		r = generate( &ti );
 		if( ! r ) {
@@ -411,6 +411,7 @@ int main( int argc, char **argv )
 	else {
 		// receive ti
 		// MPI_Status status;
+		MPI_Bcast( &ti, sizeof(TestInfo), MPI_CHAR, 0, MPI_COMM_WORLD );
 		// MPI_Recv( &ti, sizeof(TestInfo), MPI_CHAR, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status );
 		
 		{

@@ -114,7 +114,7 @@ long GET_FILE_SIZE( const char *path )
 * algorithms or strategies), by a number of shared libraries dinamically loaded.
 * This one is only called for the process with rank 0.
 */
-void mailSort( const TestInfo *ti, int *data, long size );
+void mainSort( const TestInfo *ti, int *data, long size );
 typedef void (*MainSortFunction) ( const TestInfo *ti, int *data, long size );
 /*!
 * sorts data.

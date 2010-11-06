@@ -11,8 +11,8 @@ ALGOS = mergesort samplesort nosort
 all: clean $(ALGOS) main maindbg
 	
 $(ALGOS):
-	@echo "Compiling mergesort..."
-	$(MPICC) $(ALGOCFLAGS) -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c
+	@echo "Compiling algos..."
+	$(MPICC) $(ALGOCFLAGS) -Wl,-soname,$@ -o $(LIBDIR)/lib$@.so $(ALGODIR)/$@.c
 
 install:
 	mkdir -p $(LIBDIR) $(DATADIR)
