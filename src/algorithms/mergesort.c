@@ -8,10 +8,34 @@
  * @version 0.0.01
  */
 
-#include <string.h>
+#include "sorting.h"
+#include "utils.h"
+#include "string.h"
 
-#include <sorting.h>
-#include <utils.h>
+//from_who	: return the rank of the process (node) from which i RECEIVE data in the current step
+int from_who ( int rank, int active_proc ) 
+{
+	return rank + active_proc / 2;	
+}
+
+//to_who	: return the rank of the process (node) from which i SEND data in the current step
+int to_who ( int rank, int active_proc ) 
+{
+	return rank - active_proc / 2;
+}
+
+//do_i_receive 	: return a number different from 0 if the calling process (node) has to RECEIVE data FROM another process (node) in the current step.
+int do_i_receive ( int rank, int active_proc )
+{
+	return (rank < (active_proc / 2));
+}
+
+//do_i_send	: return a number different from 0 if the calling process (node) has to SEND data TO another process (node) in the current step
+int do_i_send ( int rank, int active_proc )
+{
+	return (rank >= (active_proc / 2));
+}
+
 
 //TODO: sort should return an int* to the sorted array (and even its size, of course) 
 void mainSort( const TestInfo *ti, int *array, long size )
@@ -32,9 +56,9 @@ void mainSort( const TestInfo *ti, int *array, long size )
 
 	int j;
 	for ( j = 0; j < _log2(GET_N(ti)); ++ j ) {
-		if ( rank < (active_proc / 2) )	{
+		if ( do_i_receive( rank, active_proc ) )	{
 		
-			MPI_Recv ( (int*)sorting + size, total_size / active_proc, MPI_INT, rank + active_proc / 2 , 0, MPI_COMM_WORLD, &stat );
+			MPI_Recv ( (int*)sorting + size, total_size / active_proc, MPI_INT, from_who ( rank, active_proc ), 0, MPI_COMM_WORLD, &stat );
 								
 			//fusion phase
 			int left = 0, center = size, right = size + total_size/active_proc, k = 0;
@@ -56,8 +80,8 @@ void mainSort( const TestInfo *ti, int *array, long size )
 			size += ( total_size / active_proc ); //size of the ordered sequence
 			
 		}
-		else 
-			MPI_Send ( sorting, size, MPI_INT, rank - active_proc / 2, 0, MPI_COMM_WORLD );
+		if ( do_i_send( rank, active_proc ) )
+			MPI_Send ( sorting, size, MPI_INT, to_who ( rank, active_proc), 0, MPI_COMM_WORLD );
 		
 		active_proc /= 2;
 		
