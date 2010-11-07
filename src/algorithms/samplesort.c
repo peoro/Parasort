@@ -1,157 +1,185 @@
 
 /**
- * @file samplesort.c
- *
- * @brief This file contains a set of functions used to sort atomic elements (integers) by using a parallel version of the Sample Sort
- *
- * NOTE: compile with
- *		 export ALGO=samplesort && mpicc -fPIC -O2 -shared -Wl,-soname,lib$ALGO.so -o lib$ALGO.so $ALGO.c && cp lib$ALGO.so ~/.spd/algorithms/
- *
- * @author Nicola Desogus
- * @version 0.0.01
- */
-
-
-
-#include "sorting.h"
-
-
-/**
-* @brief Compares the input integers
+* @file samplesort.c
 *
-* @param[in] a	The firt element to be compared
-* @param[in] b	The second element to be compared
+* @brief This file contains a set of functions used to sort atomic elements (integers) by using a parallel version of the Sample Sort
 *
-* @return A negative value if the first argument is less
-		  than the second, zero if they are equal, and
-		  positive if the first argument is greater than
-		  the second
+* @author Nicola Desogus
+* @version 0.0.01
 */
-int intCompare (const void* a, const void* b) {
-	return ( *(int*)a - *(int*)b );
-}
 
-
+#include "../sorting.h"
+#include "../utils.h"
 
 /**
 * @brief Gets the index of the bucket in which to insert ele
 *
-* @param[in] ele		The element to be inserted within a bucket
-* @param[in] splitters	The array of splitters
-* @param[in] size		The number of splitters
+* @param[in] ele        The element to be inserted within a bucket
+* @param[in] splitters  The array of splitters
+* @param[in] length     The number of splitters
 *
 * @return The index of the bucket in which to insert ele
 */
-int getBucketIndex( const int* ele, int* splitters, int size ) {
-	register int base = 0;
-	register int limit = size;
-	register int cmpResult;
-	register int mid;
+int getBucketIndex( const int *ele, const int *splitters, int length )
+{
+	int base = 0;
+	int cmpResult;
+	int mid;
 
-	while( limit > base ) {
-		mid = (base + limit) >> 1;
-		cmpResult = intCompare( ele, &splitters[mid] );
+	while ( length > base ) {
+		mid = (base + length) >> 1;
+		cmpResult = compare( ele, &splitters[mid] );
 
-		if( cmpResult == 0 )
+		if ( cmpResult == 0 )
 			return mid;
 
-		if( cmpResult > 0 )
+		if ( cmpResult > 0 )
 			base = mid + 1;
 		else
-			limit >>= 1 ;
+			length >>= 1;
 	}
-	return limit;
+	return base;
 }
 
+/**
+* @brief Chooses n-1 equidistant elements of the input data array as splitters
+*
+* @param[in] 	data 				Data from which extract splitters
+* @param[in] 	length 				Length of the data array
+* @param[in] 	n 					Number of splitters plus one
+* @param[out] 	newSplitters	 	Chosen splitters
+*/
+void chooseSplitters( int *data, const int length, const int n, int *newSplitters )
+{
+	int i, j, k;
+
+	/* Sorting data */
+	qsort( data, length, sizeof(int), compare );
+
+	/* Choosing splitters (n-1 equidistant elements of the data array) */
+	for ( i=0, k=j=length/n; i<n-1; i++, k+=j )
+		newSplitters[i] = data[k];
+}
 
 /**
- * @brief Sorts input data by using a parallel version of the Sample Sort
- *
- * @param[in] ti 		The TestInfo Structure
- * @param[in] data	 	Data to be sorted
- * @param[in] size 		Size (in bytes) of data
- */
-void mainSort( const TestInfo *ti, int *data, long size )
+* @brief Sorts input data by using a parallel version of Sample Sort
+*
+* @param[in] ti        The TestInfo Structure
+* @param[in] data      Data to be sorted
+*/
+void sampleSort( const TestInfo *ti, int *data )
 {
-	const int		root = 0;							//Rank (ID) of the root process
-	const int 		id = GET_ID( ti );					//Rank (ID) of the process
-	const int 		n = GET_N( ti );					//Number of processes
-// 	const long int 	M = GET_M( ti );					//Number of data elements
-	const long int 	local_M = GET_LOCAL_M( ti );		//Number of elements assigned to each process
-	int				local_splitters[n-1];				//Local splitters (n-1 equidistant elements of the data array)
-	int* 			all_splitters = 0;					//All splitters (will include all the local splitters)
-	int* 			global_splitters = 0;				//Global splitters (will be selected from the all_splitters array)
-	int				small_buckets[n][2*local_M/n+1];	//n small buckets (in sample sort, it is shown that each bucket will have a maximum of 2*local_M/n elements)
-	int 			received_buckets[n][2*local_M/n+1];	//n received buckets (in sample sort, it is shown that each bucket will have a maximum of 2*local_M/n elements)
-	int				local_bucket[2*local_M];			//Local bucket (in sample sort, it is shown that each process will have, at the end, a maximum of 2*M/n elements to sort)
-	int 			i, j, k;
+	const int	root = 0;                           //Rank (ID) of the root process
+	const int	id = GET_ID( ti );                  //Rank (ID) of the process
+	const int	n = GET_N( ti );                    //Number of processes
+	const long	M = GET_M( ti );                    //Number of data elements
+	const long	local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
+	const long	maxLocal_M = M / n + (0 < M%n);     //Max number of elements assigned to a process
+	int			localData[local_M];                	//Local section of the input data
 
+	int			localSplitters[n-1];               	//Local splitters (n-1 equidistant elements of the data array)
+	int			*allSplitters = 0;                 	//All splitters (will include all the local splitters)
+	int			*globalSplitters = 0;            	//Global splitters (will be selected from the allSplitters array)
 
-	/* Sorting locally */
-	qsort( data, local_M, sizeof(int), intCompare );
+	int			localBucket[2*maxLocal_M]; 			//Local bucket (in sample sort, it is shown that each process will have, at the end, a maximum of 2*M/n elements to sort)
+	int 		bucketLength = 0;
+
+	int 		sendCounts[n];
+	int			sdispls[n];
+
+	int 		recvCounts[n];
+	int			rdispls[n];
+
+	int			i, j, k;
+
+	/* Computing the number of elements to be sent to each process and relative displacements */
+	if ( id == root ) {
+		for ( k=0, i=0; i<n; i++ ) {
+			sdispls[i] = k;
+			sendCounts[i] = M/n + (i < M%n);
+			k += sendCounts[i];
+		}
+	}
+	/* Scattering data */
+	MPI_Scatterv( data, sendCounts, sdispls, MPI_INT, localData, maxLocal_M, MPI_INT, root, MPI_COMM_WORLD );
 
 	/* Choosing local splitters (n-1 equidistant elements of the data array) */
-	j = local_M / n;
-	k = j;
-	for( i=0; i<n-1; i++, k+=j )
-		local_splitters[i] = data[k];
+	chooseSplitters( localData, local_M, n, localSplitters );
 
 	/* Gathering all splitters to the root process */
-	if( id == root ) {
-		all_splitters = (int*) malloc ( ((n-1)*n) * sizeof(int) );
+	if ( id == root ) {
+		allSplitters = (int*) malloc ( ((n-1)*n) * sizeof(int) );
 
-		if( all_splitters == NULL ) {
-			printf( "Error: Cannot allocate memory for all_splitters array! \n");
+		if ( allSplitters == NULL ) {
+			printf( "Error: Cannot allocate memory for allSplitters array! \n");
 			MPI_Abort( MPI_COMM_WORLD, MPI_ERR_OTHER );
 			return;
 		}
 	}
-	MPI_Gather( local_splitters, n-1, MPI_INT, all_splitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+	MPI_Gather( localSplitters, n-1, MPI_INT, allSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
 
-	/* Choosing global splitters (n-1 equidistant elements of the all_splitters array) */
-	global_splitters = local_splitters; 	//--> To save space but keeping the correct semantics!!! :F
+	/* Choosing global splitters (n-1 equidistant elements of the allSplitters array) */
+	globalSplitters = localSplitters;     //--> To save space but keeping the correct semantics!!! :F
 
-	if( id == root ) {
-		qsort( all_splitters, (n-1)*n, sizeof(int), intCompare );		//Sorts the all_splitters array
-
-		j = n-1;
-		k = j;
-		for( i=0; i<n-1; i++, k+=j )
-			global_splitters[i] = all_splitters[k];
-	}
+	if ( id == root )
+		chooseSplitters( allSplitters, (n-1)*n, n, globalSplitters );
 
 	/* Broadcasting global splitters */
-	MPI_Bcast( global_splitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+	MPI_Bcast( globalSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
 
-	for( i=0; i<n; i++ ) {
-		small_buckets[i][0] = 1;
+	/* Initializing the sendCounts array */
+	for ( i=0; i<n; i++ ) {
+		sendCounts[i] = 0;
 	}
 
-	/* Splitting local data into n small buckets */
-	for( i=0; i<local_M; i++ ) {
-		/* Placing the element in the right bubket */
-		j = getBucketIndex( &data[i], global_splitters, n-1 );
-		small_buckets[j][small_buckets[j][0]++] = data[i];
+	/* Computing the number of integers to be sent to each process */
+	for ( i=0; i<local_M; i++ ) {
+		j = getBucketIndex( &localData[i], globalSplitters, n-1 );
+		sendCounts[j]++;
 	}
+	/* Informing all processes on the number of elements that will receive */
+	MPI_Alltoall( sendCounts, 1, MPI_INT, recvCounts, 1, MPI_INT, MPI_COMM_WORLD );
 
-	/* Sending small buckets to respective processes */
-	k = 2*local_M/n+1;	//Number of elements to be sent to each process
-	MPI_Alltoall( small_buckets, k, MPI_INT, received_buckets, k, MPI_INT, MPI_COMM_WORLD );
+	/* Computing the displacements */
+	for ( k=0, i=0; i<n; i++ ) {
+		/* Computing the displacements relative to localData from which to take the outgoing data destined for each process */
+		sdispls[i] = k;
+		k += sendCounts[i];
 
-	/* Retrieving local bucket elements */
-	k = 0;
-
-	for( i=0; i<n; i++ ) {
-		for( j=1; j<received_buckets[i][0]; j++ )
-			local_bucket[k++] = received_buckets[i][j];
+		/* Computing the displacements relative to localBucket at which to place the incoming data from each process  */
+		rdispls[i] = bucketLength;
+		bucketLength += recvCounts[i];
 	}
+	/* Sending data to the appropriate processes */
+	MPI_Alltoallv( localData, sendCounts, sdispls, MPI_INT, localBucket, recvCounts, rdispls, MPI_INT, MPI_COMM_WORLD );
 
 	/* Sorting local bucket */
-	qsort( local_bucket, k, sizeof(int), intCompare );
+	qsort( localBucket, bucketLength, sizeof(int), compare );
 
-	//TODO: Store data correctly -> local_bucket is sorted, but could be greater than initial data (> M/n)
+	/* Gathering the lengths of the all buckets */
+	MPI_Gather( &bucketLength, 1, MPI_INT, recvCounts, 1, MPI_INT, root, MPI_COMM_WORLD );
+
+	/* Computing displacements relative to the output array at which to place the incoming data from each process  */
+	if ( id == root ) {
+		for ( k=0, i=0; i<n; i++ ) {
+			rdispls[i] = k;
+			k += recvCounts[i];
+		}
+	}
+	/* Gathering sorted data */
+	MPI_Gatherv( localBucket, bucketLength, MPI_INT, data, recvCounts, rdispls, MPI_INT, root, MPI_COMM_WORLD );
 
 	/* Freeing memory */
-	if( id == root )
-		free( all_splitters );
+	if ( id == root )
+		free( allSplitters );
+}
+
+void mainSort( const TestInfo *ti, int *data, long size )
+{
+	sampleSort( ti, data );
+}
+
+void sort( const TestInfo *ti )
+{
+	sampleSort( ti, 0 );
 }

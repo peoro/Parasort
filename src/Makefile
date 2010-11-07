@@ -6,19 +6,19 @@ INSTALLDIR = ~/.spd
 DATADIR = $(INSTALLDIR)/data
 LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
-ALGOS = mergesort samplesort nosort
+ALGOS = mergesort samplesort bucketsort nosort
 
 all: clean $(ALGOS) main maindbg
-	
+
 $(ALGOS):
-	@echo "Compiling algos..."
-	$(MPICC) $(ALGOCFLAGS) -Wl,-soname,$@ -o $(LIBDIR)/lib$@.so $(ALGODIR)/$@.c
+	@echo "Compiling "$@"..."
+	$(MPICC) $(ALGOCFLAGS) -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c
 
 install:
 	mkdir -p $(LIBDIR) $(DATADIR)
 	cp $(ALGODIR)/lib*.so $(LIBDIR)
 
-main: 
+main:
 	@echo "Compiling main..."
 	$(MPICC) $(CFLAGS) -ldl main.c -o spd
 
