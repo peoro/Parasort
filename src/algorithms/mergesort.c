@@ -40,12 +40,17 @@ int do_i_send ( int rank, int active_proc )
 void mergesort ( const TestInfo *ti, int *sorting )
 {
 	MPI_Status stat;
-	int total_size 	= GET_M ( ti );
+	const int total_size 	= GET_M ( ti );
 	int size 		= GET_LOCAL_M ( ti );
 	int rank 		= GET_ID ( ti );
 	int active_proc = GET_N ( ti );
 	
-	int *merging 	= (int*) malloc ( sizeof(int) * total_size ); 
+	int merging [ total_size ]; 
+
+	//scattering data partitions
+	MPI_Scatter ( sorting, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
+	//sorting local partition
+	qsort ( sorting, size, sizeof(int), compare );
 
 	int j;
 	for ( j = 0; j < _log2(GET_N(ti)); ++ j ) {
@@ -81,27 +86,12 @@ void mergesort ( const TestInfo *ti, int *sorting )
 
 void sort ( const TestInfo *ti )
 {
-	int *sorting = (int*) malloc ( sizeof(int) * GET_M ( ti )); 
-	int partition_size = GET_LOCAL_M ( ti );
-	
-	//receiving data partitions
-	MPI_Scatter ( sorting, partition_size, MPI_INT, sorting, partition_size, MPI_INT, 0, MPI_COMM_WORLD );
-	//sorting local partition
-	qsort ( sorting, partition_size, sizeof(int), compare );
-	
+	int sorting [GET_M ( ti )]; 
 	mergesort ( ti, sorting );
-	
 }
 
 void mainSort( const TestInfo *ti, int *sorting, long size )
 {	
-	int partition_size = GET_LOCAL_M ( ti );
-
-	//scattering data partitions
-	MPI_Scatter ( sorting, partition_size, MPI_INT, sorting, partition_size, MPI_INT, 0, MPI_COMM_WORLD );
-	//sorting local partition
-	qsort ( sorting, partition_size, sizeof(int), compare );
-			
 	mergesort ( ti, sorting );	
 }
 
