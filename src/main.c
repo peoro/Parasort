@@ -6,6 +6,7 @@
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <time.h>
+#include <limits.h>
 #include "sorting.h"
 
 static const struct option long_options[] =
@@ -201,6 +202,16 @@ bool checkAlgo( const char *algo )
 	return 1;
 }
 
+static unsigned int _seed_x = 123456789, _seed_y = 987654321, _seed_z = 43219876, _seed_c = 6543217; /* Seed variables */
+int JKISS()
+{
+	unsigned long long t;
+	_seed_x = 314527869 * _seed_x + 1234567;
+	_seed_y ^= _seed_y << 5; _seed_y ^= _seed_y >> 7; _seed_y ^= _seed_y << 22;
+	t = 4294584393ULL * _seed_z + _seed_c; _seed_c = t >> 32; _seed_z = t;
+	return (_seed_x + _seed_y + _seed_z)  % INT_MAX;
+}
+
 int generate( const TestInfo *ti )
 {
 	// TODO!
@@ -219,18 +230,24 @@ int generate( const TestInfo *ti )
 		return 0;
 	}
 
+	/* Setting seeds variables */
+	_seed_x = ti->seed;
+	_seed_y = 69069*_seed_x+12345;
+	_seed_z = (_seed_y<<16)+_seed_x;
+	_seed_c = _seed_z<<13;
+
 	for( i = 0; i < M; ++ i ) {
-		int x = rand();
+		int x = JKISS();
 #ifndef DEBUG
 		if( ! fwrite( &x, sizeof(int), 1, f ) ) {
 #else
-		if( fprintf( f, "%d ", x ) < 0 ) {
+		if( fprintf( f, "%d\n", x ) < 0 ) {
 #endif
 			printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, x, path );
 			return 0;
 		}
 	}
-	
+
 	fclose( f );
 
 	return 1;
@@ -290,6 +307,7 @@ int storeData( const TestInfo *ti, int *data, long size )
 #else
 	(void) size;
 	long i;
+	int tmp;
 #endif
 
 	GET_SORTED_DATA_PATH( ti, path, sizeof(path) );
@@ -306,8 +324,21 @@ int storeData( const TestInfo *ti, int *data, long size )
 		return 0;
 	}
 #else
-	for( i = 0; i < GET_M(ti); ++ i ) {
-		if( fprintf( f, "%d ", data[i] ) < 0 ) {
+	if( fprintf( f, "%d\n", data[0] ) < 0 ) {
+		printf( "Couldn't write %d-th element (of value %d) to %s\n", 0, data[0], path );
+		fclose( f );
+		return 0;
+	}
+	tmp = data[0];
+
+	for( i = 1; i < GET_M(ti); ++ i ) {
+		if( tmp > data[i] ) {
+			printf( "Sorting Failed: %ld-th element (of value %d) is bigger than %ld-th element (of value %d)\n", i, data[i], i-1, tmp );
+			fclose( f );
+			return 0;
+		}
+
+		if( fprintf( f, "%d\n", data[i] ) < 0 ) {
 			printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, data[i], path );
 			fclose( f );
 			return 0;
@@ -374,7 +405,7 @@ int main( int argc, char **argv )
 			{
 				char path[1024];
 				MainSortFunction mainSort;
-			
+
 				void *handle = dlopen( GET_ALGORITHM_PATH(ti.algo, path, sizeof(path)), RTLD_LAZY | RTLD_GLOBAL );
 				if( ! handle ) {
 					printf( "Task %d couldn't load %s (%s): %s\n"
@@ -392,7 +423,7 @@ int main( int argc, char **argv )
 					MPI_Finalize( );
 					return 1;
 				}
-			
+
 				mainSort( &ti, data, size / sizeof(int) );
 
 				dlclose( handle );
@@ -405,19 +436,19 @@ int main( int argc, char **argv )
 				return 1;
 			}
 		}
-		
-		
+
+
 	}
 	else {
 		// receive ti
 		// MPI_Status status;
 		MPI_Bcast( &ti, sizeof(TestInfo), MPI_CHAR, 0, MPI_COMM_WORLD );
 		// MPI_Recv( &ti, sizeof(TestInfo), MPI_CHAR, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status );
-		
+
 		{
 			char path[1024];
 			SortFunction sort;
-			
+
 			void *handle = dlopen( GET_ALGORITHM_PATH(ti.algo, path, sizeof(path)), RTLD_LAZY | RTLD_GLOBAL );
 			if( ! handle ) {
 				printf( "Task %d couldn't load %s (%s): %s\n"
@@ -435,12 +466,12 @@ int main( int argc, char **argv )
 				MPI_Finalize( );
 				return 1;
 			}
-		
+
 			sort( &ti );
 
 			dlclose( handle );
 		}
-		
+
 	}
 
 	MPI_Finalize( );
