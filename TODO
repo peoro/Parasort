@@ -1,0 +1,39 @@
+Fabio: 	k-way mergesort
+Paolo: 	Quicksort
+Nicola:	Bitonic Sort
+
+Assieme: 	Load Balancing mergesort
+			Mapping dei processi
+			funzioni per prendere i tempi	
+			
+			
+Roba da testare: 	scatter ( n, M )
+					gather ( n, M )
+					Bcast ( n, M )
+					Send, Receive ( M )
+					"scatter sequenziale fatta con le send vs scatter ad albero"
+					tempi di completamento ideali degli alg sequenziali
+					
+
+Relazione {
+	Cosa c'era da fare
+	Cosa s'è fatto
+	struttura del "framework" {
+		generazione dati
+		API in generale..
+		centralizzato vs distribuito..
+	}
+	ambiente di test
+	C = cost model di MPI nel nostro ambiente di test
+	for each alg {
+		descrizione
+		valutazione dei risultati effettivi rispetto a quelli ideali 
+		prestazioni (scalabilità) con eventuali considerazioni rispetto a C
+		eventuale studio statistico (e.g. varianza nel qsort...) 
+	}
+	confronto globale dei vari algoritmi
+	conclusioni ( le nostre congetture sono risultate valide? si/no perchè )
+}
+
+
+
