@@ -1,6 +1,6 @@
 
 /**
-* @file bucketsort.c
+* @file bitonicsort.c
 *
 * @brief This file contains a set of functions used to sort atomic elements (integers) by using a parallel version of the Bitonic Sort
 *
@@ -12,51 +12,42 @@
 #include "../utils.h"
 
 /**
-* @brief Compare and Exchange operation on two bitonic sequences starting from the bottom
+* @brief Compare and Exchange operation on the low part of two sequences sorted in ascending order
 *
-* @param[in] tmpSeq			An auxiliar array
-* @param[in] firstLength    The length of the first sequence
-* @param[in] firstSeq		The first sequence
-* @param[in] secondLength	The length of the second sequence
-* @param[out] secondSeq    	The second sequence (it will be also the merged sequence as output)
+* @param[in] 	length			The length of the sequences
+* @param[in] 	firstSeq		The first sequence
+* @param[in] 	secondSeq    	The second sequence
+* @param[out] 	mergedSeq		The merged sequence
 */
-void CompareLow( int* tmpSeq, const int firstLength, int *firstSeq, const int secondLength, int *secondSeq )
+void compareLow( const int length, int *firstSeq, int *secondSeq, int* mergedSeq )
 {
 	int i, j, k;
-	const int length = firstLength < secondLength ? firstLength : secondLength;
 
 	for ( i=j=k=0; i<length; i++ )
 		if ( secondSeq[j] <= firstSeq[k] )
-			tmpSeq[i] = secondSeq[j++];
+			mergedSeq[i] = secondSeq[j++];
 		else
-			tmpSeq[i] = firstSeq[k++];
-
-	for ( i=0; i<length; i++ )
-		secondSeq[i] = tmpSeq[i];
+			mergedSeq[i] = firstSeq[k++];
 }
 
+
 /**
-* @brief Compare and Exchange operation on two bitonic sequences starting from the top
+* @brief Compare and Exchange operation on the high part of two sequences sorted in ascending order
 *
-* @param[in] tmpSeq			An auxiliar array
-* @param[in] firstLength    The length of the first sequence
-* @param[in] firstSeq		The first sequence
-* @param[in] secondLength	The length of the second sequence
-* @param[out] secondSeq    	The second sequence (it will be also the merged sequence as output)
+* @param[in] 	length			The length of the sequences
+* @param[in] 	firstSeq		The first sequence
+* @param[in] 	secondSeq    	The second sequence
+* @param[out] 	mergedSeq		The merged sequence
 */
-void CompareHigh( int* tmpSeq, const int firstLength, int *firstSeq, const int secondLength, int *secondSeq )
+void compareHigh( const int length, int *firstSeq, int *secondSeq, int* mergedSeq )
 {
 	int i, j, k;
-	const int length = firstLength < secondLength ? firstLength : secondLength;
 
 	for ( i=j=k=length-1; i>=0; i-- )
 		if ( secondSeq[j] >= firstSeq[k] )
-			tmpSeq[i] = secondSeq[j--];
+			mergedSeq[i] = secondSeq[j--];
 		else
-			tmpSeq[i] = firstSeq[k--];
-
-	for ( i=0; i<length; i++ )
-		secondSeq[i] = tmpSeq[i];
+			mergedSeq[i] = firstSeq[k--];
 }
 
 /**
@@ -76,15 +67,15 @@ void bitonicSort( const TestInfo *ti, int *data )
 	int				localData[local_M];                	//Local section of the input data
 
 	int				recvData[maxLocal_M];
-	int				tmpData[maxLocal_M];
+	int				mergedData[maxLocal_M];
 
 	MPI_Status 		status;
 
 	int 			counts[n];
 	int				displs[n];
 
-	int				mask, mask2, partner, recvCount;
-	int				i, j, k, z;
+	int				mask, mask2, partner, recvCount, length;
+	int				i, j, k, z, flag;
 
 	/* Computing the number of elements to be sent to each process and relative displacements */
 	if ( id == root ) {
@@ -100,26 +91,32 @@ void bitonicSort( const TestInfo *ti, int *data )
 	/* Sorting local data */
 	qsort( localData, local_M, sizeof(int), compare );
 
-	k = _log2( n );		//Number of steps
+	k = _log2( n );		//Number of steps of the outer loop
 
 	/* Bitonic Sort */
 	for ( i=1, mask=2; i<=k; i++, mask<<=1 ) {
 		mask2 = 1 << (i - 1);					//Bitmask for partner selection
-		z = (id & mask) == 0 ? -1 : 1;			//z=-1 iff id is a multiple of mask (=2^i), z=1 otherwise
+		flag = (id & mask) == 0 ? -1 : 1;		//flag=-1 iff id has a 0 at the i-th bit, flag=1 otherwise (NOTE: mask =2^i)
 
 		for ( j=0; j<i; j++, mask2>>=1 ) {
 			partner = id ^ mask2;				//Selects as partner the process with rank that differs from id only at the j-th bit
 			recvCount = M/n + (partner < M%n);	//Number of elements that will be received from partner
 
+			/* Length of the merged sequence */
+			length = recvCount < local_M ? recvCount : local_M;
+
+			/* Exchanging data with partner */
+			MPI_Sendrecv( localData, local_M, MPI_INT, partner, 100, recvData, recvCount, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
+
 			/* Each process must call the dual function of its partner */
-			if ( (id-partner) * z > 0 ) {
-				MPI_Sendrecv( localData, local_M, MPI_INT, partner, 100, recvData, recvCount, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
-				CompareLow( tmpData, recvCount, recvData, local_M, localData );
-			}
-			else {
-				MPI_Sendrecv( localData, local_M, MPI_INT, partner, 100, recvData, recvCount, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
-				CompareHigh( tmpData, recvCount, recvData, local_M, localData );
-			}
+			if ( (id-partner) * flag > 0 )
+				compareLow( length, recvData, localData, mergedData );
+			else
+				compareHigh( length, recvData, localData, mergedData );
+
+			/* Saving the merded sequence as local data for the next step */
+			for ( z=0; z<length; z++ )
+				localData[z] = mergedData[z];
 		}
 	}
 	/* Gathering sorted data */
