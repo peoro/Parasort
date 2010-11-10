@@ -230,7 +230,7 @@ int generate( const TestInfo *ti )
 		return 0;
 	}
 
-	/* Setting seeds variables */
+	/* Setting seed variables */
 	_seed_x = ti->seed;
 	_seed_y = 69069*_seed_x+12345;
 	_seed_z = (_seed_y<<16)+_seed_x;
@@ -333,10 +333,11 @@ int storeData( const TestInfo *ti, int *data, long size )
 
 	for( i = 1; i < GET_M(ti); ++ i ) {
 		if( tmp > data[i] ) {
-			printf( "Sorting Failed: %ld-th element (of value %d) is bigger than %ld-th element (of value %d)\n", i, data[i], i-1, tmp );
+			printf( "Sorting Failed: %ld-th element (of value %d) is bigger than %ld-th element (of value %d)\n", i-1, tmp, i, data[i] );
 			fclose( f );
 			return 0;
 		}
+		tmp = data[i];
 
 		if( fprintf( f, "%d\n", data[i] ) < 0 ) {
 			printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, data[i], path );

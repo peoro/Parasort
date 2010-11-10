@@ -6,7 +6,7 @@ INSTALLDIR = ~/.spd
 DATADIR = $(INSTALLDIR)/data
 LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
-ALGOS = mergesort samplesort bucketsort nosort
+ALGOS = mergesort samplesort bucketsort bitonicsort nosort
 
 all: clean $(ALGOS) main maindbg
 
