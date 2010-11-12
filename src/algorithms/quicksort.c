@@ -146,10 +146,12 @@ void actualSort( const TestInfo *ti, int *a, long *size )
 void sort( const TestInfo *ti )
 {
 	long size = GET_M(ti);
-	int a[ size ];
+	int *a = (int*) malloc( sizeof(int)*size );
 	
 	actualSort( ti, a, &size );
 	assert( ! size );
+	
+	free( a );
 }
 
 void mainSort( const TestInfo *ti, int *a, long size )
