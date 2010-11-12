@@ -48,7 +48,11 @@ void mergesort ( const TestInfo *ti, int *sorting )
 	int merging [ total_size ]; 
 
 	//scattering data partitions
-	_MPI_Scatter ( sorting, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
+	if ( rank == 0 )
+		_MPI_Scatter ( sorting, size, MPI_INT, MPI_IN_PLACE, size, MPI_INT, 0, MPI_COMM_WORLD );
+	else
+		_MPI_Scatter ( NULL, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
+		
 	//sorting local partition
 	qsort ( sorting, size, sizeof(int), compare );
 
