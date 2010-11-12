@@ -9,6 +9,13 @@ inline int _log2 ( unsigned int n )
     }
     return toRet;
 }
+inline int _pow2( int n ) {
+	int i, r = 1;
+	for( i = 0; i < n; ++ i ) {
+		r *= 2;
+	}
+	return r;
+}
 
 //computes the logarithm base k of a positive integer
 inline int _logk ( unsigned int n, unsigned int k ) 
@@ -22,3 +29,13 @@ inline int compare (const void * a, const void * b)
 {
   return ( *(int*)a - *(int*)b );
 }
+
+#include <mpi.h>
+int _MPI_Get_count( MPI_Status *status, MPI_Datatype datatype, long *count ) {
+	int c = *count;
+	int ret = MPI_Get_count( status, datatype, &c );
+	*count = c;
+	return ret;
+}
+#define _MPI_Recv(a,b,c,d,e,f,g) MPI_Recv(a,b,c,d,e,f,g)
+#define _MPI_Send(a,b,c,d,e,f) MPI_Send(a,b,c,d,e,f)

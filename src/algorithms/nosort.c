@@ -9,21 +9,7 @@
  */
 
 #include "sorting.h"
-
-static int _pow2( int n ) {
-	int i, r = 1;
-	for( i = 0; i < n; ++ i ) {
-		r *= 2;
-	}
-	return r;
-}
-static int _log2( int n ) {
-	int r = 0;
-	for( ; n > 1; n /= 2 ) {
-		r ++;
-	}
-	return r;
-}
+#include "utils.h"
 
 #define ACTIVE_PROCS(ti,step) _pow2(step)
 #define GET_STEP_COUNT(ti) _log2( GET_N(ti) )
