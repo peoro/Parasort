@@ -38,6 +38,9 @@ void printHelp( const char *argv0 )
 			"\t--size     -M  M     sort M elements\n"
 			"\t--seed     -s  S     use seed S to generate random elements\n"
 			"\t--algo     -a  A     use algorithm A\n"
+			"\t--av1      -1  X     pass to the algorithm X as first variable\n"
+			"\t--av2      -2  Y     pass to the algorithm Y as second variable\n"
+			"\t--av3      -3  Z     pass to the algorithm Z as third variable\n"
 			"\n", argv0 );
 }
 
@@ -80,6 +83,7 @@ int parseArgs( int argc, char **argv, TestInfo *ti )
 {
 	ti->verbose = 0;
 	ti->threaded = 0;
+	memset( ti->algoVar, 0, sizeof(ti->algoVar) );
 
 	bool MGiven = 0, seedGiven = 0, algoGiven = 0;
 
@@ -88,10 +92,10 @@ int parseArgs( int argc, char **argv, TestInfo *ti )
 		int option_index = 0;
 		int c;
 
-		bool err;
+		bool err = 0;
 
 		// c = getopt_long( argc, argv, "Vhvton:M:s:a:", long_options, &option_index );
-		c = getopt_long( argc, argv, "VhvtoM:s:a:", long_options, &option_index );
+		c = getopt_long( argc, argv, "VhvtoM:s:a:1:2:3:", long_options, &option_index );
 
 		/* Detect the end of the options. */
 		if( c == -1 ) {
@@ -146,6 +150,16 @@ int parseArgs( int argc, char **argv, TestInfo *ti )
 			case 'a':
 				strncpy( ti->algo, optarg, sizeof(ti->algo) );
 				algoGiven = 1;
+				break;
+				
+			case '1':
+				ti->algoVar[0] = strToInt( optarg, &err );
+				break;
+			case '2':
+				ti->algoVar[1] = strToInt( optarg, &err );
+				break;
+			case '3':
+				ti->algoVar[2] = strToInt( optarg, &err );
 				break;
 
 			case '?':

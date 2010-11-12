@@ -17,7 +17,7 @@ typedef struct
     long M; //data count
     long seed;
     char algo[64];
-    int algoVar;
+    int algoVar[3];
 } TestInfo;
 
 
