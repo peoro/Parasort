@@ -22,6 +22,9 @@
 #include "utils.h"
 #include "string.h"
 
+#include <time.h> // srand( time(0) )
+#include <assert.h>
+
 /**************************************/
 /*               STENCIL              */
 /**************************************/
@@ -63,7 +66,7 @@ bool do_i_receive( const TestInfo *ti, int step )
 
 // partitions the array:
 // a is the array, of size size. p is the pivot
-long partition( int *a, long size, int p )
+long _partition( int *a, long size, int p )
 {
 	long i = 0, j = size-1;
 	
@@ -78,6 +81,10 @@ long partition( int *a, long size, int p )
 	
 	return j;
 }
+long partition( int *a, long size )
+{
+	return _partition( a, size, a[ rand()%size ] );
+}
 
 void scatter( const TestInfo *ti, int *a, long *size )
 {
@@ -85,10 +92,10 @@ void scatter( const TestInfo *ti, int *a, long *size )
 	
 	for( step = 0; step < GET_STEP_COUNT(ti); ++ step ) {
 		if( do_i_send(ti,step) ) {
-			long lim = partition( a, *size, a[0] );
-			*size = lim;
-			
+			long lim = partition( a, *size );
+			// printf( "%d:Partition(%ld): %ld\n", GET_ID(ti), *size, lim );
 			_MPI_Send ( & a[lim], *size-lim, MPI_INT, to_who( ti, step ), 0, MPI_COMM_WORLD );
+			*size = lim;
 		}
 		if( do_i_receive(ti,step) ) {
 			MPI_Status stat;
@@ -97,25 +104,57 @@ void scatter( const TestInfo *ti, int *a, long *size )
 		}
 	}
 	
-	printf( "Node %d has got %ld data\n", GET_ID(ti), *size );
-	
+	// printf( "Node %d has got %ld data\n", GET_ID(ti), *size );
 }
 
+void gather( const TestInfo *ti, int *a, long *size )
+{
+	// node 0
+	if( ! GET_ID(ti) ) {
+		int actualSize = *size;
+		int i;
+		// receiving sequentially from ohter nodes
+		for( i = 1; i < GET_N(ti); ++ i ) {
+			MPI_Status stat;
+			_MPI_Recv( a+actualSize, GET_M(ti)-actualSize, MPI_INT, i, 0, MPI_COMM_WORLD, &stat );
+			_MPI_Get_count( &stat, MPI_INT, size );
+			actualSize += *size;
+		}
+		*size = actualSize;
+	}
+	// other nodes
+	else {
+		_MPI_Send ( a, *size, MPI_INT, 0, 0, MPI_COMM_WORLD );
+		*size = 0;
+	}
+}
 
 
 /**************************************/
 /*              SORTING               */
 /**************************************/
 
-void sort ( const TestInfo *ti )
+void actualSort( const TestInfo *ti, int *a, long *size )
+{
+	srand( time(0) );
+	
+	scatter( ti, a, size );
+	qsort ( a, *size, sizeof(int), compare );
+	gather( ti, a, size );
+}
+
+void sort( const TestInfo *ti )
 {
 	long size = GET_M(ti);
 	int a[ size ];
-	scatter( ti, a, &size );
+	
+	actualSort( ti, a, &size );
+	assert( ! size );
 }
 
 void mainSort( const TestInfo *ti, int *a, long size )
 {	
-	scatter( ti, a, &size );
+	actualSort( ti, a, &size );
+	assert( size == GET_M(ti) );
 }
 
