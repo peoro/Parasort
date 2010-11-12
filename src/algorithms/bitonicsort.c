@@ -96,7 +96,7 @@ void bitonicSort( const TestInfo *ti, int *data )
 	/* Bitonic Sort */
 	for ( i=1, mask=2; i<=k; i++, mask<<=1 ) {
 		mask2 = 1 << (i - 1);					//Bitmask for partner selection
-		flag = (id & mask) == 0 ? -1 : 1;		//flag=-1 iff id has a 0 at the i-th bit, flag=1 otherwise (NOTE: mask =2^i)
+		flag = (id & mask) == 0 ? -1 : 1;		//flag=-1 iff id has a 0 at the i-th bit, flag=1 otherwise (NOTE: mask = 2^i)
 
 		for ( j=0; j<i; j++, mask2>>=1 ) {
 			partner = id ^ mask2;				//Selects as partner the process with rank that differs from id only at the j-th bit
@@ -114,7 +114,7 @@ void bitonicSort( const TestInfo *ti, int *data )
 			else
 				compareHigh( length, recvData, localData, mergedData );
 
-			/* Saving the merded sequence as local data for the next step */
+			/* Saving the merged sequence as local data for the next step */
 			for ( z=0; z<length; z++ )
 				localData[z] = mergedData[z];
 		}

@@ -1,7 +1,7 @@
 MPICC = mpicc
 MPICPP = mpic++
 CFLAGS = -Wall -Wextra -Wno-unused -O2 -g
-ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC -shared
+ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC
 
 INSTALLDIR = ~/.spd
 DATADIR = $(INSTALLDIR)/data
@@ -11,18 +11,18 @@ ALGOS = mergesort quicksort samplesort bucketsort bitonicsort nosort
 ALGOSPP = kmerge
 OBJECTS = longmpi.o
 
-all: $(ALGOS) $(ALGOSPP) main maindbg 
+all: $(ALGOS) $(ALGOSPP) main maindbg
 
 $(ALGOS): longmpi.o
 	@echo "Compiling "$@"..."
-	$(MPICC) $(ALGOCFLAGS) -Wl,-soname,$@ -o $(OBJECTS) $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c
+	$(MPICC) $(ALGOCFLAGS) -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
 
 $(ALGOSPP): longmpi.o
 	@echo "Compiling "$@"..."
-	$(MPICPP) $(ALGOCFLAGS) -Wl,-soname,$@ -o $(OBJECTS) $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c
+	$(MPICPP) $(ALGOCFLAGS) -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
 
 longmpi.o:
-	$(MPICC) -c longmpi.c
+	$(MPICC) $(ALGOCFLAGS) -c longmpi.c
 
 install:
 	mkdir -p $(LIBDIR) $(DATADIR)
