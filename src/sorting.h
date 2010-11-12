@@ -8,6 +8,10 @@
 
 //coppola's: 3483962622
 
+/* Keep C++ compilers from getting confused */
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 typedef struct
 {
@@ -140,6 +144,10 @@ int loadData( const TestInfo *ti, int **data, long *size );
 */
 int storeData( const TestInfo *ti, int *data, long size );
 
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif
 

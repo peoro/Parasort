@@ -1,4 +1,5 @@
 MPICC = mpicc
+MPICPP = mpic++
 CFLAGS = -Wall -Wextra
 ALGOCFLAGS = -I.. -I. -L.. -fPIC -O2 -shared -g
 
@@ -7,12 +8,17 @@ DATADIR = $(INSTALLDIR)/data
 LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
 ALGOS = mergesort samplesort bucketsort bitonicsort nosort
+ALGOSPP = kmerge
 
-all: clean $(ALGOS) main maindbg
+all: clean $(ALGOS) $(ALGOSPP) main maindbg
 
 $(ALGOS):
 	@echo "Compiling "$@"..."
 	$(MPICC) $(ALGOCFLAGS) -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c
+
+$(ALGOSPP):
+	@echo "Compiling "$@"..."
+	$(MPICPP) $(ALGOCFLAGS) -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c
 
 install:
 	mkdir -p $(LIBDIR) $(DATADIR)
