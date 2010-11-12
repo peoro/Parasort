@@ -1,7 +1,7 @@
 MPICC = mpicc
 MPICPP = mpic++
-CFLAGS = -Wall -Wextra
-ALGOCFLAGS = -I.. -I. -L.. -fPIC -O2 -shared -g
+CFLAGS = -Wall -Wextra -O2 -g
+ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC -shared
 
 INSTALLDIR = ~/.spd
 DATADIR = $(INSTALLDIR)/data
