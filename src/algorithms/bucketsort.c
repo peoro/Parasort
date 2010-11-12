@@ -26,10 +26,11 @@ void bucketSort( const TestInfo *ti, int *data )
 	const long		M = GET_M( ti );                    //Number of data elements
 	const long		local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
 	const long		maxLocal_M = M / n + (0 < M%n);     //Max number of elements assigned to a process
-	int				localData[local_M];                	//Local section of the input data
+	int				*localData;                			//Local section of the input data
 
 	const double 	range = INT_MAX / n;				//Range of elements in each bucket
-	int				localBucket[M]; 					//Local bucket
+	int				*localBucket; 						//Local bucket
+
 	int 			bucketLength = 0;
 
 	int 			sendCounts[n];
@@ -39,6 +40,10 @@ void bucketSort( const TestInfo *ti, int *data )
 	int				rdispls[n];
 
 	int				i, j, k;
+
+	/* Allocating memory */
+	localData = (int*) malloc( local_M * sizeof(int) );
+	localBucket = (int*) malloc( M * sizeof(int) );
 
 	/* Computing the number of elements to be sent to each process and relative displacements */
 	if ( id == root ) {
@@ -95,6 +100,10 @@ void bucketSort( const TestInfo *ti, int *data )
 	}
 	/* Gathering sorted data */
 	MPI_Gatherv( localBucket, bucketLength, MPI_INT, data, recvCounts, rdispls, MPI_INT, root, MPI_COMM_WORLD );
+
+	/* Freeing memory */
+	free( localData );
+	free( localBucket );
 }
 
 void mainSort( const TestInfo *ti, int *data, long size )

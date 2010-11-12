@@ -75,13 +75,13 @@ void sampleSort( const TestInfo *ti, int *data )
 	const long	M = GET_M( ti );                    //Number of data elements
 	const long	local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
 	const long	maxLocal_M = M / n + (0 < M%n);     //Max number of elements assigned to a process
-	int			localData[local_M];                	//Local section of the input data
+	int			*localData;							//Local section of the input data
 
 	int			localSplitters[n-1];               	//Local splitters (n-1 equidistant elements of the data array)
 	int			*allSplitters = 0;                 	//All splitters (will include all the local splitters)
 	int			*globalSplitters = 0;            	//Global splitters (will be selected from the allSplitters array)
 
-	int			localBucket[2*maxLocal_M]; 			//Local bucket (in sample sort, it is shown that each process will have, at the end, a maximum of 2*M/n elements to sort)
+	int			*localBucket; 						//Local bucket (in sample sort, it is shown that each process will have, at the end, a maximum of 2*M/n elements to sort)
 	int 		bucketLength = 0;
 
 	int 		sendCounts[n];
@@ -91,6 +91,10 @@ void sampleSort( const TestInfo *ti, int *data )
 	int			rdispls[n];
 
 	int			i, j, k;
+
+	/* Allocating memory */
+	localData = (int*) malloc( local_M * sizeof(int) );
+	localBucket = (int*) malloc( 2*maxLocal_M * sizeof(int) );
 
 	/* Computing the number of elements to be sent to each process and relative displacements */
 	if ( id == root ) {
@@ -172,6 +176,8 @@ void sampleSort( const TestInfo *ti, int *data )
 	/* Freeing memory */
 	if ( id == root )
 		free( allSplitters );
+	free( localData );
+	free( localBucket );
 }
 
 void mainSort( const TestInfo *ti, int *data, long size )

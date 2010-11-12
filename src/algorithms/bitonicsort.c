@@ -64,10 +64,10 @@ void bitonicSort( const TestInfo *ti, int *data )
 	const long		M = GET_M( ti );                    //Number of data elements
 	const long		local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
 	const long		maxLocal_M = M / n + (0 < M%n);     //Max number of elements assigned to a process
-	int				localData[local_M];                	//Local section of the input data
+	int				*localData;		                	//Local section of the input data
 
-	int				recvData[maxLocal_M];
-	int				mergedData[maxLocal_M];
+	int				*recvData;
+	int				*mergedData;
 
 	MPI_Status 		status;
 
@@ -76,6 +76,11 @@ void bitonicSort( const TestInfo *ti, int *data )
 
 	int				mask, mask2, partner, recvCount, length;
 	int				i, j, k, z, flag;
+
+	/* Allocating memory */
+	localData = (int*) malloc( local_M * sizeof(int) );
+	recvData = (int*) malloc( maxLocal_M * sizeof(int) );
+	mergedData = (int*) malloc( maxLocal_M * sizeof(int) );
 
 	/* Computing the number of elements to be sent to each process and relative displacements */
 	if ( id == root ) {
@@ -121,6 +126,11 @@ void bitonicSort( const TestInfo *ti, int *data )
 	}
 	/* Gathering sorted data */
 	MPI_Gatherv( localData, local_M, MPI_INT, data, counts, displs, MPI_INT, root, MPI_COMM_WORLD );
+
+	/* Freeing memory */
+	free( localData );
+	free( recvData );
+	free( mergedData );
 }
 
 void mainSort( const TestInfo *ti, int *data, long size )
