@@ -1,6 +1,6 @@
 
 /**
- * @file mk_mergesort.c
+ * @file kmerge.c
  *
  * @brief This file contains a parallel version of k-way mergesort, an external-sorting algorithm to sort atomic elements (integers) 
  * *
@@ -9,12 +9,15 @@
  */
 
 #include <string.h>
-
 #include <queue> 
-using namespace std;
 
 #include "sorting.h"
 #include "utils.h"
+
+using namespace std;
+
+const int PARAM_K 	= 0;
+const int PARAM_MAP 	= 1;
 
 //from_who	: return the ranks of the processes from which i RECEIVE data in the current step
 void from_who ( int rank, int k, int active_proc, int *dest ) 
@@ -84,14 +87,15 @@ void fusion ( int *sorting, int left, int right, int size, int* merging)
 //invariant: given n = #processors, k = #ways, q an integer, it must be n == k^q
 void mk_mergesort ( const TestInfo *ti, int *sorting )
 {
-	const int k = 4; //TODO: to be got from the ti...
-	MPI_Status stat;
 	const int total_size 	= GET_M ( ti );
-	int size 				= GET_LOCAL_M ( ti );
-	int rank		 		= GET_ID ( ti );
-	int active_proc 		= GET_N ( ti );
-	
+	int size 		= GET_LOCAL_M ( ti );
+	int rank		= GET_ID ( ti );
+	int active_proc 	= GET_N ( ti );
+
+	int k = ti->algoVar[PARAM_K]; 
 	int merging [ total_size ]; 
+
+	MPI_Status stat;
 
 	//scattering data partitions
 	MPI_Scatter ( sorting, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
@@ -123,13 +127,17 @@ void mk_mergesort ( const TestInfo *ti, int *sorting )
 	free ( dests );
 }
 
-void sort ( const TestInfo *ti )
+extern "C" 
 {
-	int sorting [GET_M ( ti )]; 
-	mk_mergesort ( ti, sorting );
+	void sort ( const TestInfo *ti )
+	{
+		int sorting [GET_M ( ti )]; 
+		mk_mergesort ( ti, sorting );
+	}
+
+	void mainSort( const TestInfo *ti, int *sorting, long size )
+	{	
+		mk_mergesort ( ti, sorting );	
+	}
 }
 
-void mainSort( const TestInfo *ti, int *sorting, long size )
-{	
-	mk_mergesort ( ti, sorting );	
-}
