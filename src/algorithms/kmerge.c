@@ -95,7 +95,7 @@ void mk_mergesort ( const TestInfo *ti, int *sorting )
 	int active_proc 	= GET_N ( ti );
 
 	int k = ti->algoVar[PARAM_K]; 
-	int merging [ total_size ]; 
+	int *merging = (int*) malloc ( sizeof(int) * total_size );  
 
 	MPI_Status stat;
 
@@ -129,6 +129,7 @@ void mk_mergesort ( const TestInfo *ti, int *sorting )
 		active_proc /= k;
 	}
 	
+	free ( merging );
 	free ( dests );
 }
 
@@ -136,8 +137,9 @@ extern "C"
 {
 	void sort ( const TestInfo *ti )
 	{
-		int sorting [GET_M ( ti )]; 
+		int *sorting = (int*) malloc ( sizeof(int) * GET_M ( ti )); 
 		mk_mergesort ( ti, sorting );
+		free ( sorting );
 	}
 
 	void mainSort( const TestInfo *ti, int *sorting, long size )

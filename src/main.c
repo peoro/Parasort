@@ -425,6 +425,7 @@ int main( int argc, char **argv )
 				if( ! handle ) {
 					printf( "Task %d couldn't load %s (%s): %s\n"
 							"%s\n", GET_ID(&ti), ti.algo, path, strerror(errno), dlerror() );
+					free ( data );
 					MPI_Finalize( );
 					return 1;
 				}
@@ -435,6 +436,7 @@ int main( int argc, char **argv )
 					printf( "Task %d couldn't load %s (%s)'s mainSort() function: %s\n"
 							"%s\n", GET_ID(&ti), ti.algo, path, strerror(errno), dlerror() );
 					dlclose( handle );
+					free ( data );
 					MPI_Finalize( );
 					return 1;
 				}
@@ -447,9 +449,11 @@ int main( int argc, char **argv )
 			r = storeData( &ti, data, size );
 			if( ! r ) {
 				printf( "Error storing data for task %d\n", GET_ID(&ti) );
+				free ( data );
 				MPI_Finalize( );
 				return 1;
 			}
+			free ( data );
 		}
 
 

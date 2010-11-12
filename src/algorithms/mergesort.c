@@ -45,7 +45,7 @@ void mergesort ( const TestInfo *ti, int *sorting )
 	int rank 		= GET_ID ( ti );
 	int active_proc 	= GET_N ( ti );
 	
-	int merging [ total_size ]; 
+	int *merging = (int*) malloc ( sizeof(int) * total_size ); 
 
 	//scattering data partitions
 	if ( rank == 0 )
@@ -86,12 +86,15 @@ void mergesort ( const TestInfo *ti, int *sorting )
 		
 		active_proc /= 2;
 	}
+	
+	free ( merging );
 }
 
 void sort ( const TestInfo *ti )
 {
-	int sorting [GET_M ( ti )]; 
+	int *sorting = (int*) malloc ( sizeof(int) * GET_M ( ti )); 
 	mergesort ( ti, sorting );
+	free ( sorting );
 }
 
 void mainSort( const TestInfo *ti, int *sorting, long size )
