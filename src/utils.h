@@ -1,3 +1,5 @@
+#include "longmpi.h"
+
 //efficiently computes the logarithm base 2 of a positive integer
 inline int _log2 ( unsigned int n ) 
 {
@@ -30,12 +32,5 @@ inline int compare (const void * a, const void * b)
   return ( *(int*)a - *(int*)b );
 }
 
-#include <mpi.h>
-int _MPI_Get_count( MPI_Status *status, MPI_Datatype datatype, long *count ) {
-	int c = *count;
-	int ret = MPI_Get_count( status, datatype, &c );
-	*count = c;
-	return ret;
-}
-#define _MPI_Recv(a,b,c,d,e,f,g) MPI_Recv(a,b,c,d,e,f,g)
-#define _MPI_Send(a,b,c,d,e,f) MPI_Send(a,b,c,d,e,f)
+
+

@@ -60,6 +60,8 @@ struct Min_val {
 	
 void fusion ( int *sorting, int left, int right, int size, int* merging) 
 {
+	
+	
 	priority_queue<Min_val> heap;
 	int i, runs = (right - left) / size; //== k
 	int *runs_indexes = (int*) calloc ( sizeof(int), runs );   
@@ -98,7 +100,10 @@ void mk_mergesort ( const TestInfo *ti, int *sorting )
 	MPI_Status stat;
 
 	//scattering data partitions
-	MPI_Scatter ( sorting, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
+	if ( rank  == 0 )
+		MPI_Scatter ( sorting, size, MPI_INT, MPI_IN_PLACE, size, MPI_INT, 0, MPI_COMM_WORLD );
+	else
+		MPI_Scatter ( NULL, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
 	//sorting local partition
 	qsort ( sorting, size, sizeof(int), compare );
 

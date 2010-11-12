@@ -43,12 +43,12 @@ void mergesort ( const TestInfo *ti, int *sorting )
 	const int total_size 	= GET_M ( ti );
 	int size 		= GET_LOCAL_M ( ti );
 	int rank 		= GET_ID ( ti );
-	int active_proc = GET_N ( ti );
+	int active_proc 	= GET_N ( ti );
 	
 	int merging [ total_size ]; 
 
 	//scattering data partitions
-	MPI_Scatter ( sorting, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
+	_MPI_Scatter ( sorting, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
 	//sorting local partition
 	qsort ( sorting, size, sizeof(int), compare );
 
@@ -56,7 +56,7 @@ void mergesort ( const TestInfo *ti, int *sorting )
 	for ( j = 0; j < _log2(GET_N(ti)); ++ j ) {
 		if ( do_i_receive( rank, active_proc ) ) {
 		
-			MPI_Recv ( (int*)sorting + size, total_size / active_proc, MPI_INT, from_who( rank, active_proc ) , 0, MPI_COMM_WORLD, &stat );
+			_MPI_Recv ( (int*)sorting + size, total_size / active_proc, MPI_INT, from_who( rank, active_proc ) , 0, MPI_COMM_WORLD, &stat );
 								
 			//fusion phase
 			int left = 0, center = size, right = size + total_size/active_proc, k = 0;
@@ -78,7 +78,7 @@ void mergesort ( const TestInfo *ti, int *sorting )
 			
 		}
 		if ( do_i_send ( rank, active_proc ) )
-			MPI_Send ( sorting, size, MPI_INT, to_who( rank, active_proc ), 0, MPI_COMM_WORLD );
+			_MPI_Send ( sorting, size, MPI_INT, to_who( rank, active_proc ), 0, MPI_COMM_WORLD );
 		
 		active_proc /= 2;
 	}

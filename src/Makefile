@@ -9,16 +9,20 @@ LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
 ALGOS = mergesort quicksort samplesort bucketsort bitonicsort nosort
 ALGOSPP = kmerge
+OBJECTS = longmpi.o
 
-all: $(ALGOS) $(ALGOSPP) main maindbg
+all: $(ALGOS) $(ALGOSPP) main maindbg 
 
-$(ALGOS):
+$(ALGOS): longmpi.o
 	@echo "Compiling "$@"..."
-	$(MPICC) $(ALGOCFLAGS) -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c
+	$(MPICC) $(ALGOCFLAGS) -Wl,-soname,$@ -o $(OBJECTS) $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c
 
-$(ALGOSPP):
+$(ALGOSPP): longmpi.o
 	@echo "Compiling "$@"..."
-	$(MPICPP) $(ALGOCFLAGS) -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c
+	$(MPICPP) $(ALGOCFLAGS) -Wl,-soname,$@ -o $(OBJECTS) $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c
+
+longmpi.o:
+	$(MPICC) -c longmpi.c
 
 install:
 	mkdir -p $(LIBDIR) $(DATADIR)
@@ -33,4 +37,4 @@ maindbg:
 	$(MPICC) $(CFLAGS) -ldl main.c -DDEBUG -o spddbg
 
 clean:
-	@rm -f *~ *.o spd spddbg
+	rm -f *~ *.o spd spddbg
