@@ -35,24 +35,40 @@
 //from_who	: return the rank of the process (node) from which i RECEIVE data in the current step
 int from_who( const TestInfo *ti, int step ) 
 {
+	switch( ti->algoVar[0] ) {
+		case 1:
+			return GET_ID(ti) - ACTIVE_PROCS(ti,step);
+	}
 	return GET_ID(ti) - ( GET_N(ti) / ACTIVE_PROCS(ti,step+1) );
 }
 
 //to_who	: return the rank of the process (node) from which i SEND data in the current step
 int to_who( const TestInfo *ti, int step ) 
 {
+	switch( ti->algoVar[0] ) {
+		case 1:
+			return GET_ID(ti) + ACTIVE_PROCS(ti,step);
+	}
 	return GET_ID(ti) + ( GET_N(ti) / ACTIVE_PROCS(ti,step+1) );
 }
 
 //do_i_send	: true if the calling process (node) has to SEND data TO another process (node) in the current step
 bool do_i_send( const TestInfo *ti, int step )
 {
+	switch( ti->algoVar[0] ) {
+		case 1:
+			return GET_ID(ti) < ACTIVE_PROCS(ti,step);
+	}
 	return ! ( GET_ID(ti) % ( GET_N(ti) / ACTIVE_PROCS(ti,step) ) );
 }
 
 //do_i_receive 	: return a number different from 0 if the calling process (node) has to RECEIVE data FROM another process (node) in the current step.
 bool do_i_receive( const TestInfo *ti, int step )
 {
+	switch( ti->algoVar[0] ) {
+		case 1:
+			return ! do_i_send( ti, step ) && GET_ID(ti) < 2*ACTIVE_PROCS(ti,step);
+	}
 	return ! do_i_send( ti, step ) && ! ( GET_ID(ti) % ( GET_N(ti) / ACTIVE_PROCS(ti,step+1) ) ) ;
 }
 
