@@ -12,38 +12,53 @@
 #include "utils.h"
 #include "string.h"
 
-//from_who	: return the rank of the process (node) from which i RECEIVE data in the current step
-int from_who ( int rank, int active_proc ) 
+#define ACTIVE_PROCS(ti,step) ( GET_N(ti) / _pow2( step ) )
+
+int from_who ( const TestInfo *ti, int step ) 
 {
-	return rank + active_proc / 2;	
+	switch (ti->algoVar[0]) {
+		case 0: return GET_ID(ti) + ACTIVE_PROCS(ti, step) / 2;
+		case 1:	return GET_ID(ti) + _pow2 ( step );
+		default: return -1;
+	}
 }
 
-//to_who	: return the rank of the process (node) from which i SEND data in the current step
-int to_who ( int rank, int active_proc ) 
+int to_who ( const TestInfo *ti, int step ) 
 {
-	return rank - active_proc / 2;
+	switch (ti->algoVar[0]) {
+		case 0: return GET_ID(ti) - ACTIVE_PROCS(ti, step) / 2;
+		case 1:	return GET_ID(ti) - _pow2 ( step );
+		default: return -1;
+	}
 }
 
-//do_i_receive 	: return a number different from 0 if the calling process (node) has to RECEIVE data FROM another process (node) in the current step.
-int do_i_receive ( int rank, int active_proc )
+int do_i_receive ( const TestInfo *ti, int step )
 {
-	return (rank < (active_proc / 2));
+	switch (ti->algoVar[0]) {
+		case 0: return (GET_ID(ti) < (ACTIVE_PROCS(ti, step) / 2));
+		case 1:	return (GET_ID(ti) % _pow2 ( step + 1 ) == 0);
+		default: return -1;
+	}
 }
 
-//do_i_send	: return a number different from 0 if the calling process (node) has to SEND data TO another process (node) in the current step
-int do_i_send ( int rank, int active_proc )
+int do_i_send ( const TestInfo *ti, int step )
 {
-	return (rank >= (active_proc / 2));
+	switch (ti->algoVar[0]) {
+		case 0: return (GET_ID(ti) >= (ACTIVE_PROCS(ti, step) / 2));
+		case 1:	return (GET_ID(ti) % _pow2 ( step + 1 ) == _pow2 ( step ));
+		default: return -1;
+	}
 }
+
 
 
 void mergesort ( const TestInfo *ti, int *sorting )
 {
 	MPI_Status stat;
 	const int total_size 	= GET_M ( ti );
-	int size 		= GET_LOCAL_M ( ti );
-	int rank 		= GET_ID ( ti );
-	int active_proc 	= GET_N ( ti );
+	int size 				= GET_LOCAL_M ( ti );
+	int rank 				= GET_ID ( ti );
+	int active_proc 		= GET_N ( ti );
 	
 	int *merging = (int*) malloc ( sizeof(int) * total_size ); 
 
@@ -56,11 +71,11 @@ void mergesort ( const TestInfo *ti, int *sorting )
 	//sorting local partition
 	qsort ( sorting, size, sizeof(int), compare );
 
-	int j;
-	for ( j = 0; j < _log2(GET_N(ti)); ++ j ) {
-		if ( do_i_receive( rank, active_proc ) ) {
+	int step;
+	for ( step = 0; step < _log2(GET_N(ti)); step++ ) {
+		if ( do_i_receive( ti, step ) ) {
 		
-			_MPI_Recv ( (int*)sorting + size, total_size / active_proc, MPI_INT, from_who( rank, active_proc ) , 0, MPI_COMM_WORLD, &stat );
+			_MPI_Recv ( (int*)sorting + size, total_size / active_proc, MPI_INT, from_who( ti, step ) , 0, MPI_COMM_WORLD, &stat );
 								
 			//fusion phase
 			int left = 0, center = size, right = size + total_size/active_proc, k = 0;
@@ -81,8 +96,8 @@ void mergesort ( const TestInfo *ti, int *sorting )
 			size += ( total_size / active_proc ); //size of the ordered sequence
 			
 		}
-		if ( do_i_send ( rank, active_proc ) )
-			_MPI_Send ( sorting, size, MPI_INT, to_who( rank, active_proc ), 0, MPI_COMM_WORLD );
+		if ( do_i_send ( ti, step ) )
+			_MPI_Send ( sorting, size, MPI_INT, to_who( ti, step ), 0, MPI_COMM_WORLD );
 		
 		active_proc /= 2;
 	}

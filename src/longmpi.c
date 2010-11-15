@@ -1,5 +1,10 @@
 #include "longmpi.h"
 
+/* Keep C++ compilers from getting confused */
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 int _MPI_Get_count( MPI_Status *status, MPI_Datatype datatype, long *count ) {
 	int c = *count;
 	int ret = MPI_Get_count( status, datatype, &c );
@@ -30,3 +35,10 @@ int _MPI_Gather ( void *sendbuf, long sendcnt, MPI_Datatype sendtype, void *recv
 int _MPI_Alltoall( void *sendbuf, long sendcount, MPI_Datatype sendtype, void *recvbuf, long recvcnt, MPI_Datatype recvtype, MPI_Comm comm ) {
 	return MPI_Alltoall( sendbuf, sendcount, sendtype, recvbuf, recvcnt, recvtype, comm );
 }
+
+/* Keep C++ compilers from getting confused */
+#if defined(__cplusplus)
+}
+#endif
+
+

@@ -16,8 +16,8 @@
 
 using namespace std;
 
-const int PARAM_K 	= 0;
-const int PARAM_MAP 	= 1;
+const int PARAM_K 	= 1;
+const int PARAM_MAP = 0;
 
 //from_who	: return the ranks of the processes from which i RECEIVE data in the current step
 void from_who ( int rank, int k, int active_proc, int *dest ) 
@@ -90,9 +90,9 @@ void fusion ( int *sorting, int left, int right, int size, int* merging)
 void mk_mergesort ( const TestInfo *ti, int *sorting )
 {
 	const int total_size 	= GET_M ( ti );
-	int size 		= GET_LOCAL_M ( ti );
-	int rank		= GET_ID ( ti );
-	int active_proc 	= GET_N ( ti );
+	int size 				= GET_LOCAL_M ( ti );
+	int rank				= GET_ID ( ti );
+	int active_proc 		= GET_N ( ti );
 
 	int k = ti->algoVar[PARAM_K]; 
 	int *merging = (int*) malloc ( sizeof(int) * total_size );  
@@ -101,9 +101,9 @@ void mk_mergesort ( const TestInfo *ti, int *sorting )
 
 	//scattering data partitions
 	if ( rank  == 0 )
-		MPI_Scatter ( sorting, size, MPI_INT, MPI_IN_PLACE, size, MPI_INT, 0, MPI_COMM_WORLD );
+		_MPI_Scatter ( sorting, size, MPI_INT, MPI_IN_PLACE, size, MPI_INT, 0, MPI_COMM_WORLD );
 	else
-		MPI_Scatter ( NULL, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
+		_MPI_Scatter ( NULL, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
 	//sorting local partition
 	qsort ( sorting, size, sizeof(int), compare );
 
@@ -116,7 +116,7 @@ void mk_mergesort ( const TestInfo *ti, int *sorting )
 			int receiving = 0;
 			from_who( rank, k, active_proc, dests );
 			for ( ; receiving < (k-1); receiving++ ) 
-				MPI_Recv ( (int*)sorting + (receiving+1)*size, size, MPI_INT, dests[receiving] , 0, MPI_COMM_WORLD, &stat );
+				_MPI_Recv ( (int*)sorting + (receiving+1)*size, size, MPI_INT, dests[receiving] , 0, MPI_COMM_WORLD, &stat );
 								
 			//fusion phase
 			fusion ( sorting, 0, size + (total_size * (k-1) / active_proc), size, merging );
@@ -124,7 +124,7 @@ void mk_mergesort ( const TestInfo *ti, int *sorting )
 			size += ( total_size * (k-1) / active_proc ); //size of the ordered sequence
 		}
 		if ( do_i_send ( rank, k, active_proc ) )
-			MPI_Send ( sorting, size, MPI_INT, to_who( rank, k, active_proc ), 0, MPI_COMM_WORLD );
+			_MPI_Send ( sorting, size, MPI_INT, to_who( rank, k, active_proc ), 0, MPI_COMM_WORLD );
 		
 		active_proc /= k;
 	}

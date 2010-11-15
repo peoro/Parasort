@@ -15,7 +15,7 @@ all: $(ALGOS) $(ALGOSPP) spd spddbg
 
 $(ALGOS): longmpi.o
 	@echo "Compiling "$@"..."
-	$(MPICC) $(ALGOCFLAGS) -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
+	$(MPICC) -lm $(ALGOCFLAGS) -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
 
 $(ALGOSPP): longmpi.o
 	@echo "Compiling "$@"..."
