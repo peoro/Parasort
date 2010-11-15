@@ -72,8 +72,8 @@ inline char * GET_UNSORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLe
 }
 inline char * GET_SORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen )
 {
-	snprintf( path, pathLen, "%s/.spd/data/M%ld_s%ld.sorted",
-							 getenv("HOME"), GET_M(ti), GET_SEED(ti) );
+	snprintf( path, pathLen, "%s/.spd/data/M%ld_s%ld.%s.sorted",
+							 getenv("HOME"), GET_M(ti), GET_SEED(ti), GET_ALGO(ti) );
 	return path;
 }
 #else
@@ -85,8 +85,8 @@ inline char * GET_UNSORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLe
 }
 inline char * GET_SORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen )
 {
-	snprintf( path, pathLen, "%s/.spd/data/M%ld_s%ld_human.sorted",
-							 getenv("HOME"), GET_M(ti), GET_SEED(ti) );
+	snprintf( path, pathLen, "%s/.spd/data/M%ld_s%ld_human.%s.sorted",
+							 getenv("HOME"), GET_M(ti), GET_SEED(ti), GET_ALGO(ti) );
 	return path;
 }
 #endif

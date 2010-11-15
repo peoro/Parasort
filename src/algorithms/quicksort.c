@@ -36,8 +36,7 @@
 int from_who( const TestInfo *ti, int step ) 
 {
 	switch( ti->algoVar[0] ) {
-		case 1:
-			return GET_ID(ti) - ACTIVE_PROCS(ti,step);
+		case 1: return GET_ID(ti) - ACTIVE_PROCS(ti,step);
 	}
 	return GET_ID(ti) - ( GET_N(ti) / ACTIVE_PROCS(ti,step+1) );
 }
@@ -46,8 +45,7 @@ int from_who( const TestInfo *ti, int step )
 int to_who( const TestInfo *ti, int step ) 
 {
 	switch( ti->algoVar[0] ) {
-		case 1:
-			return GET_ID(ti) + ACTIVE_PROCS(ti,step);
+		case 1: return GET_ID(ti) + ACTIVE_PROCS(ti,step);
 	}
 	return GET_ID(ti) + ( GET_N(ti) / ACTIVE_PROCS(ti,step+1) );
 }
@@ -56,8 +54,7 @@ int to_who( const TestInfo *ti, int step )
 bool do_i_send( const TestInfo *ti, int step )
 {
 	switch( ti->algoVar[0] ) {
-		case 1:
-			return GET_ID(ti) < ACTIVE_PROCS(ti,step);
+		case 1: return GET_ID(ti) < ACTIVE_PROCS(ti,step);
 	}
 	return ! ( GET_ID(ti) % ( GET_N(ti) / ACTIVE_PROCS(ti,step) ) );
 }
@@ -66,10 +63,34 @@ bool do_i_send( const TestInfo *ti, int step )
 bool do_i_receive( const TestInfo *ti, int step )
 {
 	switch( ti->algoVar[0] ) {
-		case 1:
-			return ! do_i_send( ti, step ) && GET_ID(ti) < 2*ACTIVE_PROCS(ti,step);
+		case 1: return ! do_i_send( ti, step ) && GET_ID(ti) < 2*ACTIVE_PROCS(ti,step);
 	}
 	return ! do_i_send( ti, step ) && ! ( GET_ID(ti) % ( GET_N(ti) / ACTIVE_PROCS(ti,step+1) ) ) ;
+}
+
+// return the ID of the node owning the n-th data token. Useful during gathering
+int nth_token_owner( const TestInfo *ti, int n )
+{
+	switch( ti->algoVar[0] ) {
+		case 1:
+		{
+			int res = 0;
+			int nodes = GET_N(ti);
+			int steps = GET_STEP_COUNT(ti);
+			int i;
+			
+			for( i = 0; i < steps; ++ i ) {
+				if( n >= nodes/2 ) {
+					res += ACTIVE_PROCS(ti,i);
+					n -= nodes/2;
+				}
+				nodes /= 2;
+			}
+			
+			return res;
+		}
+	}
+	return n;
 }
 
 
@@ -109,7 +130,7 @@ void scatter( const TestInfo *ti, int *a, long *size )
 	for( step = 0; step < GET_STEP_COUNT(ti); ++ step ) {
 		if( do_i_send(ti,step) ) {
 			long lim = partition( a, *size );
-			// printf( "%d:Partition(%ld): %ld\n", GET_ID(ti), *size, lim );
+			// printf( "%d->%d:Partition(%ld): %ld\n", GET_ID(ti), to_who(ti,step), *size, lim );
 			_MPI_Send ( & a[lim], *size-lim, MPI_INT, to_who( ti, step ), 0, MPI_COMM_WORLD );
 			*size = lim;
 		}
@@ -132,7 +153,7 @@ void gather( const TestInfo *ti, int *a, long *size )
 		// receiving sequentially from ohter nodes
 		for( i = 1; i < GET_N(ti); ++ i ) {
 			MPI_Status stat;
-			_MPI_Recv( a+actualSize, GET_M(ti)-actualSize, MPI_INT, i, 0, MPI_COMM_WORLD, &stat );
+			_MPI_Recv( a+actualSize, GET_M(ti)-actualSize, MPI_INT, nth_token_owner(ti,i), 0, MPI_COMM_WORLD, &stat );
 			_MPI_Get_count( &stat, MPI_INT, size );
 			actualSize += *size;
 		}
