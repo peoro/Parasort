@@ -20,29 +20,35 @@ const int PARAM_K 	= 1;
 const int PARAM_MAP = 0;
 
 //from_who	: return the ranks of the processes from which i RECEIVE data in the current step
-void from_who ( int rank, int k, int active_proc, int *dest ) 
+void from_who ( int rank, int k, int active_proc, int *dest, int *n_dest ) 
 {
+	//riceverò da un numero di processi che è tra il minimo tra k-1 e active_proc
+	*n_dest = ( active_proc >= k ) ? k-1 : active_proc-1; 	
+		
 	int i = 0;
-	for ( ; i < (k-1) ; i++ )
-		dest[i] = rank + ( 1 + i )*( active_proc / k );
+	for ( ; i < *n_dest ; i++ )
+		dest[i] = ( active_proc >= k ) ? rank + ( 1 + i )*( active_proc / k ) : rank + 1 + i;
 }
 
-//to_who	: return the rank of the process (node) to which i SEND data in the current step
+//to_who: return the rank of the process (node) to which i SEND data in the current step
 int to_who ( int rank, int k, int active_proc ) 
 {
-	return rank % ( active_proc / k );
+	if ( active_proc < k )
+		return 0;
+	else
+		return rank % ( active_proc / k );
 }
 
-//do_i_receive 	: return a number different from 0 if the calling process (node) has to RECEIVE data FROM another process (node) in the current step.
+//do_i_receive: return a number different from 0 if the calling process (node) has to RECEIVE data FROM another process (node) in the current step.
 int do_i_receive ( int rank, int k, int active_proc )
 {
-	return (rank < (active_proc / k));
+	return (rank < (active_proc / k) || rank == 0 );
 }
 
-//do_i_send	: return a number different from 0 if the calling process (node) has to SEND data TO another process (node) in the current step
+//do_i_send: return a number different from 0 if the calling process (node) has to SEND data TO another process (node) in the current step
 int do_i_send ( int rank, int k, int active_proc )
 {
-	return (rank >= (active_proc / k));
+	return (rank >= (active_proc / k) && rank < active_proc);
 }
 
 
@@ -60,10 +66,8 @@ struct Min_val {
 	
 void fusion ( int *sorting, int left, int right, int size, int* merging) 
 {
-	
-	
 	priority_queue<Min_val> heap;
-	int i, runs = (right - left) / size; //== k
+	int i, runs = (right - left) / size; //== min(k, active_proc)
 	int *runs_indexes = (int*) calloc ( sizeof(int), runs );   
 	
 	//initializing the heap
@@ -109,21 +113,24 @@ void mk_mergesort ( const TestInfo *ti, int *sorting )
 
 	//for each merge-step, this array contains the ranks of the k processes from which partitions will be received. 
 	int *dests = (int*) calloc ( sizeof(int), k-1 ); 
-	int j = 0;
-	for ( ; j < _logk(GET_N(ti), k); ++ j ) {
+	
+	while ( active_proc > 1 ) {
 		if ( do_i_receive( rank, k, active_proc ) ) {
 			//receiving k-1 partitions
-			int receiving = 0;
-			from_who( rank, k, active_proc, dests );
-			for ( ; receiving < (k-1); receiving++ ) 
+			int receiving = 0, n_dests;
+			from_who( rank, k, active_proc, dests, &n_dests );
+			for ( ; receiving < n_dests; receiving++ ) 
 				_MPI_Recv ( (int*)sorting + (receiving+1)*size, size, MPI_INT, dests[receiving] , 0, MPI_COMM_WORLD, &stat );
-								
+			
 			//fusion phase
-			fusion ( sorting, 0, size + (total_size * (k-1) / active_proc), size, merging );
-		
-			size += ( total_size * (k-1) / active_proc ); //size of the ordered sequence
+			if ( active_proc >= k )
+				fusion ( sorting, 0, size + (total_size * (k-1) / active_proc), size, merging );
+			else 
+				fusion ( sorting, 0, total_size, size, merging ); //case of unbalanced tree, latest step
+				
+			size += ( total_size * (k-1) / active_proc ); //size of the locally ordered sequence
 		}
-		if ( do_i_send ( rank, k, active_proc ) )
+		else if ( do_i_send ( rank, k, active_proc ) ) 
 			_MPI_Send ( sorting, size, MPI_INT, to_who( rank, k, active_proc ), 0, MPI_COMM_WORLD );
 		
 		active_proc /= k;
