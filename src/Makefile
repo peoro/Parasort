@@ -11,7 +11,7 @@ ALGOS = mergesort quicksort samplesort bucketsort bitonicsort nosort
 ALGOSPP = kmerge
 OBJECTS = longmpi.o
 
-all: $(ALGOS) $(ALGOSPP) spd spddbg
+all: $(ALGOS) $(ALGOSPP) main
 
 $(ALGOS): longmpi.o
 	@echo "Compiling "$@"..."
@@ -28,11 +28,13 @@ install:
 	mkdir -p $(LIBDIR) $(DATADIR)
 	cp $(ALGODIR)/lib*.so $(LIBDIR)
 
-spd:
+main: spd spddbg
+
+spd: spd.c
 	@echo "Compiling spd..."
 	$(MPICC) $(CFLAGS) -ldl spd.c -o spd
 
-spddbg:
+spddbg: spd.c
 	@echo "Compiling spddbg (debug mode)..."
 	$(MPICC) $(CFLAGS) -ldl spd.c -DDEBUG -o spddbg
 

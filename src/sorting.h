@@ -145,6 +145,19 @@ int loadData( const TestInfo *ti, int **data, long *size );
 int storeData( const TestInfo *ti, int *data, long size );
 
 
+
+// typedef struct _Phase * PhaseHandle;
+typedef int PhaseHandle;
+/*!
+* starts a phase (to study how much time it'll take
+* returns the phase which needs to be stopped with stopPhase
+*/
+PhaseHandle startPhase( const TestInfo *ti, const char *phaseName );
+/*!
+* stops a phase
+*/
+void stopPhase( const TestInfo *ti, PhaseHandle phase );
+
 #if defined(__cplusplus)
 }
 #endif

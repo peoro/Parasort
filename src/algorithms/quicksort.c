@@ -173,11 +173,20 @@ void gather( const TestInfo *ti, int *a, long *size )
 
 void actualSort( const TestInfo *ti, int *a, long *size )
 {
+	PhaseHandle scatterP, localP, gatherP;
 	srand( time(0) );
 	
+	scatterP = startPhase( ti, "scattering" );
 	scatter( ti, a, size );
+	stopPhase( ti, scatterP );
+	
+	localP = startPhase( ti, "local sorting" );
 	qsort ( a, *size, sizeof(int), compare );
+	stopPhase( ti, localP );
+	
+	gatherP = startPhase( ti, "gathering" );
 	gather( ti, a, size );
+	stopPhase( ti, gatherP );
 }
 
 void sort( const TestInfo *ti )
