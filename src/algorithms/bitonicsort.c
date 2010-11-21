@@ -10,6 +10,8 @@
 
 #include "../sorting.h"
 #include "../utils.h"
+#include <string.h>
+
 
 /**
 * @brief Compare and Exchange operation on the low part of two sequences sorted in ascending order
@@ -64,23 +66,30 @@ void bitonicSort( const TestInfo *ti, int *data )
 	const long		M = GET_M( ti );                    //Number of data elements
 	const long		local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
 	const long		maxLocal_M = M / n + (0 < M%n);     //Max number of elements assigned to a process
-	int				*localData;		                	//Local section of the input data
+	int				*localData = 0;	                	//Local section of the input data
 
-	int				*recvData;
-	int				*mergedData;
+	int				*recvData = 0;
+	int				*mergedData = 0;
 
 	MPI_Status 		status;
 
-	int 			counts[n];
-	int				displs[n];
+	int 			counts[n];							//Number of elements in send/receive buffers
+	int				displs[n];							//Send/receive buffer displacements
 
 	int				mask, mask2, partner, recvCount, length;
 	int				i, j, k, z, flag;
+
+	PhaseHandle 	scatterP, localP, gatherP;
 
 	/* Allocating memory */
 	localData = (int*) malloc( local_M * sizeof(int) );
 	recvData = (int*) malloc( maxLocal_M * sizeof(int) );
 	mergedData = (int*) malloc( maxLocal_M * sizeof(int) );
+
+/***************************************************************************************************************/
+/********************************************* Scatter Phase ***************************************************/
+/***************************************************************************************************************/
+	scatterP = startPhase( ti, "scattering" );
 
 	/* Computing the number of elements to be sent to each process and relative displacements */
 	if ( id == root ) {
@@ -92,6 +101,15 @@ void bitonicSort( const TestInfo *ti, int *data )
 	}
 	/* Scattering data */
 	MPI_Scatterv( data, counts, displs, MPI_INT, localData, maxLocal_M, MPI_INT, root, MPI_COMM_WORLD );
+
+	stopPhase( ti, scatterP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/*********************************************** Local Phase ***************************************************/
+/***************************************************************************************************************/
+	localP = startPhase( ti, "local sorting" );
 
 	/* Sorting local data */
 	qsort( localData, local_M, sizeof(int), compare );
@@ -120,12 +138,24 @@ void bitonicSort( const TestInfo *ti, int *data )
 				compareHigh( length, recvData, localData, mergedData );
 
 			/* Saving the merged sequence as local data for the next step */
-			for ( z=0; z<length; z++ )
-				localData[z] = mergedData[z];
+			memcpy( localData, mergedData, length*sizeof(int) );
 		}
 	}
+
+	stopPhase( ti, localP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/********************************************** Ghater Phase ***************************************************/
+/***************************************************************************************************************/
+	gatherP = startPhase( ti, "gathering" );
+
 	/* Gathering sorted data */
 	MPI_Gatherv( localData, local_M, MPI_INT, data, counts, displs, MPI_INT, root, MPI_COMM_WORLD );
+
+	stopPhase( ti, gatherP );
+/*--------------------------------------------------------------------------------------------------------------*/
 
 	/* Freeing memory */
 	free( localData );

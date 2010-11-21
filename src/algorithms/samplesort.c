@@ -10,56 +10,7 @@
 
 #include "../sorting.h"
 #include "../utils.h"
-
-/**
-* @brief Gets the index of the bucket in which to insert ele
-*
-* @param[in] ele        The element to be inserted within a bucket
-* @param[in] splitters  The array of splitters
-* @param[in] length     The number of splitters
-*
-* @return The index of the bucket in which to insert ele
-*/
-int getBucketIndex( const int *ele, const int *splitters, int length )
-{
-	int base = 0;
-	int cmpResult;
-	int mid;
-
-	while ( length > base ) {
-		mid = (base + length) >> 1;
-		cmpResult = compare( ele, &splitters[mid] );
-
-		if ( cmpResult == 0 )
-			return mid;
-
-		if ( cmpResult > 0 )
-			base = mid + 1;
-		else
-			length >>= 1;
-	}
-	return base;
-}
-
-/**
-* @brief Chooses n-1 equidistant elements of the input data array as splitters
-*
-* @param[in] 	data 				Data from which extract splitters
-* @param[in] 	length 				Length of the data array
-* @param[in] 	n 					Number of splitters plus one
-* @param[out] 	newSplitters	 	Chosen splitters
-*/
-void chooseSplitters( int *data, const int length, const int n, int *newSplitters )
-{
-	int i, j, k;
-
-	/* Sorting data */
-	qsort( data, length, sizeof(int), compare );
-
-	/* Choosing splitters (n-1 equidistant elements of the data array) */
-	for ( i=0, k=j=length/n; i<n-1; i++, k+=j )
-		newSplitters[i] = data[k];
-}
+#include <string.h>
 
 /**
 * @brief Sorts input data by using a parallel version of Sample Sort
@@ -75,26 +26,29 @@ void sampleSort( const TestInfo *ti, int *data )
 	const long	M = GET_M( ti );                    //Number of data elements
 	const long	local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
 	const long	maxLocal_M = M / n + (0 < M%n);     //Max number of elements assigned to a process
-	int			*localData;							//Local section of the input data
+	int			*localData = 0;						//Local section of the input data
 
 	int			localSplitters[n-1];               	//Local splitters (n-1 equidistant elements of the data array)
 	int			*allSplitters = 0;                 	//All splitters (will include all the local splitters)
 	int			*globalSplitters = 0;            	//Global splitters (will be selected from the allSplitters array)
 
-	int			*localBucket; 						//Local bucket (in sample sort, it is shown that each process will have, at the end, a maximum of 2*M/n elements to sort)
-	int 		bucketLength = 0;
+	int			*localBucket = 0; 					//Local bucket (in sample sort, it is shown that each process will have, at the end, a maximum of 2*M/n elements to sort)
+	long 		bucketLength = 0;
 
-	int 		sendCounts[n];
-	int			sdispls[n];
-
-	int 		recvCounts[n];
-	int			rdispls[n];
-
+	int 		sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
+	int			sdispls[n], rdispls[n];				//Send/receive buffer displacements
 	int			i, j, k;
+
+	PhaseHandle scatterP, localP, gatherP;
 
 	/* Allocating memory */
 	localData = (int*) malloc( local_M * sizeof(int) );
-	localBucket = (int*) malloc( 2*maxLocal_M * sizeof(int) );
+	localBucket = (int*) malloc( M/2 * sizeof(int) );
+
+/***************************************************************************************************************/
+/********************************************* Scatter Phase ***************************************************/
+/***************************************************************************************************************/
+	scatterP = startPhase( ti, "scattering" );
 
 	/* Computing the number of elements to be sent to each process and relative displacements */
 	if ( id == root ) {
@@ -107,34 +61,39 @@ void sampleSort( const TestInfo *ti, int *data )
 	/* Scattering data */
 	MPI_Scatterv( data, sendCounts, sdispls, MPI_INT, localData, maxLocal_M, MPI_INT, root, MPI_COMM_WORLD );
 
+	stopPhase( ti, scatterP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/*********************************************** Local Phase ***************************************************/
+/***************************************************************************************************************/
+	localP = startPhase( ti, "local sorting" );
+
+	/* Sorting local data */
+	qsort( localData, local_M, sizeof(int), compare );
+
 	/* Choosing local splitters (n-1 equidistant elements of the data array) */
 	chooseSplitters( localData, local_M, n, localSplitters );
 
 	/* Gathering all splitters to the root process */
-	if ( id == root ) {
+	if ( id == root )
 		allSplitters = (int*) malloc ( ((n-1)*n) * sizeof(int) );
-
-		if ( allSplitters == NULL ) {
-			printf( "Error: Cannot allocate memory for allSplitters array! \n");
-			MPI_Abort( MPI_COMM_WORLD, MPI_ERR_OTHER );
-			return;
-		}
-	}
 	MPI_Gather( localSplitters, n-1, MPI_INT, allSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
 
 	/* Choosing global splitters (n-1 equidistant elements of the allSplitters array) */
 	globalSplitters = localSplitters;     //--> To save space but keeping the correct semantics!!! :F
 
-	if ( id == root )
+	if ( id == root ) {
+		qsort( allSplitters, (n-1)*n, sizeof(int), compare );
 		chooseSplitters( allSplitters, (n-1)*n, n, globalSplitters );
+	}
 
 	/* Broadcasting global splitters */
 	MPI_Bcast( globalSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
 
 	/* Initializing the sendCounts array */
-	for ( i=0; i<n; i++ ) {
-		sendCounts[i] = 0;
-	}
+	memset( sendCounts, 0, n*sizeof(int) );
 
 	/* Computing the number of integers to be sent to each process */
 	for ( i=0; i<local_M; i++ ) {
@@ -160,6 +119,15 @@ void sampleSort( const TestInfo *ti, int *data )
 	/* Sorting local bucket */
 	qsort( localBucket, bucketLength, sizeof(int), compare );
 
+	stopPhase( ti, localP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/********************************************** Ghater Phase ***************************************************/
+/***************************************************************************************************************/
+	gatherP = startPhase( ti, "gathering" );
+
 	/* Gathering the lengths of the all buckets */
 	MPI_Gather( &bucketLength, 1, MPI_INT, recvCounts, 1, MPI_INT, root, MPI_COMM_WORLD );
 
@@ -172,6 +140,9 @@ void sampleSort( const TestInfo *ti, int *data )
 	}
 	/* Gathering sorted data */
 	MPI_Gatherv( localBucket, bucketLength, MPI_INT, data, recvCounts, rdispls, MPI_INT, root, MPI_COMM_WORLD );
+
+	stopPhase( ti, gatherP );
+/*--------------------------------------------------------------------------------------------------------------*/
 
 	/* Freeing memory */
 	if ( id == root )

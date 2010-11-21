@@ -11,6 +11,7 @@
 #include "../sorting.h"
 #include "../utils.h"
 #include <limits.h>
+#include <string.h>
 
 /**
 * @brief Sorts input data by using a parallel version of Bucket Sort
@@ -26,24 +27,26 @@ void bucketSort( const TestInfo *ti, int *data )
 	const long		M = GET_M( ti );                    //Number of data elements
 	const long		local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
 	const long		maxLocal_M = M / n + (0 < M%n);     //Max number of elements assigned to a process
-	int				*localData;                			//Local section of the input data
+	int				*localData = 0;            			//Local section of the input data
 
 	const double 	range = INT_MAX / n;				//Range of elements in each bucket
-	int				*localBucket; 						//Local bucket
+	int				*localBucket = 0;					//Local bucket
+	long 			bucketLength = 0;
 
-	int 			bucketLength = 0;
-
-	int 			sendCounts[n];
-	int				sdispls[n];
-
-	int 			recvCounts[n];
-	int				rdispls[n];
-
+	int 			sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
+	int				sdispls[n], rdispls[n];				//Send/receive buffer displacements
 	int				i, j, k;
+
+	PhaseHandle 	scatterP, localP, gatherP;
 
 	/* Allocating memory */
 	localData = (int*) malloc( local_M * sizeof(int) );
 	localBucket = (int*) malloc( M * sizeof(int) );
+
+/***************************************************************************************************************/
+/********************************************* Scatter Phase ***************************************************/
+/***************************************************************************************************************/
+	scatterP = startPhase( ti, "scattering" );
 
 	/* Computing the number of elements to be sent to each process and relative displacements */
 	if ( id == root ) {
@@ -56,13 +59,20 @@ void bucketSort( const TestInfo *ti, int *data )
 	/* Scattering data */
 	MPI_Scatterv( data, sendCounts, sdispls, MPI_INT, localData, maxLocal_M, MPI_INT, root, MPI_COMM_WORLD );
 
+	stopPhase( ti, scatterP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/*********************************************** Local Phase ***************************************************/
+/***************************************************************************************************************/
+	localP = startPhase( ti, "local sorting" );
+
 	/* Sorting local data */
 	qsort( localData, local_M, sizeof(int), compare );
 
 	/* Initializing the sendCounts array */
-	for ( i=0; i<n; i++ ) {
-		sendCounts[i] = 0;
-	}
+	memset( sendCounts, 0, n*sizeof(int) );
 
 	/* Computing the number of integers to be sent to each process */
 	for ( i=0; i<local_M; i++ ) {
@@ -88,6 +98,15 @@ void bucketSort( const TestInfo *ti, int *data )
 	/* Sorting local bucket */
 	qsort( localBucket, bucketLength, sizeof(int), compare );
 
+	stopPhase( ti, localP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/********************************************** Ghater Phase ***************************************************/
+/***************************************************************************************************************/
+	gatherP = startPhase( ti, "gathering" );
+
 	/* Gathering the lengths of the all buckets */
 	MPI_Gather( &bucketLength, 1, MPI_INT, recvCounts, 1, MPI_INT, root, MPI_COMM_WORLD );
 
@@ -100,6 +119,9 @@ void bucketSort( const TestInfo *ti, int *data )
 	}
 	/* Gathering sorted data */
 	MPI_Gatherv( localBucket, bucketLength, MPI_INT, data, recvCounts, rdispls, MPI_INT, root, MPI_COMM_WORLD );
+
+	stopPhase( ti, gatherP );
+/*--------------------------------------------------------------------------------------------------------------*/
 
 	/* Freeing memory */
 	free( localData );
