@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-//coppola's: 3483962622
-
 /* Keep C++ compilers from getting confused */
 #if defined(__cplusplus)
 extern "C" {

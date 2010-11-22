@@ -12,6 +12,10 @@
 #include "utils.h"
 #include "string.h"
 
+/**************************************/
+/*               STENCIL              */
+/**************************************/
+
 #define ACTIVE_PROCS(ti,step) ( GET_N(ti) / _pow2( step ) )
 
 int from_who ( const TestInfo *ti, int step ) 
@@ -51,26 +55,34 @@ int do_i_send ( const TestInfo *ti, int step )
 }
 
 
+/**************************************/
+/*            ALGORITHMIC             */
+/**************************************/
 
 void mergesort ( const TestInfo *ti, int *sorting )
 {
-	MPI_Status stat;
-	const int total_size 	= GET_M ( ti );
-	int size 				= GET_LOCAL_M ( ti );
-	int rank 				= GET_ID ( ti );
-	int active_proc 		= GET_N ( ti );
+	MPI_Status 	stat;
+	const int 	total_size = GET_M ( ti );
+	int 		size = GET_LOCAL_M ( ti );
+	int 		rank = GET_ID ( ti );
+	int 		active_proc = GET_N ( ti );
 	
-	int *merging = (int*) malloc ( sizeof(int) * total_size ); 
+	int 		*merging = (int*) malloc ( sizeof(int) * total_size ); 
+
+	PhaseHandle	scatterP, localP;
 
 	//scattering data partitions
+	scatterP = startPhase( ti, "scattering" );
 	if ( rank == 0 )
 		_MPI_Scatter ( sorting, size, MPI_INT, MPI_IN_PLACE, size, MPI_INT, 0, MPI_COMM_WORLD );
 	else
 		_MPI_Scatter ( NULL, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
-		
+	stopPhase( ti, scatterP );
+	
 	//sorting local partition
+	localP = startPhase( ti, "local sorting" );
 	qsort ( sorting, size, sizeof(int), compare );
-
+	
 	int step;
 	for ( step = 0; step < _log2(GET_N(ti)); step++ ) {
 		if ( do_i_receive( ti, step ) ) {
@@ -101,6 +113,8 @@ void mergesort ( const TestInfo *ti, int *sorting )
 		
 		active_proc /= 2;
 	}
+	
+	stopPhase( ti, localP );
 	
 	free ( merging );
 }

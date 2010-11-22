@@ -19,6 +19,10 @@ using namespace std;
 const int PARAM_K 	= 1;
 const int PARAM_MAP = 0;
 
+/**************************************/
+/*               STENCIL              */
+/**************************************/
+
 //from_who	: return the ranks of the processes from which i RECEIVE data in the current step
 void from_who ( int rank, int k, int active_proc, int *dest, int *n_dest ) 
 {
@@ -51,6 +55,9 @@ int do_i_send ( int rank, int k, int active_proc )
 	return (rank >= (active_proc / k) && rank < active_proc);
 }
 
+/**************************************/
+/*            ALGORITHMIC             */
+/**************************************/
 
 struct Min_val {
 	Min_val ( int val, int run_index ) {
@@ -93,22 +100,28 @@ void fusion ( int *sorting, int left, int right, int size, int* merging)
 //invariant: given n = #processors, k = #ways, q an integer, it must be n == k^q
 void mk_mergesort ( const TestInfo *ti, int *sorting )
 {
-	const int total_size 	= GET_M ( ti );
-	int size 				= GET_LOCAL_M ( ti );
-	int rank				= GET_ID ( ti );
-	int active_proc 		= GET_N ( ti );
+	const int 	total_size = GET_M ( ti );
+	int 		size = GET_LOCAL_M ( ti );
+	int 		rank = GET_ID ( ti );
+	int 		active_proc = GET_N ( ti );
 
-	int k = ti->algoVar[PARAM_K]; 
-	int *merging = (int*) malloc ( sizeof(int) * total_size );  
+	int 		k = ti->algoVar[PARAM_K]; 
+	int 		*merging = (int*) malloc ( sizeof(int) * total_size );  
+
+	PhaseHandle scatterP, localP, gatherP;
 
 	MPI_Status stat;
 
 	//scattering data partitions
+	scatterP = startPhase( ti, "scattering" );
 	if ( rank  == 0 )
 		_MPI_Scatter ( sorting, size, MPI_INT, MPI_IN_PLACE, size, MPI_INT, 0, MPI_COMM_WORLD );
 	else
 		_MPI_Scatter ( NULL, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
+	stopPhase( ti, scatterP );
+	
 	//sorting local partition
+	localP = startPhase( ti, "local sorting" );
 	qsort ( sorting, size, sizeof(int), compare );
 
 	//for each merge-step, this array contains the ranks of the k processes from which partitions will be received. 
@@ -135,6 +148,8 @@ void mk_mergesort ( const TestInfo *ti, int *sorting )
 		
 		active_proc /= k;
 	}
+	
+	stopPhase( ti, localP );
 	
 	free ( merging );
 	free ( dests );
