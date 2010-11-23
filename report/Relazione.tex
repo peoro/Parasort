@@ -1,0 +1,76 @@
+\documentclass[a4paper,12pt,oneside,openright]{article}
+\usepackage[pdftex] {graphicx}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{chapterbib}
+
+\addtolength{\hoffset}{-1cm}
+\addtolength{\textwidth}{2.5cm}
+
+\lstdefinelanguage{J}[]{C}
+{morekeywords={},
+sensitive=false}
+\lstset{language=J}
+% shadowbox come frame
+% rulesepcolor=\color{Gray}
+\lstset{frame=trBL}
+\lstset{frameround=fttt}
+\lstset{tabsize=3, breaklines, commentstyle=\texttt}
+\lstset{showstringspaces=false}
+\lstset{basicstyle=\small}
+\lstset{emph={},emphstyle=\textit}
+
+\title{Performance evaluation of parallel sorting algorithms on large data sets}
+\author{Nicola Desogus, Paolo Giangrandi, Fabio Luporini}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\pagebreak
+
+\section{State of the art}
+
+\section{Parallel sorting algorithms}
+
+\section{Structuring the framework}
+\subsection{Design choices}
+\subsection{Data generation}
+\subsection{Performance evaluation}
+\subsection{API}
+
+\section{Test environment}
+\subsection{MPI cost model}
+
+\section{Description and performance evaluation of the algorithms}
+\subsection{Mergesort}
+\subsection{Quicksort}
+\subsection{Bucketsort}
+\subsection{Samplesort}
+\subsection{Bitonicsort}
+\subsection{Load-Balanced Mergesort}
+\subsection{K-Way Mergesort}
+
+\section{Comparing the algorithms: analysis of the results}
+
+\section{Conclusions and future works}
+
+
+                                                                    
+
+%\lstinputlisting{mapreduce_types.code}
+
+%\begin{figure}
+%        \centerline{
+%               \mbox{\includegraphics[scale=0.88]{CompletionTime_64}}
+%        }
+%        \caption{The completion time for the benchmark using a matrix of 64MB.}
+%        \label{CompletionTime64}
+%\end{figure}
+
+
+\pagebreak
+
+\bibliography{biblio}
+\bibliographystyle{plain}
+\end{document}
