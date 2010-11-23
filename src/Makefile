@@ -32,11 +32,11 @@ main: spd spddbg
 
 spd: spd.c
 	@echo "Compiling spd..."
-	$(MPICC) $(CFLAGS) -ldl spd.c -o spd
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c -o spd
 
 spddbg: spd.c
 	@echo "Compiling spddbg (debug mode)..."
-	$(MPICC) $(CFLAGS) -ldl spd.c -DDEBUG -o spddbg
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c -DDEBUG -o spddbg
 
 clean:
 	rm -f *~ *.o spd spddbg

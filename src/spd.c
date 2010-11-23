@@ -154,7 +154,7 @@ int parseArgs( int argc, char **argv, TestInfo *ti )
 				strncpy( ti->algo, optarg, sizeof(ti->algo) );
 				algoGiven = 1;
 				break;
-				
+
 			case '1':
 				ti->algoVar[0] = strToInt( optarg, &err );
 				break;
@@ -390,16 +390,16 @@ PhaseHandle startPhase( const TestInfo *ti, const char *phaseName )
 {
 	int phaseId = phaseCount;
 	phaseCount ++;
-	
+
 	if( GET_ID(ti) == 0 ) {
 		phaseNames = realloc( phaseNames, sizeof(char*)*phaseCount );
 		phaseNames[ phaseId ] = strdup( phaseName );
 	}
 	phases = realloc( phases, sizeof(Phase)*phaseCount );
 	Phase *p = & phases[ phaseId ];
-	
+
 	gettimeofday( & p->start, NULL );
-	
+
 	return phaseId;
 }
 void stopPhase( const TestInfo *ti, PhaseHandle phase )
@@ -488,7 +488,7 @@ int main( int argc, char **argv )
 					MPI_Finalize( );
 					return 1;
 				}
-				
+
 				mainSortPhase = startPhase( &ti, "sort" );
 				mainSort( &ti, data, size / sizeof(int) );
 				stopPhase( &ti, mainSortPhase );
@@ -510,31 +510,32 @@ int main( int argc, char **argv )
 		{
 			Phase **allPhases = (Phase**) malloc( sizeof(Phase*)*GET_N(&ti) );
 			int i, j;
-			
+
 			allPhases[0] = (Phase*) malloc( sizeof(Phase)*phaseCount );
 			memcpy( allPhases[0], phases, sizeof(Phase)*phaseCount );
-			
+
 #ifdef DEBUG
 			if( phaseCount != phaseEndCount ) {
 				printf( "Warning! Node %d started %d phases, and stopped %d only.",
 						GET_ID(&ti), phaseCount, phaseEndCount );
 			}
 #endif
-			
+			MPI_Status status;
+
 			for( i = 1; i < GET_N(&ti); ++ i ) {
 #ifdef DEBUG
 				int count;
 				// getting how many phases they've got ...
-				MPI_Recv( & count, sizeof(int), MPI_CHAR, i, 0, MPI_COMM_WORLD, NULL );
+				MPI_Recv( & count, sizeof(int), MPI_CHAR, i, 0, MPI_COMM_WORLD, &status );
 				if( count != phaseCount ) {
 					printf( "Warning! Node %d has only %d phases, while node 0 has %d.",
 							i, count, phaseCount );
 				}
 #endif
 				allPhases[i] = (Phase*) malloc( sizeof(Phase)*phaseCount );
-				MPI_Recv( allPhases[i], sizeof(Phase)*phaseCount, MPI_CHAR, i, 0, MPI_COMM_WORLD, NULL );
+				MPI_Recv( allPhases[i], sizeof(Phase)*phaseCount, MPI_CHAR, i, 0, MPI_COMM_WORLD, &status );
 			}
-			
+
 			// printing phases
 			for( i = 0; i < phaseCount; ++ i ) {
 				printf( "Phase \"%s\":\n", phaseNames[i] );
@@ -542,29 +543,29 @@ int main( int argc, char **argv )
 					Phase *p = & ( allPhases[j][i] );
 					struct timeval t1 = p->start, t2 = p->end;
 					long utime, mtime, time, secs, usecs;
-	
+
 					secs  = t2.tv_sec  - t1.tv_sec;
 					usecs = t2.tv_usec - t1.tv_usec;
-	
+
 					utime = secs*1000000 + usecs;
 					mtime = (secs*1000 + usecs/1000.0) + 0.5;
 					time = secs + usecs/1000000.0 + 0.5;
-	
+
 					printf( "   node %2d: %7ld microsecs :: %4ld millisecs :: %ld secs\n", j, utime, mtime, time );
 				}
 			}
-			
+
 			// freeing phase data
 			for( i = 0; i < GET_N(&ti); ++ i ) {
 				free( allPhases[i] );
 			}
 			free( allPhases );
 		}
-		
+
 		// freeing global data
 		{
 			int i;
-			
+
 			for( i= 0; i < phaseCount; ++ i ) {
 				free( phaseNames[i] );
 			}
@@ -606,7 +607,7 @@ int main( int argc, char **argv )
 
 			dlclose( handle );
 		}
-		
+
 		// sending phases
 		{
 #ifdef DEBUG
@@ -619,7 +620,7 @@ int main( int argc, char **argv )
 #endif
 			MPI_Send( phases, sizeof(Phase)*phaseCount, MPI_CHAR, 0, 0, MPI_COMM_WORLD );
 		}
-		
+
 		// freeing global data
 		{
 			free( phases );
