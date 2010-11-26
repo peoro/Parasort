@@ -10,7 +10,10 @@
 #include <sys/time.h>
 #include "sorting.h"
 
-#define _GNU_SOURCE
+#ifndef _GNU_SOURCE
+	// for strdup
+	#define _GNU_SOURCE
+#endif
 
 static const struct option long_options[] =
 {
@@ -52,13 +55,13 @@ void printVersion( )
 	srand( time(NULL) );
 
 	#define COUNT 3
-	char * (authors[COUNT]) = { "Paolo Giangrandi", "Fabio Luporini", "Nicola Desogus" };
+	const char * (authors[COUNT]) = { "Paolo Giangrandi", "Fabio Luporini", "Nicola Desogus" };
 	int i;
 
 	for( i = 0; i < COUNT; ++ i ) {
 		int r = rand() % ( COUNT - i ) + i;
 
-		#define SWAP( a, b ) { char*tmp=(a); (a)=(b); (b)=tmp; }
+		#define SWAP( a, b ) { const char*tmp=(a); (a)=(b); (b)=tmp; }
 		SWAP( authors[ i ], authors[ r ] );
 	}
 
@@ -392,10 +395,10 @@ PhaseHandle startPhase( const TestInfo *ti, const char *phaseName )
 	phaseCount ++;
 
 	if( GET_ID(ti) == 0 ) {
-		phaseNames = realloc( phaseNames, sizeof(char*)*phaseCount );
+		phaseNames = (char**) realloc( phaseNames, sizeof(char*)*phaseCount );
 		phaseNames[ phaseId ] = strdup( phaseName );
 	}
-	phases = realloc( phases, sizeof(Phase)*phaseCount );
+	phases = (Phase*) realloc( phases, sizeof(Phase)*phaseCount );
 	Phase *p = & phases[ phaseId ];
 
 	gettimeofday( & p->start, NULL );
