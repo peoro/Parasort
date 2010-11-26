@@ -1,0 +1,45 @@
+MPICC = gcc
+MPICPP = g++
+CFLAGS = -Wall -W -Wno-unused -O2 -g
+ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC
+SPDFLAGS = -lmpich -ldl -rdynamic
+
+INSTALLDIR = ~/.spd
+DATADIR = $(INSTALLDIR)/data
+LIBDIR = $(INSTALLDIR)/algorithms
+ALGODIR = algorithms
+# ALGOS = mergesort quicksort samplesort bucketsort bitonicsort lbmergesort nosort
+ALGOS = quicksort samplesort bucketsort bitonicsort lbmergesort nosort
+# ALGOSPP = kmerge
+ALGOSPP = 
+OBJECTS = longmpi.o
+
+all: $(ALGOS) $(ALGOSPP) main
+
+$(ALGOS): longmpi.o
+	@echo "Compiling "$@"..."
+	$(MPICC) -lm $(ALGOCFLAGS) -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
+
+$(ALGOSPP): longmpi.o
+	@echo "Compiling "$@"..."
+	$(MPICPP) $(ALGOCFLAGS) -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
+
+longmpi.o:
+	$(MPICC) $(ALGOCFLAGS) -c longmpi.c
+
+install:
+	mkdir -p $(LIBDIR) $(DATADIR)
+	cp $(ALGODIR)/lib*.so $(LIBDIR)
+
+main: spd spddbg
+
+spd: spd.c
+	@echo "Compiling spd..."
+	$(MPICC) spd.c $(CFLAGS) $(SPDFLAGS) -o spd
+
+spddbg: spd.c
+	@echo "Compiling spddbg (debug mode)..."
+	$(MPICC) spd.c $(CFLAGS) $(SPDFLAGS) -DDEBUG -o spddbg
+
+clean:
+	rm -f *~ *.o spd spddbg
