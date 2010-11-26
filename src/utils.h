@@ -42,25 +42,30 @@ inline int compare (const void * a, const void * b)
 *
 * @return The index of the bucket in which to insert ele
 */
-int getBucketIndex( const int *ele, const int *splitters, int length )
+int getBucketIndex( const int *ele, const int *splitters, const int length )
 {
-	int base = 0;
-	int cmpResult;
+	int low = 0;
+	int high = length;
+	int cmpResult = 0;
 	int mid;
 
-	while ( length > base ) {
-		mid = (base + length) >> 1;
+	while ( high > low ) {
+		mid = (low + high) >> 1;
 		cmpResult = compare( ele, &splitters[mid] );
 
 		if ( cmpResult == 0 )
 			return mid;
 
 		if ( cmpResult > 0 )
-			base = mid + 1;
+			low = mid + 1;
 		else
-			length >>= 1;
+			high = mid - 1;
 	}
-	return base;
+	cmpResult = compare( ele, &splitters[low] );
+
+	if ( cmpResult > 0 && low < length)
+		return (low + 1);
+	return low;
 }
 
 
@@ -76,7 +81,7 @@ void chooseSplitters( int *data, const int length, const int n, int *newSplitter
 {
 	int i, j, k;
 
-	if ( length > n )
+	if ( length >= n )
 		/* Choosing splitters (n-1 equidistant elements of the data array) */
 		for ( i=0, k=j=length/n; i<n-1; i++, k+=j )
 			newSplitters[i] = data[k];

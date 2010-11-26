@@ -32,7 +32,7 @@ void sampleSort( const TestInfo *ti, int *data )
 	int			*allSplitters = 0;                 	//All splitters (will include all the local splitters)
 	int			*globalSplitters = 0;            	//Global splitters (will be selected from the allSplitters array)
 
-	int			*localBucket = 0; 					//Local bucket (in sample sort, it is shown that each process will have, at the end, a maximum of 2*M/n elements to sort)
+	int			*localBucket = 0; 					//Local bucket (in sample sort, it is shown that each process will have, at the end, a maximum of 4*M/n elements to sort)
 	long 		bucketLength = 0;
 
 	int 		sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
@@ -43,7 +43,7 @@ void sampleSort( const TestInfo *ti, int *data )
 
 	/* Allocating memory */
 	localData = (int*) malloc( local_M * sizeof(int) );
-	localBucket = (int*) malloc( M/2 * sizeof(int) );
+	localBucket = (int*) malloc( 4*maxLocal_M * sizeof(int) );
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/

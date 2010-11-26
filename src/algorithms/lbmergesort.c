@@ -24,20 +24,19 @@
 void merge( const int flength, int *firstSeq, const int slength, int *secondSeq, int* mergedSeq )
 {
 	int i, j, k;
-
 	i = 0; j = 0; k = 0;
 
-	while ( j < flength && k < slength )
+	while ( j < flength && k < slength ) {
 		if ( firstSeq[j] < secondSeq[k] )
 			mergedSeq[i++] = firstSeq[j++];
 		else
 			mergedSeq[i++] = secondSeq[k++];
+	}
+	while ( j<flength )
+		mergedSeq[i++] = firstSeq[j++];
 
-	for ( ; j<flength; j++ )
-		mergedSeq[i++] = firstSeq[j];
-
-	for ( ; k<slength; k++ )
-		mergedSeq[i++] = secondSeq[k];
+	while ( k<slength )
+		mergedSeq[i++] = secondSeq[k++];
 }
 
 
@@ -64,19 +63,20 @@ void lbmergeSort( const TestInfo *ti, int *data )
 
 	MPI_Status 	status;
 
-	int 		groupSize, idInGroup, partner, pairedGroupRoot, groupRoot;
-
-	int			groupSplitters[n*(n-1)], recvSplitters[n*(n-1)], mergedSplitters[n*(n-1)], splitters[n-1];
+	int			localSplitters[n-1];               	//Local splitters (n-1 equidistant elements of the data array)
+	int			*allSplitters = 0;                 	//All splitters (will include all the local splitters)
+	int			*globalSplitters = 0;            	//Global splitters (will be selected from the allSplitters array)
+	int			splitters[n-1];
 	int 		splittersCount = 0;
 
-	int			i, j, k, h;
-
+	int 		groupSize, idInGroup, partner, pairedGroupRoot, groupRoot;
+	int			i, j, k;
 	PhaseHandle scatterP, localP, gatherP;
 
 	/* Allocating memory */
-	localData = (int*) malloc( M/2 * sizeof(int) );
-	recvData = (int*) malloc( M/2 * sizeof(int) );
-	mergedData = (int*) malloc( M/2 * sizeof(int) );
+	localData = (int*) malloc( 4*maxLocal_M * sizeof(int) );
+	recvData = (int*) malloc( 4*maxLocal_M * sizeof(int) );
+	mergedData = (int*) malloc( 4*maxLocal_M * sizeof(int) );
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
@@ -107,7 +107,22 @@ void lbmergeSort( const TestInfo *ti, int *data )
 	qsort( localData, dataLength, sizeof(int), compare );
 
 	/* Choosing local splitters (n-1 equidistant elements of the data array) */
-	chooseSplitters( localData, dataLength, n, groupSplitters );
+	chooseSplitters( localData, dataLength, n, localSplitters );
+
+	/* Gathering all splitters to the root process */
+	if ( id == root )
+		allSplitters = (int*) malloc ( ((n-1)*n) * sizeof(int) );
+	MPI_Gather( localSplitters, n-1, MPI_INT, allSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+
+	/* Choosing global splitters (n-1 equidistant elements of the allSplitters array) */
+	globalSplitters = localSplitters;     //--> To save space but keeping the correct semantics!!! :F
+
+	if ( id == root ) {
+		qsort( allSplitters, (n-1)*n, sizeof(int), compare );
+		chooseSplitters( allSplitters, (n-1)*n, n, globalSplitters );
+	}
+	/* Broadcasting global splitters */
+	MPI_Bcast( globalSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
 
 	for ( i=1, groupSize=1; i<=_log2( n ); i++, groupSize<<=1 ) {
 		splittersCount += groupSize;	//Updates the number of splitters needed in this step
@@ -118,23 +133,16 @@ void lbmergeSort( const TestInfo *ti, int *data )
 		groupRoot = id-idInGroup;
 		pairedGroupRoot = (id&groupSize) ? groupRoot-groupSize : groupRoot+groupSize;
 
-		/* Exchanging local group splitters with partner */
-		MPI_Sendrecv( groupSplitters, groupSize*(n-1), MPI_INT, partner, 100, recvSplitters, groupSize*(n-1), MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
-
-		/* Merging local group splitters with received splitters */
-		merge( groupSize*(n-1), groupSplitters, groupSize*(n-1), recvSplitters, mergedSplitters );
-
-		/* Updating group splitters splitters for the next step */
- 		memcpy( groupSplitters, mergedSplitters, 2*groupSize*(n-1)*sizeof(int) );
-
 		/* Selecting the splitters for this step */
-		chooseSplitters( mergedSplitters, 2*groupSize*(n-1), splittersCount+1, splitters );
+		k = groupRoot < pairedGroupRoot ? groupRoot : pairedGroupRoot;
+		for ( j=0; j<splittersCount; j++ )
+			splitters[j] = globalSplitters[k++];
 
 		/* Initializing the sendCounts array */
 		memset( sendCounts, 0, n*sizeof(int) );
 
-		/* Computing the number of integers to be sent to each process */
-		h = id < partner ? groupRoot : pairedGroupRoot;
+		/* Computing the number of integers to be sent to each process of the paired group */
+		int h = id < partner ? groupRoot : pairedGroupRoot;
 		for ( j=0; j<dataLength; j++ ) {
 			k = getBucketIndex( &localData[j], splitters, splittersCount );
 			sendCounts[h+k]++;
@@ -149,24 +157,20 @@ void lbmergeSort( const TestInfo *ti, int *data )
 
 		int recvDataLength = 0;
 		int sentData = 0;
-		MPI_Request r;
+		int flag = groupRoot < pairedGroupRoot ? 1 : -1;
 
-		for ( j=0; j<2*groupSize; j++, h++ )
-			if ( h != id ) {
-				MPI_Isend( &localData[sdispls[h]], sendCounts[h], MPI_INT, h, 10, MPI_COMM_WORLD, &r );
-				MPI_Recv( &recvData[recvDataLength], M/2, MPI_INT, h, 10, MPI_COMM_WORLD, &status );
+		/* Exchanging data with the paired group avoiding deadlocks */
+		for ( h=1, j=partner; h<=groupSize; h++ ) {
+			MPI_Sendrecv( &localData[sdispls[j]], sendCounts[j], MPI_INT, j, 100, &recvData[recvDataLength], 4*maxLocal_M, MPI_INT, j, 100, MPI_COMM_WORLD, &status );
+			sentData += sendCounts[j];
 
-				sentData += sendCounts[h];
+			MPI_Get_count( &status, MPI_INT, &k);
+			recvDataLength += k;
 
-				MPI_Get_count( &status, MPI_INT, &k);
-				recvDataLength += k;
-			}
-		/* Sorting and merging received data */
-		qsort( recvData, recvDataLength, sizeof(int), compare );
-		merge( recvDataLength, recvData, dataLength-sentData, &localData[sdispls[id]], mergedData );
-
+			j = ((id + h*flag) % groupSize + groupRoot) ^ groupSize;		//Selects the next partner to avoid deadlocks
+		}
+		merge( recvDataLength, recvData, dataLength-sentData, &localData[sdispls[groupRoot]], mergedData );
 		dataLength = dataLength - sentData + recvDataLength;
-
  		memcpy( localData, mergedData, dataLength*sizeof(int) );
 	}
 
