@@ -8,10 +8,9 @@
 * @version 0.0.01
 */
 
+#include <string.h>
 #include "../sorting.h"
 #include "../utils.h"
-#include <string.h>
-
 
 /**
 * @brief Compare and Exchange operation on the low part of two sequences sorted in ascending order

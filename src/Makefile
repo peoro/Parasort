@@ -8,7 +8,7 @@ DATADIR = $(INSTALLDIR)/data
 LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
 ALGOS = mergesort quicksort samplesort bucketsort bitonicsort lbmergesort nosort
-ALGOSPP = kmerge
+ALGOSPP = kmerge lbkmergesort
 OBJECTS = longmpi.o
 
 all: $(ALGOS) $(ALGOSPP) main

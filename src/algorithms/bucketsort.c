@@ -8,10 +8,10 @@
 * @version 0.0.01
 */
 
-#include "../sorting.h"
-#include "../utils.h"
 #include <limits.h>
 #include <string.h>
+#include "../sorting.h"
+#include "../utils.h"
 
 /**
 * @brief Sorts input data by using a parallel version of Bucket Sort

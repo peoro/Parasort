@@ -8,9 +8,9 @@
 * @version 0.0.01
 */
 
+#include <string.h>
 #include "../sorting.h"
 #include "../utils.h"
-#include <string.h>
 
 /**
 * @brief Sorts input data by using a parallel version of Sample Sort
@@ -27,6 +27,7 @@ void sampleSort( const TestInfo *ti, int *data )
 	const long	local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
 	const long	maxLocal_M = M / n + (0 < M%n);     //Max number of elements assigned to a process
 	int			*localData = 0;						//Local section of the input data
+	const int	buffSize = 4*maxLocal_M;			//Max number of received elements (in sample sort, it is shown that each process will have, at the end, a maximum of 4*M/n elements to sort)
 
 	int			localSplitters[n-1];               	//Local splitters (n-1 equidistant elements of the data array)
 	int			*allSplitters = 0;                 	//All splitters (will include all the local splitters)
@@ -43,7 +44,7 @@ void sampleSort( const TestInfo *ti, int *data )
 
 	/* Allocating memory */
 	localData = (int*) malloc( local_M * sizeof(int) );
-	localBucket = (int*) malloc( 4*maxLocal_M * sizeof(int) );
+	localBucket = (int*) malloc( buffSize * sizeof(int) );
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
@@ -137,6 +138,8 @@ void sampleSort( const TestInfo *ti, int *data )
 			rdispls[i] = k;
 			k += recvCounts[i];
 		}
+		/* Freeing memory */
+		free( allSplitters );
 	}
 	/* Gathering sorted data */
 	MPI_Gatherv( localBucket, bucketLength, MPI_INT, data, recvCounts, rdispls, MPI_INT, root, MPI_COMM_WORLD );
@@ -145,8 +148,6 @@ void sampleSort( const TestInfo *ti, int *data )
 /*--------------------------------------------------------------------------------------------------------------*/
 
 	/* Freeing memory */
-	if ( id == root )
-		free( allSplitters );
 	free( localData );
 	free( localBucket );
 }
