@@ -75,7 +75,7 @@ void lbmergeSort( const TestInfo *ti, int *data )
 	PhaseHandle scatterP, localP, gatherP;
 
 	/* Allocating memory */
-	localData = (int*) malloc( 3*buffSize * sizeof(int) );
+	localData = (int*) malloc( buffSize * sizeof(int) );
 	recvData = (int*) malloc( buffSize * sizeof(int) );
 	mergedData = (int*) malloc( buffSize * sizeof(int) );
 
