@@ -8,6 +8,7 @@
 #include <time.h>
 #include <limits.h>
 #include <sys/time.h>
+#include <unistd.h>
 #include "sorting.h"
 
 #ifndef _GNU_SOURCE
@@ -229,46 +230,46 @@ int JKISS()
 	_seed_x = 314527869 * _seed_x + 1234567;
 	_seed_y ^= _seed_y << 5; _seed_y ^= _seed_y >> 7; _seed_y ^= _seed_y << 22;
 	t = 4294584393ULL * _seed_z + _seed_c; _seed_c = t >> 32; _seed_z = t;
-	return (_seed_x + _seed_y + _seed_z)  % INT_MAX;
+	return abs (_seed_x + _seed_y + _seed_z);
 }
 
 int generate( const TestInfo *ti )
 {
-	// TODO!
-	// implement it the right way :F
-
 	FILE *f;
 	char path[1024];
 	long M = GET_M(ti), i;
 
-	// TODO: check if file is already existing and if it's valid
-
 	GET_UNSORTED_DATA_PATH( ti, path, sizeof(path) );
-	f = fopen( path, "wb" );
-	if( ! f ) {
-		printf( "Couldn't open %s for writing\n", path );
-		return 0;
-	}
 
-	/* Setting seed variables */
-	_seed_x = ti->seed;
-	_seed_y = 69069*_seed_x+12345;
-	_seed_z = (_seed_y<<16)+_seed_x;
-	_seed_c = _seed_z<<13;
+	// TODO: check if file is valid
+	if( access( path, R_OK ) == -1 ) {
 
-	for( i = 0; i < M; ++ i ) {
-		int x = JKISS();
-#ifndef DEBUG
-		if( ! fwrite( &x, sizeof(int), 1, f ) ) {
-#else
-		if( fprintf( f, "%d\n", x ) < 0 ) {
-#endif
-			printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, x, path );
+		f = fopen( path, "wb" );
+		if( ! f ) {
+			printf( "Couldn't open %s for writing\n", path );
 			return 0;
 		}
-	}
 
-	fclose( f );
+		/* Setting seed variables */
+		_seed_x = ti->seed;
+		_seed_y = 69069*_seed_x+12345;
+		_seed_z = (_seed_y<<16)+_seed_x;
+		_seed_c = _seed_z<<13;
+
+		for( i = 0; i < M; ++ i ) {
+			int x = JKISS();
+#ifndef DEBUG
+			if( ! fwrite( &x, sizeof(int), 1, f ) ) {
+#else
+			if( fprintf( f, "%d\n", x ) < 0 ) {
+#endif
+				printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, x, path );
+				return 0;
+			}
+		}
+
+		fclose( f );
+	}
 
 	return 1;
 }
@@ -353,7 +354,7 @@ int storeData( const TestInfo *ti, int *data, long size )
 
 	for( i = 1; i < GET_M(ti); ++ i ) {
 		if( tmp > data[i] ) {
-			printf( "Sorting Failed: %ld-th element (of value %d) is bigger than %ld-th element (of value %d)\n", i-1, tmp, i, data[i] );
+			printf( "Sorting Failed: %ld-th element (of value %d) is bigger than %ld-th element (of value %d)\n", i, tmp, i+1, data[i] );
 			fclose( f );
 			return 0;
 		}

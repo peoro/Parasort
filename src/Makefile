@@ -3,11 +3,11 @@ MPICPP = mpic++
 CFLAGS = -Wall -Wextra -Wno-unused -O2 -g
 ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC
 
-INSTALLDIR = ~/.spd
+INSTALLDIR = $(HOME)/.spd
 DATADIR = $(INSTALLDIR)/data
 LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
-ALGOS = mergesort quicksort samplesort bucketsort bitonicsort lbmergesort nosort
+ALGOS = mergesort quicksort samplesort bucketsort bitonicsort lbmergesort nosort sequential
 ALGOSPP = kmerge lbkmergesort
 OBJECTS = longmpi.o
 
@@ -28,7 +28,7 @@ install:
 	mkdir -p $(LIBDIR) $(DATADIR)
 	cp $(ALGODIR)/lib*.so $(LIBDIR)
 
-main: spd spddbg
+main: spd spddbg spdlog
 
 spd: spd.c
 	@echo "Compiling spd..."
@@ -38,5 +38,9 @@ spddbg: spd.c
 	@echo "Compiling spddbg (debug mode)..."
 	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c -DDEBUG -o spddbg
 
+spdlog: spd.c
+	@echo "Compiling spdlog (profiling mode)..."
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c -mpe=mpilog -o spdlog
+
 clean:
-	rm -f *~ *.o spd spddbg
+	rm -f *~ *.o *.clog2 spd spddbg spdlog
