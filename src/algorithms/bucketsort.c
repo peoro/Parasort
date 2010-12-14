@@ -37,7 +37,7 @@ void bucketSort( const TestInfo *ti, int *data )
 	int				sdispls[n], rdispls[n];				//Send/receive buffer displacements
 	int				i, j, k;
 
-	PhaseHandle 	scatterP, localP, gatherP;
+	PhaseHandle 	scatterP, localP, bucketsP, gatherP;
 
 	/* Allocating memory */
 	localData = (int*) malloc( local_M * sizeof(int) );
@@ -66,10 +66,21 @@ void bucketSort( const TestInfo *ti, int *data )
 /***************************************************************************************************************/
 /*********************************************** Local Phase ***************************************************/
 /***************************************************************************************************************/
+
 	localP = startPhase( ti, "local sorting" );
 
 	/* Sorting local data */
 	qsort( localData, local_M, sizeof(int), compare );
+
+	stopPhase( ti, localP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/**************************************** Buckets Construction Phase *******************************************/
+/***************************************************************************************************************/
+
+	bucketsP = startPhase( ti, "buckets construction" );
 
 	/* Initializing the sendCounts array */
 	memset( sendCounts, 0, n*sizeof(int) );
@@ -98,7 +109,7 @@ void bucketSort( const TestInfo *ti, int *data )
 	/* Sorting local bucket */
 	qsort( localBucket, bucketLength, sizeof(int), compare );
 
-	stopPhase( ti, localP );
+	stopPhase( ti, bucketsP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
 

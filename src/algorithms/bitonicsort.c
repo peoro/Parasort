@@ -78,7 +78,7 @@ void bitonicSort( const TestInfo *ti, int *data )
 	int				mask, mask2, partner, recvCount, length;
 	int				i, j, k, z, flag;
 
-	PhaseHandle 	scatterP, localP, gatherP;
+	PhaseHandle 	scatterP, localP, mergeP, gatherP;
 
 	/* Allocating memory */
 	localData = (int*) malloc( local_M * sizeof(int) );
@@ -113,6 +113,16 @@ void bitonicSort( const TestInfo *ti, int *data )
 	/* Sorting local data */
 	qsort( localData, local_M, sizeof(int), compare );
 
+	stopPhase( ti, localP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/****************************************** Parallel Merge Phase ***********************************************/
+/***************************************************************************************************************/
+
+	mergeP = startPhase( ti, "parallel merge" );
+
 	k = _log2( n );		//Number of steps of the outer loop
 
 	/* Bitonic Sort */
@@ -141,7 +151,7 @@ void bitonicSort( const TestInfo *ti, int *data )
 		}
 	}
 
-	stopPhase( ti, localP );
+	stopPhase( ti, mergeP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
 

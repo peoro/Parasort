@@ -65,7 +65,7 @@ void kmerge( int *runs, int k, int* lengths, int* displs, int mergedLength, int 
 * @param[in] ti        The TestInfo Structure
 * @param[in] data      Data to be sorted
 */
-void lbmergeSort( const TestInfo *ti, int *data )
+void lbkmergesort( const TestInfo *ti, int *data )
 {
 	const int	root = 0;                          	//Rank (ID) of the root process
 	const int	id = GET_ID( ti );                	//Rank (ID) of the process
@@ -87,7 +87,7 @@ void lbmergeSort( const TestInfo *ti, int *data )
 	int			*globalSplitters = 0;            	//Global splitters (will be selected from the allSplitters array)
 
 	int			i, j, k, h, z, flag;
-	PhaseHandle scatterP, localP, gatherP;
+	PhaseHandle scatterP, localP, samplingP, multiwayMergeP, gatherP;
 	int 		groupSize, idInGroup, partner, pairedGroupRoot, groupRoot;
 
 	/* Allocating memory */
@@ -122,6 +122,16 @@ void lbmergeSort( const TestInfo *ti, int *data )
 	/* Sorting local data */
 	qsort( localData, dataLength, sizeof(int), compare );
 
+	stopPhase( ti, localP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/********************************************* Sampling Phase **************************************************/
+/***************************************************************************************************************/
+
+	samplingP = startPhase( ti, "sampling" );
+
 	/* Choosing local splitters (n-1 equidistant elements of the data array) */
 	chooseSplitters( localData, dataLength, n, localSplitters );
 
@@ -139,6 +149,16 @@ void lbmergeSort( const TestInfo *ti, int *data )
 	}
 	/* Broadcasting global splitters */
 	MPI_Bcast( globalSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+
+	stopPhase( ti, samplingP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/************************************* Parallel Multiway Merge Phase *******************************************/
+/***************************************************************************************************************/
+
+	multiwayMergeP = startPhase( ti, "parallel multiway merge" );
 
 	/* Initializing the sendCounts array */
 	memset( sendCounts, 0, n*sizeof(int) );
@@ -190,7 +210,7 @@ void lbmergeSort( const TestInfo *ti, int *data )
 	/* Merging received data */
 	kmerge ( recvData, n, recvCounts, rdispls, dataLength, localData );
 
-	stopPhase( ti, localP );
+	stopPhase( ti, multiwayMergeP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
 
@@ -226,11 +246,11 @@ extern "C"
 {
 	void mainSort( const TestInfo *ti, int *data, long size )
 	{
-		lbmergeSort( ti, data );
+		lbkmergesort( ti, data );
 	}
 
 	void sort( const TestInfo *ti )
 	{
-		lbmergeSort( ti, 0 );
+		lbkmergesort( ti, 0 );
 	}
 }

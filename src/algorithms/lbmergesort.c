@@ -72,7 +72,7 @@ void lbmergeSort( const TestInfo *ti, int *data )
 
 	int 		groupSize, idInGroup, partner, pairedGroupRoot, groupRoot;
 	int			i, j, k, h, flag;
-	PhaseHandle scatterP, localP, gatherP;
+	PhaseHandle scatterP, localP, samplingP, mergeP, gatherP;
 
 	/* Allocating memory */
 	localData = (int*) malloc( buffSize * sizeof(int) );
@@ -107,6 +107,16 @@ void lbmergeSort( const TestInfo *ti, int *data )
 	/* Sorting local data */
 	qsort( localData, dataLength, sizeof(int), compare );
 
+	stopPhase( ti, localP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/********************************************* Sampling Phase **************************************************/
+/***************************************************************************************************************/
+
+	samplingP = startPhase( ti, "sampling" );
+
 	/* Choosing local splitters (n-1 equidistant elements of the data array) */
 	chooseSplitters( localData, dataLength, n, localSplitters );
 
@@ -124,6 +134,16 @@ void lbmergeSort( const TestInfo *ti, int *data )
 	}
 	/* Broadcasting global splitters */
 	MPI_Bcast( globalSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+
+	stopPhase( ti, samplingP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/****************************************** Parallel Merge Phase ***********************************************/
+/***************************************************************************************************************/
+
+	mergeP = startPhase( ti, "parallel merge" );
 
 	for ( i=1, groupSize=1; i<=_log2( n ); i++, groupSize<<=1 ) {
 		splittersCount += groupSize;	//Updates the number of splitters needed in this step
@@ -173,7 +193,7 @@ void lbmergeSort( const TestInfo *ti, int *data )
  		memcpy( localData, mergedData, dataLength*sizeof(int) );
 	}
 
-	stopPhase( ti, localP );
+	stopPhase( ti, mergeP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
 

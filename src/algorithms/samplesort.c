@@ -40,7 +40,7 @@ void sampleSort( const TestInfo *ti, int *data )
 	int			sdispls[n], rdispls[n];				//Send/receive buffer displacements
 	int			i, j, k;
 
-	PhaseHandle scatterP, localP, gatherP;
+	PhaseHandle scatterP, localP, samplingP, bucketsP, gatherP;
 
 	/* Allocating memory */
 	localData = (int*) malloc( local_M * sizeof(int) );
@@ -69,10 +69,21 @@ void sampleSort( const TestInfo *ti, int *data )
 /***************************************************************************************************************/
 /*********************************************** Local Phase ***************************************************/
 /***************************************************************************************************************/
+
 	localP = startPhase( ti, "local sorting" );
 
 	/* Sorting local data */
 	qsort( localData, local_M, sizeof(int), compare );
+
+	stopPhase( ti, localP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/********************************************* Sampling Phase **************************************************/
+/***************************************************************************************************************/
+
+	samplingP = startPhase( ti, "sampling" );
 
 	/* Choosing local splitters (n-1 equidistant elements of the data array) */
 	chooseSplitters( localData, local_M, n, localSplitters );
@@ -92,6 +103,16 @@ void sampleSort( const TestInfo *ti, int *data )
 
 	/* Broadcasting global splitters */
 	MPI_Bcast( globalSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+
+	stopPhase( ti, samplingP );
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/**************************************** Buckets Construction Phase *******************************************/
+/***************************************************************************************************************/
+
+	bucketsP = startPhase( ti, "buckets construction" );
 
 	/* Initializing the sendCounts array */
 	memset( sendCounts, 0, n*sizeof(int) );
@@ -120,7 +141,7 @@ void sampleSort( const TestInfo *ti, int *data )
 	/* Sorting local bucket */
 	qsort( localBucket, bucketLength, sizeof(int), compare );
 
-	stopPhase( ti, localP );
+	stopPhase( ti, bucketsP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
 
