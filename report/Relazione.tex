@@ -5,6 +5,9 @@
 \usepackage{graphicx}
 \usepackage{chapterbib}
 
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
 \addtolength{\hoffset}{-1cm}
 \addtolength{\textwidth}{2.5cm}
 
@@ -42,14 +45,18 @@ sensitive=false}
 \section{Test environment}
 \subsection{MPI cost model}
 
+\pagebreak
+
 \section{Description and performance evaluation of the algorithms}
-\include{mergesort}
+\input{terminology}
+\input{mergesort}
+\input{kmerge}
+\subsection{Load-Balanced Mergesort}
 \subsection{Quicksort}
 \subsection{Bucketsort}
 \subsection{Samplesort}
 \subsection{Bitonicsort}
-\subsection{Load-Balanced Mergesort}
-\subsection{K-Way Mergesort}
+
 
 \section{Comparing the algorithms: analysis of the results}
 
@@ -71,6 +78,7 @@ sensitive=false}
 
 \pagebreak
 
-\bibliography{biblio}
-\bibliographystyle{plain}
+\begin{thebibliography}{13}
+\bibitem{FERR}{Paolo Ferragina. \textit{The magic of Algorithms!.} Lectures notes in Algorithm Engineering, 2010}
+\end{thebibliography}
 \end{document}
