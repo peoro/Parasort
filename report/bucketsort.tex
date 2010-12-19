@@ -1,0 +1,23 @@
+\subsection{Bucket Sort}
+\textit{Bucket sort} is not based upon compare and exchange, but is naturally a partitioning method. The idea behind bucket sort is that if we know the range of our elements to be sorted, say $0$ to $a-1$, we can divide this interval into $n$ equal regions, $0$ to $\frac{a}{n}-1$, $\frac{a}{n}$ to $2\frac{a}{n}-1$, \dots , and one bucket is assigned to hold values that fall within each region. The numbers are simply placed into the appropriate buckets and each bucket is sorted using the best sequential algorithm. However, bucket sort only works well if the original numbers are uniformly distributed across the known interval. 
+
+To identify the region in which a number lies is sufficient to divide the number by $\frac{a}{n}$ and use the result as index of the proper bucket. Thus, placing all numbers into the buckets will require $M$ steps. If the numbers are uniformly distributed, there should be $\frac{M}{n}$ numbers in each bucket. The lower bound on any compare and exchange sorting algorithm on $k$ numbers is about $k \log k$ comparisons. Therefore, in the best case, to sort $\frac{M}{n}$ numbers of one bucket will require $\frac{M}{n} \log \frac{M}{n}$ steps. Let us assume that the concatenation of the sorted buckets takes no additional steps. Thus, the sequential time complexity of bucket sort becomes
+\[
+O( n \log \frac{M}{n} )
+\]
+
+Parallelizing bucket sort is straightforward. We will have $n$ processes, and as many buckets. Each process separates the numbers in its region into $n$ ``small'' buckets. These small buckets are then sent to the corresponding process (bucket $i$ process $i$) with an ``all to all'' communication. Thus, the algorithm follows these phases:
+\begin{enumerate}	
+	\item the input sequence $S$ is scattered among processes;
+	\item each process separates the numbers in its partition into $n$ ``small'' buckets;
+	\item each process sends the numbers in the ``small'' bucket $i$ to the process with rank $i$ (where $0 \leq i < n$);
+	\item each process sorts locally its own bucket;
+	\item the sorted sequence is gathered to the root process.
+\end{enumerate}
+
+ 
+\subsubsection{Parallel version}
+\subsubsection{Mapping virtual processors onto different cores} 
+\subsubsection{Performance Analisys} 
+\subsubsection{Efficiency} 
+\subsubsection{Statistical Analysys}
