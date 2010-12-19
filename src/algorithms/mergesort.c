@@ -48,7 +48,7 @@ int do_i_receive ( const TestInfo *ti, int step )
 int do_i_send ( const TestInfo *ti, int step )
 {
 	switch (ti->algoVar[0]) {
-		case 0: return (GET_ID(ti) >= (ACTIVE_PROCS(ti, step) / 2));
+		case 0: return (GET_ID(ti) >= (ACTIVE_PROCS(ti, step) / 2) && GET_ID(ti) < ACTIVE_PROCS(ti, step));
 		case 1:	return (GET_ID(ti) % _pow2 ( step + 1 ) == _pow2 ( step ));
 		default: return -1;
 	}
@@ -86,9 +86,9 @@ void mergesort ( const TestInfo *ti, int *sorting )
 	int step;
 	for ( step = 0; step < _log2(GET_N(ti)); step++ ) {
 		if ( do_i_receive( ti, step ) ) {
-		
+			
 			_MPI_Recv ( (int*)sorting + size, total_size / active_proc, MPI_INT, from_who( ti, step ) , 0, MPI_COMM_WORLD, &stat );
-								
+			
 			//fusion phase
 			int left = 0, center = size, right = size + total_size/active_proc, k = 0;
 			while ( left < size && center < right ) {
@@ -108,9 +108,9 @@ void mergesort ( const TestInfo *ti, int *sorting )
 			size += ( total_size / active_proc ); //size of the ordered sequence
 			
 		}
-		if ( do_i_send ( ti, step ) )
+		if ( do_i_send ( ti, step ) ) 
 			_MPI_Send ( sorting, size, MPI_INT, to_who( ti, step ), 0, MPI_COMM_WORLD );
-		
+
 		active_proc /= 2;
 	}
 	
