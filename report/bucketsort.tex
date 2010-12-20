@@ -3,7 +3,7 @@
 
 To identify the region in which a number lies is sufficient to divide the number by $\frac{a}{n}$ and use the result as index of the proper bucket. Thus, placing all numbers into the buckets will require $M$ steps. If the numbers are uniformly distributed, there should be $\frac{M}{n}$ numbers in each bucket. The lower bound on any compare and exchange sorting algorithm on $k$ numbers is about $k \log k$ comparisons. Therefore, in the best case, to sort $\frac{M}{n}$ numbers of one bucket will require $\frac{M}{n} \log \frac{M}{n}$ steps. Let us assume that the concatenation of the sorted buckets takes no additional steps. Thus, the sequential time complexity of bucket sort becomes
 \[
-O( n \log \frac{M}{n} )
+t_s = M + M \log \frac{M}{n} = O( M \log \frac{M}{n} )
 \]
 
 Parallelizing bucket sort is straightforward. We will have $n$ processes, and as many buckets. Each process separates the numbers in its region into $n$ ``small'' buckets. These small buckets are then sent to the corresponding process (bucket $i$ process $i$) with an ``all to all'' communication. Thus, the algorithm follows these phases:
