@@ -5,10 +5,10 @@ Quicksort, like Mergesort, is a very popular sorting algorithm, the most widely 
 	\item{sequential sorting phase: any process sorts its own partition with a sequential partition.}
 	\item{\textit{gathering} phase: processes send sorted data back, to rebuild the whole sorted array.}
 \end{itemize}
-We won't spend any time talking about the sequential sorting phase, since it's in common with all the other algorithms.
-The \textit{scattering} and the \textit{gathering} phases, instead, are a bit tricky; they are not the simple, \textit{primitive} scatter and gather offered by MPI, since they need to do some more computation: our custom scattering phase needs to choose a pivot, partition the array according to the pivot, and send a whole partition away, while the gather knows exactly where to place the data it's receiving, since such data is one of the partitions, which has been sorted.
-We chose to implement our scattering phase as a binary three: the first process (rank 0) will partition its data and send the second partition to a second process, and this will go on recursively until all of our processes get their data. The idea of implementing a linear scattering has been discarded because it wouldn't have allowed a parallelization of the partitioning, which is the most expensive operation of the scattering phase.
-The gathering phase has instead been implemented in a linear way: each process sends its sorted data to the first one (to rank 0) which will read the data directly in the final array, without needing a further merging operation.
+We will not spend any time talking about the sequential sorting phase, since it is in common with all the other algorithms.
+The \textit{scattering} and the \textit{gathering} phases, instead, are a bit tricky; they are not the simple, \textit{primitive} scatter and gather offered by MPI, since they need to do some more computation: our custom scattering phase needs to choose a pivot, partition the array according to the pivot, and send a whole partition away, while the gather knows exactly where to place the data it is receiving, since such data is one of the partitions, which has been sorted.
+We chose to implement our scattering phase as a binary three: rank 0 will partition its data and send the second partition to a second process, and this will go on recursively until all of our processes get their data. The idea of implementing a linear scattering has been discarded because it would not have allowed a parallelization of the partitioning, which is the most expensive operation of the scattering phase.
+The gathering phase has instead been implemented in a linear way: each process sends its sorted data to rank 0 which will read the data directly in the final array, without needing a further merging operation.
 
 \subsubsection*{Parallel version}
 \subsubsection*{Mapping virtual processors onto different cores} 
