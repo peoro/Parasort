@@ -88,7 +88,7 @@ void mergesort ( const TestInfo *ti, Data *data_local )
 	int step;
 	for ( step = 0; step < _log2(GET_N(ti)); step++ ) {
 		if ( do_i_receive( ti, step ) ) {
-			receive ( data_received, total_size / active_proc, from_who( ti, step ) );
+			receive ( ti, data_received, total_size / active_proc, from_who( ti, step ) );
 			
 			//memory merging phase 
 			int left_a = 0, left_b = 0, k = 0;
@@ -109,7 +109,7 @@ void mergesort ( const TestInfo *ti, Data *data_local )
 			data_local->size += data_received->size;
 		}
 		if ( do_i_send ( ti, step ) ) 
-			send ( data_local, to_who( ti, step ) );
+			send ( ti, data_local, to_who( ti, step ) );
 
 		active_proc /= 2;
 	}

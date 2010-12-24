@@ -115,5 +115,4 @@ bool allocDataArray( Data *data, int size )
 }
 #endif
 
-#endif
 
