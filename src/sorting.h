@@ -11,6 +11,7 @@
 extern "C" {
 #endif
 
+
 typedef struct
 {
 	bool verbose;

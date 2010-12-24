@@ -425,6 +425,7 @@ void stopPhase( const TestInfo *ti, PhaseHandle phase )
 }
 
 //merges two input buckets <a,b> into merged
+/*
 void twoMerge ( Data* a, Data* b, Data* merged ) {
 	
 	//TODO: al momento fondo solo in memoria
@@ -449,6 +450,7 @@ void twoMerge ( Data* a, Data* b, Data* merged ) {
 	free ( merging );		
 	
 }
+*/
 
 
 int main( int argc, char **argv )

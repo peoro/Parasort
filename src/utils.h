@@ -31,6 +31,11 @@ inline int compare (const void * a, const void * b)
 {
   return ( *(int*)a - *(int*)b );
 }
+/// sequential sort function
+void sequentialSort( TestInfo *ti, Data *data )
+{
+	qsort( data->array, data->size, sizeof(int), compare );
+}
 
 
 /**
