@@ -22,7 +22,7 @@ $(ALGOSPP): $(OBJECTS)
 	$(MPICPP) $(ALGOCFLAGS) -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
 
 $(OBJECTS):
-	$(MPICC) $(ALGOCFLAGS) -c communication.c
+	$(MPICC) $(ALGOCFLAGS) -c $$( echo $@ | sed -rs "s/\.o/.c/" )
 
 install:
 	mkdir -p $(LIBDIR) $(DATADIR)
