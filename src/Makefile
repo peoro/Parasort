@@ -9,20 +9,20 @@ LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
 ALGOS = mergesort quicksort samplesort bucketsort bitonicsort lbmergesort nosort sequential
 ALGOSPP = kmerge lbkmergesort
-OBJECTS = longmpi.o
+OBJECTS = communication.o
 
 all: $(ALGOS) $(ALGOSPP) main
 
-$(ALGOS): longmpi.o
+$(ALGOS): $(OBJECTS)
 	@echo "Compiling "$@"..."
 	$(MPICC) -lm $(ALGOCFLAGS) -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
 
-$(ALGOSPP): longmpi.o
+$(ALGOSPP): $(OBJECTS)
 	@echo "Compiling "$@"..."
 	$(MPICPP) $(ALGOCFLAGS) -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
 
-longmpi.o:
-	$(MPICC) $(ALGOCFLAGS) -c longmpi.c
+$(OBJECTS):
+	$(MPICC) $(ALGOCFLAGS) -c communication.c
 
 install:
 	mkdir -p $(LIBDIR) $(DATADIR)

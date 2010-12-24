@@ -3,8 +3,8 @@
 * This constrain is due to the fact that functions such as MPI_Send, MPI_Recv, ..., uses an integer to represent the buffer size
 */
 
-#ifndef _LONGMPI_H_
-#define _LONGMPI_H_
+#ifndef _COMMUNICATION_H_
+#define _COMMUNICATION_H_
 
 /* Keep C++ compilers from getting confused */
 #if defined(__cplusplus)
@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 #include <mpi.h>
+#include "sorting.h"
 
 /*
 // functions to re-implement
@@ -27,8 +28,8 @@ inline void send( Data *data, int dest )
 }
 inline void receive( Data *data, long size, int source )
 {
-	allocArray( data, size );
-	MPI_Recv( data->array, size, MPI_INT, source, 0, MPI_COMM_WORLD );
+	allocDataArray( data, size );
+	MPI_Recv( data->array, size, MPI_INT, source, 0, MPI_COMM_WORLD, NULL );
 }
 
 inline void scatterSend( TestInfo *ti, Data *data )
@@ -37,6 +38,7 @@ inline void scatterSend( TestInfo *ti, Data *data )
 }
 inline void scatterReceive( TestInfo *ti, Data *data, long size, int root )
 {
+	allocDataArray( data, size );
 	MPI_Scatter( NULL, 0, 0, data->array, size, MPI_INT, root, MPI_COMM_WORLD );
 }
 inline void scatter( TestInfo *ti, Data *data, long size, int root )

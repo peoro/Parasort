@@ -1,4 +1,6 @@
-#include "longmpi.h"
+
+#include "sorting.h"
+#include "communication.h"
 
 //efficiently computes the logarithm base 2 of a positive integer
 inline int _log2 ( unsigned int n )
