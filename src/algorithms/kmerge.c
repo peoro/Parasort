@@ -159,14 +159,13 @@ extern "C"
 {
 	void sort ( const TestInfo *ti )
 	{
-		int *sorting = (int*) malloc ( sizeof(int) * GET_M ( ti )); 
-		mk_mergesort ( ti, sorting );
-		free ( sorting );
+		Data data_local;
+		mk_mergesort ( ti, &data_local );
 	}
 
-	void mainSort( const TestInfo *ti, int *sorting, long size )
+	void mainSort( const TestInfo *ti, Data *data_local )
 	{	
-		mk_mergesort ( ti, sorting );	
+		mk_mergesort ( ti, data_local );	
 	}
 }
 

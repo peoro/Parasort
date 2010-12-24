@@ -425,34 +425,6 @@ void stopPhase( const TestInfo *ti, PhaseHandle phase )
 #endif
 }
 
-//merges two input buckets <a,b> into merged
-/*
-void twoMerge ( Data* a, Data* b, Data* merged ) {
-	
-	//TODO: al momento fondo solo in memoria
-	int *merging (int*) malloc ( sizeof(int) * (a->size + b->size) );
-	int left_a = 0, left_b = 0, k = 0;
-	while ( left_a < a->size && left_b < b->size ) {
-		if ( a->array[left_a] <= b->array[left_b] )
-			merging[k++] = a->array[left_a++];
-		else
-			merging[k++] = b->array[left_b++];
-	} 
-	
-	for ( ; left_a < a->size; left_a++, k++ )
-		merging[k] = a->array[left_a]; 
-	for ( ; left_b < b->size; left_b++, k++ )
-		merging[k] = b->array[left_b];
-	for ( left_a = 0; left_a < a->size + b->size; left_a++ )
-		merged->array[left_a] = merging[left_a];
-
-	merged->size += a->size + b->size; //size of the ordered sequence
-			
-	free ( merging );		
-	
-}
-*/
-
 
 int main( int argc, char **argv )
 {

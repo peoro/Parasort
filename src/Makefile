@@ -9,7 +9,7 @@ LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
 ALGOS = mergesort quicksort samplesort bucketsort bitonicsort lbmergesort nosort sequential
 ALGOSPP = kmerge lbkmergesort
-OBJECTS = communication.o
+OBJECTS = communication.o sorting.o
 
 all: $(ALGOS) $(ALGOSPP) main
 

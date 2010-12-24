@@ -55,6 +55,7 @@ int do_i_send ( const TestInfo *ti, int step )
 }
 
 
+
 /**************************************/
 /*            ALGORITHMIC             */
 /**************************************/
@@ -68,27 +69,44 @@ void mergesort ( const TestInfo *ti, Data *data_local )
 	int 		active_proc = GET_N ( ti );
 	
 	Data 		*data_received = (Data*) malloc ( sizeof( Data )); 
-
+	int 		*merging = (int*) malloc ( sizeof(int) * total_size ); 
+	
 	PhaseHandle	scatterP, localP;
 
 	//scattering data partitions
 	scatterP = startPhase( ti, "Scattering" );
 	if ( rank == 0 )
-		scatterSend ( data_local );
+		scatterSend ( ti, data_local );
 	else
-		scatter ( data_local, size, 0 );
+		scatter ( ti, data_local, size, 0 );
 	stopPhase( ti, scatterP );
 	
 	//sorting
 	localP = startPhase( ti, "Sorting" );
-	sequentialSort ( data_local );
+	sequentialSort ( ti, data_local );
 	
 	int step;
 	for ( step = 0; step < _log2(GET_N(ti)); step++ ) {
 		if ( do_i_receive( ti, step ) ) {
-			
 			receive ( data_received, total_size / active_proc, from_who( ti, step ) );
-			twoMerge ( data_local, data_received, data_local );
+			
+			//memory merging phase 
+			int left_a = 0, left_b = 0, k = 0;
+			while ( left_a < data_local->size && left_b < data_received->size ) {
+				if ( data_local->array[left_a] <= data_received->array[left_b] )
+					merging[k++] = data_local->array[left_a++];
+				else
+					merging[k++] = data_received->array[left_b++];
+				} 
+
+			for ( ; left_a < data_local->size; left_a++, k++ )
+				merging[k] = data_local->array[left_a]; 
+			for ( ; left_b < data_received->size; left_b++, k++ )
+				merging[k] = data_received->array[left_b];
+			for ( left_a = 0; left_a < data_local->size + data_received->size; left_a++ )
+				data_local->array[left_a] = merging[left_a];
+		
+			data_local->size += data_received->size;
 		}
 		if ( do_i_send ( ti, step ) ) 
 			send ( data_local, to_who( ti, step ) );
@@ -111,4 +129,5 @@ void mainSort( const TestInfo *ti, Data *data )
 {	
 	mergesort ( ti, data );	
 }
+
 

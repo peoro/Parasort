@@ -1,3 +1,5 @@
+#ifndef _UTILS_H_
+#define _UTILS_H_
 
 #include "sorting.h"
 #include "communication.h"
@@ -34,7 +36,7 @@ inline int compare (const void * a, const void * b)
   return ( *(int*)a - *(int*)b );
 }
 /// sequential sort function
-void sequentialSort( TestInfo *ti, Data *data )
+void sequentialSort( const TestInfo *ti, Data *data )
 {
 	qsort( data->array, data->size, sizeof(int), compare );
 }
@@ -99,3 +101,5 @@ void chooseSplitters( int *data, const int length, const int n, int *newSplitter
 		qsort( newSplitters, n-1, sizeof(int), compare );
 	}
 }
+
+#endif
