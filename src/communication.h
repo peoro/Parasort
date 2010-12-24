@@ -22,34 +22,12 @@ int _MPI_Alltoall( void *sendbuf, long sendcount, MPI_Datatype sendtype, void *r
 + scatterv, sendU, receiveU, scatterU, scattervU ...
 */
 
-inline void send( Data *data, int dest )
-{
-	MPI_Send( data->array, data->size, MPI_INT, dest, 0, MPI_COMM_WORLD );
-}
-inline void receive( Data *data, long size, int source )
-{
-	allocDataArray( data, size );
-	MPI_Recv( data->array, size, MPI_INT, source, 0, MPI_COMM_WORLD, NULL );
-}
+void send( Data *data, int dest );
+void receive( Data *data, long size, int source );
 
-inline void scatterSend( TestInfo *ti, Data *data )
-{
-	MPI_Scatter( data->array, data->size / GET_N(ti), MPI_INT, NULL, 0, 0, GET_ID(ti), MPI_COMM_WORLD );
-}
-inline void scatterReceive( TestInfo *ti, Data *data, long size, int root )
-{
-	allocDataArray( data, size );
-	MPI_Scatter( NULL, 0, 0, data->array, size, MPI_INT, root, MPI_COMM_WORLD );
-}
-inline void scatter( TestInfo *ti, Data *data, long size, int root )
-{
-	if( GET_ID(ti) == root ) {
-		return scatterSend( ti, data );
-	}
-	else {
-		return scatterReceive( ti, data, size, root );
-	}
-}
+void scatterSend( TestInfo *ti, Data *data );
+void scatterReceive( TestInfo *ti, Data *data, long size, int root );
+void scatter( TestInfo *ti, Data *data, long size, int root );
 
 /*
 scattervSend( Data *data, int *sizes, int *displacements );
