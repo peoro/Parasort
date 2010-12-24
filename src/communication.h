@@ -22,12 +22,12 @@ int _MPI_Alltoall( void *sendbuf, long sendcount, MPI_Datatype sendtype, void *r
 + scatterv, sendU, receiveU, scatterU, scattervU ...
 */
 
-void send( Data *data, int dest );
-void receive( Data *data, long size, int source );
+void send( const TestInfo *ti, Data *data, int dest );
+void receive( const TestInfo *ti, Data *data, long size, int source );
 
-void scatterSend( TestInfo *ti, Data *data );
-void scatterReceive( TestInfo *ti, Data *data, long size, int root );
-void scatter( TestInfo *ti, Data *data, long size, int root );
+void scatterSend( const TestInfo *ti, Data *data );
+void scatterReceive( const TestInfo *ti, Data *data, long size, int root );
+void scatter( const TestInfo *ti, Data *data, long size, int root );
 
 /*
 scattervSend( Data *data, int *sizes, int *displacements );
