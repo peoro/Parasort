@@ -59,7 +59,7 @@ int do_i_send ( const TestInfo *ti, int step )
 /*            ALGORITHMIC             */
 /**************************************/
 
-void mergesort ( const TestInfo *ti, int *sorting )
+void mergesort ( const TestInfo *ti, Data *data_local )
 {
 	MPI_Status 	stat;
 	const int 	total_size = GET_M ( ti );
@@ -67,67 +67,48 @@ void mergesort ( const TestInfo *ti, int *sorting )
 	int 		rank = GET_ID ( ti );
 	int 		active_proc = GET_N ( ti );
 	
-	int 		*merging = (int*) malloc ( sizeof(int) * total_size ); 
+	Data 		*data_received = (Data*) malloc ( sizeof( Data )); 
 
 	PhaseHandle	scatterP, localP;
 
 	//scattering data partitions
-	scatterP = startPhase( ti, "scattering" );
+	scatterP = startPhase( ti, "Scattering" );
 	if ( rank == 0 )
-		_MPI_Scatter ( sorting, size, MPI_INT, MPI_IN_PLACE, size, MPI_INT, 0, MPI_COMM_WORLD );
+		scatterSend ( data_local );
 	else
-		_MPI_Scatter ( NULL, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
+		scatter ( data_local, size, 0 );
 	stopPhase( ti, scatterP );
 	
-	//sorting local partition
-	localP = startPhase( ti, "local sorting" );
-	qsort ( sorting, size, sizeof(int), compare );
+	//sorting
+	localP = startPhase( ti, "Sorting" );
+	sequentialSort ( data_local );
 	
 	int step;
 	for ( step = 0; step < _log2(GET_N(ti)); step++ ) {
 		if ( do_i_receive( ti, step ) ) {
 			
-			_MPI_Recv ( (int*)sorting + size, total_size / active_proc, MPI_INT, from_who( ti, step ) , 0, MPI_COMM_WORLD, &stat );
-			
-			//fusion phase
-			int left = 0, center = size, right = size + total_size/active_proc, k = 0;
-			while ( left < size && center < right ) {
-				if ( sorting[left] <= sorting[center] )
-					merging[k++] = sorting[left++];
-				else
-					merging[k++] = sorting[center++];
-			} 
-			
-			for ( ; left < size; left++, k++ )
-				merging[k] = sorting[left]; 
-			for ( ; center < right; center++, k++ )
-				merging[k] = sorting[center];
-			for ( left = 0; left < right; left++ )
-				sorting[left] = merging[left];
-					
-			size += ( total_size / active_proc ); //size of the ordered sequence
-			
+			receive ( data_received, total_size / active_proc, from_who( ti, step ) );
+			twoMerge ( data_local, data_received, data_local );
 		}
 		if ( do_i_send ( ti, step ) ) 
-			_MPI_Send ( sorting, size, MPI_INT, to_who( ti, step ), 0, MPI_COMM_WORLD );
+			send ( data_local, to_who( ti, step ) );
 
 		active_proc /= 2;
 	}
 	
 	stopPhase( ti, localP );
 	
-	free ( merging );
+	destroyData ( data_received );
 }
 
 void sort ( const TestInfo *ti )
 {
-	int *sorting = (int*) malloc ( sizeof(int) * GET_M ( ti )); 
-	mergesort ( ti, sorting );
-	free ( sorting );
+	Data data_local; 
+	mergesort ( ti, &data_local );
 }
 
-void mainSort( const TestInfo *ti, int *sorting, long size )
+void mainSort( const TestInfo *ti, Data *data )
 {	
-	mergesort ( ti, sorting );	
+	mergesort ( ti, data );	
 }
 

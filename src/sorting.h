@@ -159,6 +159,10 @@ PhaseHandle startPhase( const TestInfo *ti, const char *phaseName );
 */
 void stopPhase( const TestInfo *ti, PhaseHandle phase );
 
+
+void twoMerge ( Data*, Data*, Data* );
+
+
 #if defined(__cplusplus)
 }
 #endif

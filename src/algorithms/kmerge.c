@@ -106,7 +106,7 @@ void mk_mergesort ( const TestInfo *ti, int *sorting )
 	int 		active_proc = GET_N ( ti );
 
 	int 		k = ti->algoVar[PARAM_K]; 
-	int 		*merging = (int*) malloc ( sizeof(int) * total_size );  
+	Data 		*merging;  
 
 	PhaseHandle scatterP, localP, gatherP;
 
