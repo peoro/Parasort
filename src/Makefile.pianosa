@@ -35,11 +35,11 @@ main: spd spddbg
 
 spd: spd.c $(OBJECTS)
 	@echo "Compiling spd..."
-	$(MPICC) spd.c $(CFLAGS) $(SPDFLAGS) $(OBJECTS) -o spd
+	$(MPICC) spd.c $(OBJECTS) $(CFLAGS) $(SPDFLAGS) -o spd
 
 spddbg: spd.c $(OBJECTS)
 	@echo "Compiling spddbg (debug mode)..."
-	$(MPICC) spd.c $(CFLAGS) $(SPDFLAGS) -DDEBUG $(OBJECTS) -o spddbg
+	$(MPICC) spd.c $(OBJECTS) $(CFLAGS) $(SPDFLAGS) -DDEBUG -o spddbg
 
 clean:
 	rm -f *~ *.o spd spddbg
