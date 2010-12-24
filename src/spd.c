@@ -284,6 +284,7 @@ int loadData( const TestInfo *ti, Data *data )
 {
 	FILE *f;
 	char path[1024];
+	
 #ifndef DEBUG
 #else
 	long i;

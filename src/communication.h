@@ -27,6 +27,7 @@ inline void send( Data *data, int dest )
 }
 inline void receive( Data *data, long size, int source )
 {
+	allocArray( data, size );
 	MPI_Recv( data->array, size, MPI_INT, source, 0, MPI_COMM_WORLD );
 }
 

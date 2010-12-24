@@ -126,6 +126,17 @@ inline void destroyData( Data *data )
 		free( data->array );
 	}
 }
+inline bool allocData( Data *data, int size )
+{
+	data->medium = NoMedium;
+	data->array = (int*) malloc( size * sizeof(int) );
+	if( ! data->array ) {
+		return 0;
+	}
+	data->medium = Array;
+	data->size = size;
+	return 1;
+}
 
 
 
