@@ -233,6 +233,9 @@ int JKISS()
 	return abs (_seed_x + _seed_y + _seed_z);
 }
 
+/*!
+* generates the unsorted data file for the current scenario
+*/
 int generate( const TestInfo *ti )
 {
 	FILE *f;
@@ -273,7 +276,11 @@ int generate( const TestInfo *ti )
 
 	return 1;
 }
-int loadData( const TestInfo *ti, int **data, long *size )
+
+/*!
+* loads unsorted data file
+*/
+int loadData( const TestInfo *ti, Data *data )
 {
 	FILE *f;
 	char path[1024];
@@ -290,26 +297,26 @@ int loadData( const TestInfo *ti, int **data, long *size )
 	}
 
 #ifndef DEBUG
-	*size = GET_FILE_SIZE( path );
-	if( (unsigned long) *size != GET_M(ti)*sizeof(int) ) {
+	data->size = GET_FILE_SIZE( path ) / sizeof(int);
+	if( data->size != GET_M(ti) ) {
 		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
-				path, GET_M(ti)*sizeof(int), GET_M(ti), *size );
+				path, GET_M(ti), GET_M(ti), data->size*sizeof(int) );
 		fclose( f );
 		return 0;
 	}
-	*data = (int*) malloc( *size );
+	data->array = (int*) malloc( data->size*sizeof(int) );
 
-	if( ! fread( *data, *size, 1, f ) ) {
-		printf( "Couldn't read %ld bytes from %s\n", *size, path );
+	if( ! fread( data->array, data->size*sizeof(int), 1, f ) ) {
+		printf( "Couldn't read %ld bytes from %s\n", data->size*sizeof(int), path );
 		fclose( f );
 		return 0;
 	}
 #else
-	*size = GET_M(ti)*sizeof(int);
-	*data = (int*) malloc( *size );
+	data->size = GET_M(ti);
+	data->array = (int*) malloc( data->size*sizeof(int) );
 	for( i = 0; i < GET_M(ti); ++ i ) {
-		if( fscanf( f, "%d ", & (*data)[i] ) == EOF ) {
-			printf( "Couldn't read %ld-th element (of value %d) from %s\n", i, (*data)[i], path );
+		if( fscanf( f, "%d ", & data->array[i] ) == EOF ) {
+			printf( "Couldn't read %ld-th element (of value %d) from %s\n", i, data->array[i], path );
 			fclose( f );
 			return 0;
 		}
@@ -320,13 +327,16 @@ int loadData( const TestInfo *ti, int **data, long *size )
 
 	return 1;
 }
-int storeData( const TestInfo *ti, int *data, long size )
+
+/*!
+* stores the result to our sorted data file
+*/
+int storeData( const TestInfo *ti, Data *data )
 {
 	FILE *f;
 	char path[1024];
 #ifndef DEBUG
 #else
-	(void) size;
 	long i;
 	int tmp;
 #endif
@@ -339,29 +349,29 @@ int storeData( const TestInfo *ti, int *data, long size )
 	}
 
 #ifndef DEBUG
-	if( ! fwrite( data, size, 1, f ) ) {
-		printf( "Couldn't write %ld bytes to %s\n", size, path );
+	if( ! fwrite( data->array, data->size, 1, f ) ) {
+		printf( "Couldn't write %ld bytes to %s\n", data->size, path );
 		fclose( f );
 		return 0;
 	}
 #else
-	if( fprintf( f, "%d\n", data[0] ) < 0 ) {
-		printf( "Couldn't write %d-th element (of value %d) to %s\n", 0, data[0], path );
+	if( fprintf( f, "%d\n", data->array[0] ) < 0 ) {
+		printf( "Couldn't write %d-th element (of value %d) to %s\n", 0, data->array[0], path );
 		fclose( f );
 		return 0;
 	}
-	tmp = data[0];
+	tmp = data->array[0];
 
 	for( i = 1; i < GET_M(ti); ++ i ) {
-		if( tmp > data[i] ) {
-			printf( "Sorting Failed: %ld-th element (of value %d) is bigger than %ld-th element (of value %d)\n", i, tmp, i+1, data[i] );
+		if( tmp > data->array[i] ) {
+			printf( "Sorting Failed: %ld-th element (of value %d) is bigger than %ld-th element (of value %d)\n", i, tmp, i+1, data->array[i] );
 			fclose( f );
 			return 0;
 		}
-		tmp = data[i];
+		tmp = data->array[i];
 
-		if( fprintf( f, "%d\n", data[i] ) < 0 ) {
-			printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, data[i], path );
+		if( fprintf( f, "%d\n", data->array[i] ) < 0 ) {
+			printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, data->array[i], path );
 			fclose( f );
 			return 0;
 		}
@@ -458,10 +468,9 @@ int main( int argc, char **argv )
 
 		// sorting data
 		{
-			int *data;
-			long size;
+			Data data;
 
-			r = loadData( &ti, &data, &size );
+			r = loadData( &ti, &data );
 			if( ! r ) {
 				printf( "Error loading data for task %d\n", GET_ID(&ti) );
 				MPI_Finalize( );
@@ -477,7 +486,7 @@ int main( int argc, char **argv )
 				if( ! handle ) {
 					printf( "Task %d couldn't load %s (%s): %s\n"
 							"%s\n", GET_ID(&ti), ti.algo, path, strerror(errno), dlerror() );
-					free ( data );
+					destroyData( &data );
 					MPI_Finalize( );
 					return 1;
 				}
@@ -488,26 +497,26 @@ int main( int argc, char **argv )
 					printf( "Task %d couldn't load %s (%s)'s mainSort() function: %s\n"
 							"%s\n", GET_ID(&ti), ti.algo, path, strerror(errno), dlerror() );
 					dlclose( handle );
-					free ( data );
+					destroyData( &data );
 					MPI_Finalize( );
 					return 1;
 				}
 
 				mainSortPhase = startPhase( &ti, "sort" );
-				mainSort( &ti, data, size / sizeof(int) );
+				mainSort( &ti, data );
 				stopPhase( &ti, mainSortPhase );
 
 				dlclose( handle );
 			}
 
-			r = storeData( &ti, data, size );
+			r = storeData( &ti, &data );
 			if( ! r ) {
 				printf( "Error storing data for task %d\n", GET_ID(&ti) );
-				free ( data );
+				destroyData( &data );
 				MPI_Finalize( );
 				return 1;
 			}
-			free ( data );
+			destroyData( &data );
 		}
 
 		// gathering phases

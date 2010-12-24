@@ -110,14 +110,32 @@ long GET_FILE_SIZE( const char *path )
 
 
 
+typedef struct
+{
+	enum { NoMedium, File, Array } medium;
+	
+	int *array;
+	long size;
+} Data;
+
+inline void destroyData( Data *data )
+{
+	if( data->medium == Array ) {
+		data->medium = NoMedium;
+		free( data->array );
+	}
+}
+
+
+
 /*!
 * main sorts data.
 * this function will be implemented in several flavours (using several different
 * algorithms or strategies), by a number of shared libraries dinamically loaded.
 * This one is only called for the process with rank 0.
 */
-void mainSort( const TestInfo *ti, int *data, long size );
-typedef void (*MainSortFunction) ( const TestInfo *ti, int *data, long size );
+void mainSort( const TestInfo *ti, Data *data );
+typedef void (*MainSortFunction) ( const TestInfo *ti, Data data );
 /*!
 * sorts data.
 * this function will be implemented in several flavours (using several different
@@ -126,21 +144,6 @@ typedef void (*MainSortFunction) ( const TestInfo *ti, int *data, long size );
 */
 void sort( const TestInfo *ti );
 typedef void (*SortFunction) ( const TestInfo *ti );
-
-/*!
-* generates the unsorted data file for the current scenario
-*/
-int generate( const TestInfo *ti );
-
-/*!
-* loads unsorted data file
-*/
-int loadData( const TestInfo *ti, int **data, long *size );
-
-/*!
-* stores the result to our sorted data file
-*/
-int storeData( const TestInfo *ti, int *data, long size );
 
 
 
