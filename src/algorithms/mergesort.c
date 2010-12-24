@@ -73,6 +73,8 @@ void mergesort ( const TestInfo *ti, Data *data_local )
 	
 	PhaseHandle	scatterP, localP;
 
+	printf ("prima di scatter\n");	
+
 	//scattering data partitions
 	scatterP = startPhase( ti, "Scattering" );
 	if ( rank == 0 )
@@ -80,6 +82,8 @@ void mergesort ( const TestInfo *ti, Data *data_local )
 	else
 		scatter ( ti, data_local, size, 0 );
 	stopPhase( ti, scatterP );
+	
+	printf ("dopo scatter\n");
 	
 	//sorting
 	localP = startPhase( ti, "Sorting" );
@@ -127,6 +131,7 @@ void sort ( const TestInfo *ti )
 
 void mainSort( const TestInfo *ti, Data *data )
 {	
+	printf ("rank 0 dentro mainsort\n");
 	mergesort ( ti, data );	
 }
 

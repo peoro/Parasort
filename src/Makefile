@@ -30,13 +30,13 @@ install:
 
 main: spd spddbg spdlog
 
-spd: spd.c
+spd: spd.c  $(OBJECTS) 
 	@echo "Compiling spd..."
-	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c -o spd
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -o spd
 
-spddbg: spd.c
+spddbg: spd.c $(OBJECTS) 
 	@echo "Compiling spddbg (debug mode)..."
-	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c -DDEBUG -o spddbg
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c -DDEBUG $(OBJECTS) -o spddbg
 
 spdlog: spd.c
 	@echo "Compiling spdlog (profiling mode)..."
