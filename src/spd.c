@@ -284,7 +284,7 @@ int loadData( const TestInfo *ti, Data *data )
 {
 	FILE *f;
 	char path[1024];
-	
+
 #ifndef DEBUG
 #else
 	long i;
@@ -503,7 +503,7 @@ int main( int argc, char **argv )
 				}
 
 				mainSortPhase = startPhase( &ti, "sort" );
-				mainSort( &ti, data );
+				mainSort( &ti, &data );
 				stopPhase( &ti, mainSortPhase );
 
 				dlclose( handle );

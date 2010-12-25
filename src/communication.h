@@ -29,11 +29,15 @@ void scatterSend( const TestInfo *ti, Data *data );
 void scatterReceive( const TestInfo *ti, Data *data, long size, int root );
 void scatter( const TestInfo *ti, Data *data, long size, int root );
 
-/*
-scattervSend( Data *data, int *sizes, int *displacements );
-scattervReceive( Data *data, int size, int root );
-scatterv( Data *data, int *sizes, int *displacements, int root );
-*/
+void scattervSend( const TestInfo *ti, Data *data, long *sizes, long *displs );
+void scattervReceive( const TestInfo *ti, Data *data, long size, int root );
+void scatterv( const TestInfo *ti, Data *data, long *sizes, long *displs, int root );
+
+void gathervSend( const TestInfo *ti, Data *data, int root );
+void gathervReceive( const TestInfo *ti, Data *data, long *sizes, long *displs );
+void gatherv( const TestInfo *ti, Data *data, long *sizes, long *displs, int root );
+
+void alltoallv( const TestInfo *ti, Data *sendData, long *sendSizes, long *sdispls, Data *recvData, long *recvSizes, long *rdispls );
 
 /* Keep C++ compilers from getting confused */
 #if defined(__cplusplus)

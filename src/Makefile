@@ -7,8 +7,8 @@ INSTALLDIR = $(HOME)/.spd
 DATADIR = $(INSTALLDIR)/data
 LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
-ALGOS = mergesort quicksort samplesort bucketsort bitonicsort lbmergesort nosort sequential
-ALGOSPP = kmerge lbkmergesort
+ALGOS = mergesort samplesort bucketsort # bitonicsort lbmergesort nosort sequential
+ALGOSPP = # kmerge lbkmergesort
 OBJECTS = communication.o sorting.o
 
 all: $(ALGOS) $(ALGOSPP) main
@@ -30,17 +30,17 @@ install:
 
 main: spd spddbg spdlog
 
-spd: spd.c  $(OBJECTS) 
+spd: spd.c  $(OBJECTS)
 	@echo "Compiling spd..."
 	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -o spd
 
-spddbg: spd.c $(OBJECTS) 
+spddbg: spd.c $(OBJECTS)
 	@echo "Compiling spddbg (debug mode)..."
 	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c -DDEBUG $(OBJECTS) -o spddbg
 
 spdlog: spd.c
 	@echo "Compiling spdlog (profiling mode)..."
-	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c -mpe=mpilog -o spdlog
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -mpe=mpilog -o spdlog
 
 clean:
 	rm -f *~ *.o *.clog2 spd spddbg spdlog

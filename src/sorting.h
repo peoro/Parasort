@@ -27,7 +27,7 @@ typedef struct
 typedef struct
 {
 	enum { NoMedium, File, Array } medium;
-	
+
 	int *array;
 	long size;
 } Data;
@@ -63,7 +63,7 @@ bool allocDataArray( Data *data, int size );
 * This one is only called for the process with rank 0.
 */
 void mainSort( const TestInfo *ti, Data *data );
-typedef void (*MainSortFunction) ( const TestInfo *ti, Data data );
+typedef void (*MainSortFunction) ( const TestInfo *ti, Data *data );
 /*!
 * sorts data.
 * this function will be implemented in several flavours (using several different

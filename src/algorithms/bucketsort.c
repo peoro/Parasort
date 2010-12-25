@@ -19,7 +19,7 @@
 * @param[in] ti        The TestInfo Structure
 * @param[in] data      Data to be sorted
 */
-void bucketSort( const TestInfo *ti, int *data )
+void bucketSort( const TestInfo *ti, Data *data )
 {
 	const int		root = 0;                           //Rank (ID) of the root process
 	const int		id = GET_ID( ti );                  //Rank (ID) of the process
@@ -27,21 +27,17 @@ void bucketSort( const TestInfo *ti, int *data )
 	const long		M = GET_M( ti );                    //Number of data elements
 	const long		local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
 	const long		maxLocal_M = M / n + (0 < M%n);     //Max number of elements assigned to a process
-	int				*localData = 0;            			//Local section of the input data
 
 	const double 	range = INT_MAX / n;				//Range of elements in each bucket
-	int				*localBucket = 0;					//Local bucket
+
+	Data			localBucket; 						//Local bucket
 	long 			bucketLength = 0;
 
-	int 			sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
-	int				sdispls[n], rdispls[n];				//Send/receive buffer displacements
-	int				i, j, k;
+	long 			sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
+	long			sdispls[n], rdispls[n];				//Send/receive buffer displacements
+	long			i, j, k;
 
 	PhaseHandle 	scatterP, localP, bucketsP, gatherP;
-
-	/* Allocating memory */
-	localData = (int*) malloc( local_M * sizeof(int) );
-	localBucket = (int*) malloc( M * sizeof(int) );
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
@@ -57,7 +53,7 @@ void bucketSort( const TestInfo *ti, int *data )
 		}
 	}
 	/* Scattering data */
-	MPI_Scatterv( data, sendCounts, sdispls, MPI_INT, localData, maxLocal_M, MPI_INT, root, MPI_COMM_WORLD );
+	scatterv( ti, data, sendCounts, sdispls, root );
 
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -70,7 +66,7 @@ void bucketSort( const TestInfo *ti, int *data )
 	localP = startPhase( ti, "local sorting" );
 
 	/* Sorting local data */
-	qsort( localData, local_M, sizeof(int), compare );
+	sequentialSort( ti, data );
 
 	stopPhase( ti, localP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -83,13 +79,13 @@ void bucketSort( const TestInfo *ti, int *data )
 	bucketsP = startPhase( ti, "buckets construction" );
 
 	/* Initializing the sendCounts array */
-	memset( sendCounts, 0, n*sizeof(int) );
+	memset( sendCounts, 0, n*sizeof(long) );
 
 	/* Computing the number of integers to be sent to each process */
-	for ( i=0; i<local_M; i++ ) {
-		j = ((double) localData[i]) / range;
-		sendCounts[j]++;
-	}
+/*TODO*/	for ( i=0; i<local_M; i++ ) {
+/*TODO*/		j = ((double) data->array[i]) / range;
+/*TODO*/		sendCounts[j]++;
+/*TODO*/	}
 	/* Informing all processes on the number of elements that will receive */
 	MPI_Alltoall( sendCounts, 1, MPI_INT, recvCounts, 1, MPI_INT, MPI_COMM_WORLD );
 
@@ -103,11 +99,12 @@ void bucketSort( const TestInfo *ti, int *data )
 		rdispls[i] = bucketLength;
 		bucketLength += recvCounts[i];
 	}
+/*TODO*/	allocDataArray( &localBucket, bucketLength );
 	/* Sending data to the appropriate processes */
-	MPI_Alltoallv( localData, sendCounts, sdispls, MPI_INT, localBucket, recvCounts, rdispls, MPI_INT, MPI_COMM_WORLD );
+	alltoallv( ti, data, sendCounts, sdispls, &localBucket, recvCounts, rdispls );
 
 	/* Sorting local bucket */
-	qsort( localBucket, bucketLength, sizeof(int), compare );
+	sequentialSort( ti, &localBucket );
 
 	stopPhase( ti, bucketsP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -127,24 +124,28 @@ void bucketSort( const TestInfo *ti, int *data )
 			rdispls[i] = k;
 			k += recvCounts[i];
 		}
+
+/*TODO*/			memcpy( localBucket.array, data->array, bucketLength*sizeof(int) );
 	}
 	/* Gathering sorted data */
-	MPI_Gatherv( localBucket, bucketLength, MPI_INT, data, recvCounts, rdispls, MPI_INT, root, MPI_COMM_WORLD );
+	gatherv( ti, data, recvCounts, rdispls, root );
 
 	stopPhase( ti, gatherP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
 	/* Freeing memory */
-	free( localData );
-	free( localBucket );
+	if ( id != root )
+		destroyData( data );
+	destroyData( &localBucket );
 }
 
-void mainSort( const TestInfo *ti, int *data, long size )
+void mainSort( const TestInfo *ti, Data *data )
 {
 	bucketSort( ti, data );
 }
 
 void sort( const TestInfo *ti )
 {
-	bucketSort( ti, 0 );
+	Data data;
+	bucketSort( ti, &data );
 }
