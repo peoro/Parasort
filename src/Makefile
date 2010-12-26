@@ -36,7 +36,7 @@ spd: spd.c  $(OBJECTS)
 
 spddbg: spd.c $(OBJECTS)
 	@echo "Compiling spddbg (debug mode)..."
-	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c -DDEBUG $(OBJECTS) -o spddbg
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -DDEBUG -o spddbg
 
 spdlog: spd.c
 	@echo "Compiling spdlog (profiling mode)..."

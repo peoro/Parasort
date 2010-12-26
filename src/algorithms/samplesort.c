@@ -66,8 +66,12 @@ void sampleSort( const TestInfo *ti, Data *data )
 
 	localP = startPhase( ti, "local sorting" );
 
+/*TODO*/	data->size = local_M;
+
 	/* Sorting local data */
 	sequentialSort( ti, data );
+
+/*TODO*/	data->size = M;
 
 	stopPhase( ti, localP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -146,7 +150,7 @@ void sampleSort( const TestInfo *ti, Data *data )
 	gatherP = startPhase( ti, "gathering" );
 
 	/* Gathering the lengths of the all buckets */
-	MPI_Gather( &bucketLength, 1, MPI_INT, recvCounts, 1, MPI_INT, root, MPI_COMM_WORLD );
+	MPI_Gather( &bucketLength, 1, MPI_LONG, recvCounts, 1, MPI_LONG, root, MPI_COMM_WORLD );
 
 	/* Computing displacements relative to the output array at which to place the incoming data from each process  */
 	if ( id == root ) {
@@ -157,8 +161,18 @@ void sampleSort( const TestInfo *ti, Data *data )
 		/* Freeing memory */
 		free( allSplitters );
 
-/*TODO*/			memcpy( localBucket.array, data->array, bucketLength*sizeof(int) );
+		/*TODO*/	memcpy( data->array, localBucket.array, bucketLength*sizeof(int) );
 	}
+	else {
+		/*TODO: Swap!*/
+/*TODO*/	int *tmp;
+/*TODO*/	tmp = data->array;
+/*TODO*/	data->array = localBucket.array;
+/*TODO*/	data->size = bucketLength;
+/*TODO*/	localBucket.array = tmp;
+/*TODO*/	localBucket.size = data->size;
+	}
+
 	/* Gathering sorted data */
 	gatherv( ti, data, recvCounts, rdispls, root );
 
