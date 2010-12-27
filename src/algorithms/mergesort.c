@@ -62,28 +62,18 @@ int do_i_send ( const TestInfo *ti, int step )
 
 void mergesort ( const TestInfo *ti, Data *data_local )
 {
-	MPI_Status 	stat;
-	const int 	total_size = GET_M ( ti );
-	int 		size = GET_LOCAL_M ( ti );
-	int 		rank = GET_ID ( ti );
+	const int 	total_size 	= GET_M ( ti );
+	const int 	rank 		= GET_ID ( ti );
 	int 		active_proc = GET_N ( ti );
+	int 		*merging 	= (int*) malloc ( sizeof(int) * total_size ); /*TODO: needs to be limited somehow to the memory size*/
 	
-	Data 		*data_received = (Data*) malloc ( sizeof( Data )); 
-	int 		*merging = (int*) malloc ( sizeof(int) * total_size ); 
-	
+	Data 		data_received; 
 	PhaseHandle	scatterP, localP;
-
-	printf ("prima di scatter\n");	
 
 	//scattering data partitions
 	scatterP = startPhase( ti, "Scattering" );
-	if ( rank == 0 )
-		scatterSend ( ti, data_local );
-	else
-		scatter ( ti, data_local, size, 0 );
+	scatter ( ti, data_local, GET_LOCAL_M( ti ), 0 );
 	stopPhase( ti, scatterP );
-	
-	printf ("dopo scatter\n");
 	
 	//sorting
 	localP = startPhase( ti, "Sorting" );
@@ -92,46 +82,52 @@ void mergesort ( const TestInfo *ti, Data *data_local )
 	int step;
 	for ( step = 0; step < _log2(GET_N(ti)); step++ ) {
 		if ( do_i_receive( ti, step ) ) {
-			receive ( ti, data_received, total_size / active_proc, from_who( ti, step ) );
+		
+			receive ( ti, &data_received, total_size / active_proc, from_who( ti, step ) );
+
+			int old_size = data_local->size;
+			reallocDataArray ( data_local, data_local->size + data_received.size );			
 			
 			//memory merging phase 
 			int left_a = 0, left_b = 0, k = 0;
-			while ( left_a < data_local->size && left_b < data_received->size ) {
-				if ( data_local->array[left_a] <= data_received->array[left_b] )
+			while ( left_a < old_size && left_b < data_received.size ) {
+				if ( data_local->array[left_a] <= data_received.array[left_b] )
 					merging[k++] = data_local->array[left_a++];
 				else
-					merging[k++] = data_received->array[left_b++];
+					merging[k++] = data_received.array[left_b++];
 				} 
 
-			for ( ; left_a < data_local->size; left_a++, k++ )
+			for ( ; left_a < old_size; left_a++, k++ )
 				merging[k] = data_local->array[left_a]; 
-			for ( ; left_b < data_received->size; left_b++, k++ )
-				merging[k] = data_received->array[left_b];
-			for ( left_a = 0; left_a < data_local->size + data_received->size; left_a++ )
+			for ( ; left_b < data_received.size; left_b++, k++ )
+				merging[k] = data_received.array[left_b];
+			for ( left_a = 0; left_a < data_local->size; left_a++ )
 				data_local->array[left_a] = merging[left_a];
-		
-			data_local->size += data_received->size;
+
+			//free memory			
+			destroyData ( &data_received );
 		}
 		if ( do_i_send ( ti, step ) ) 
 			send ( ti, data_local, to_who( ti, step ) );
-
+			
+		//keeps updated the number of processes that partecipate to the sorting in the next step
 		active_proc /= 2;
 	}
 	
 	stopPhase( ti, localP );
 	
-	destroyData ( data_received );
+	free ( merging );
 }
 
 void sort ( const TestInfo *ti )
 {
 	Data data_local; 
 	mergesort ( ti, &data_local );
+	destroyData ( &data_local );
 }
 
 void mainSort( const TestInfo *ti, Data *data )
 {	
-	printf ("rank 0 dentro mainsort\n");
 	mergesort ( ti, data );	
 }
 

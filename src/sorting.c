@@ -110,6 +110,15 @@ bool allocDataArray( Data *data, int size )
 	return 1;
 }
 
+bool reallocDataArray ( Data *data, int size )
+{
+	data->array = (int*) realloc( data->array, size * sizeof(int) );
+	if( ! data->array ) {
+		return 0;
+	}
+	data->size = size;
+	return 1;
+}
 
 #if defined(__cplusplus)
 }

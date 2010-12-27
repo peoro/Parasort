@@ -53,7 +53,7 @@ long GET_FILE_SIZE( const char *path );
 
 void destroyData( Data *data );
 bool allocDataArray( Data *data, int size );
-
+bool reallocDataArray ( Data *data, int size );
 
 
 /*!

@@ -7,13 +7,16 @@ void send( const TestInfo *ti, Data *data, int dest )
 }
 void receive( const TestInfo *ti, Data *data, long size, int source )
 {
+	MPI_Status 	stat;
 	allocDataArray( data, size );
-	MPI_Recv( data->array, size, MPI_INT, source, 0, MPI_COMM_WORLD, NULL );
+	MPI_Recv( data->array, size, MPI_INT, source, 0, MPI_COMM_WORLD, &stat );
 }
 
 void scatterSend( const TestInfo *ti, Data *data )
 {
-	MPI_Scatter( data->array, data->size / GET_N(ti), MPI_INT, MPI_IN_PLACE, 0, 0, GET_ID(ti), MPI_COMM_WORLD );
+	data->size /= GET_N(ti);
+	MPI_Scatter( data->array, data->size, MPI_INT, MPI_IN_PLACE, 0, 0, GET_ID(ti), MPI_COMM_WORLD );	
+	data->array = realloc( data->array, data->size * sizeof(int));
 }
 void scatterReceive( const TestInfo *ti, Data *data, long size, int root )
 {

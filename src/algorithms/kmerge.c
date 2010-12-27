@@ -98,7 +98,7 @@ void fusion ( int *sorting, int left, int right, int size, int* merging)
 }
 
 //invariant: given n = #processors, k = #ways, q an integer, it must be n == k^q
-void mk_mergesort ( const TestInfo *ti, int *sorting )
+void mk_mergesort ( const TestInfo *ti, Data *data_local )
 {
 	const int 	total_size = GET_M ( ti );
 	int 		size = GET_LOCAL_M ( ti );
@@ -110,19 +110,14 @@ void mk_mergesort ( const TestInfo *ti, int *sorting )
 
 	PhaseHandle scatterP, localP, gatherP;
 
-	MPI_Status stat;
-
 	//scattering data partitions
-	scatterP = startPhase( ti, "scattering" );
-	if ( rank  == 0 )
-		_MPI_Scatter ( sorting, size, MPI_INT, MPI_IN_PLACE, size, MPI_INT, 0, MPI_COMM_WORLD );
-	else
-		_MPI_Scatter ( NULL, size, MPI_INT, sorting, size, MPI_INT, 0, MPI_COMM_WORLD );
+	scatterP = startPhase( ti, "Scattering" );
+	scatter ( ti, data_local, GET_LOCAL_M ( ti ), 0 )
 	stopPhase( ti, scatterP );
 	
 	//sorting local partition
-	localP = startPhase( ti, "local sorting" );
-	qsort ( sorting, size, sizeof(int), compare );
+	localP = startPhase( ti, "Sorting" );
+	sequentialSort ( ti, data_local );
 
 	//for each merge-step, this array contains the ranks of the k processes from which partitions will be received. 
 	int *dests = (int*) calloc ( sizeof(int), k-1 ); 
