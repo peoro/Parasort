@@ -77,27 +77,70 @@ int getBucketIndex( const int *ele, const int *splitters, const int length )
 	return low;
 }
 
+/**
+* @brief Gets the number of element to be inserted in each small bucket
+*
+* @param[in] data       	The data object containing data to be distributed
+* @param[in] splitters  	The array of splitters
+* @param[in] n     			The number of processes
+* @param[out] lengths    	The array that will contain the small bucket lengths
+*/
+void getSmallBucketLengths( Data *data, const int *splitters, const int n, long *lengths )
+{
+	/* TODO: Implement it the right way!! */
+	int i, j;
+
+		/* Computing the number of integers to be sent to each process */
+	for ( i=0; i<data->size; i++ ) {
+		j = getBucketIndex( &data->array[i], splitters, n-1 );
+		lengths[j]++;
+	}
+}
 
 /**
 * @brief Chooses n-1 equidistant elements of the input data array as splitters
 *
-* @param[in] 	data 				Data from which extract splitters
+* @param[in] 	array 				Data from which extract splitters
 * @param[in] 	length 				Length of the data array
 * @param[in] 	n 					Number of parts in which to split data
 * @param[out] 	newSplitters	 	Chosen splitters
 */
-void chooseSplitters( int *data, const int length, const int n, int *newSplitters )
+void chooseSplitters( int *array, const int length, const int n, int *newSplitters )
 {
 	int i, j, k;
 
 	if ( length >= n )
 		/* Choosing splitters (n-1 equidistant elements of the data array) */
 		for ( i=0, k=j=length/n; i<n-1; i++, k+=j )
-			newSplitters[i] = data[k];
+			newSplitters[i] = array[k];
 	else {
 		/* Choosing n-1 random splitters */
 		for ( i=0; i<n-1; i++ )
-			newSplitters[i] = data[rand()%length];
+			newSplitters[i] = array[rand()%length];
+		qsort( newSplitters, n-1, sizeof(int), compare );
+	}
+}
+
+/**
+* @brief Chooses n-1 equidistant elements of the input data object as splitters
+*
+* @param[in] 	data 				Data from which extract splitters
+* @param[in] 	n 					Number of parts in which to split data
+* @param[out] 	newSplitters	 	Chosen splitters
+*/
+void chooseSplittersFromData( Data *data, const int n, int *newSplitters )
+{
+	/* TODO: Implement it the right way!! */
+	int i, j, k;
+
+	if ( data->size >= n )
+		/* Choosing splitters (n-1 equidistant elements of the data array) */
+		for ( i=0, k=j=data->size/n; i<n-1; i++, k+=j )
+			newSplitters[i] = data->array[k];
+	else {
+		/* Choosing n-1 random splitters */
+		for ( i=0; i<n-1; i++ )
+			newSplitters[i] = data->array[rand()%data->size];
 		qsort( newSplitters, n-1, sizeof(int), compare );
 	}
 }

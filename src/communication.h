@@ -37,7 +37,7 @@ void gathervSend( const TestInfo *ti, Data *data, int root );
 void gathervReceive( const TestInfo *ti, Data *data, long *sizes, long *displs );
 void gatherv( const TestInfo *ti, Data *data, long *sizes, long *displs, int root );
 
-void alltoallv( const TestInfo *ti, Data *sendData, long *sendSizes, long *sdispls, Data *recvData, long *recvSizes, long *rdispls );
+void alltoallv( const TestInfo *ti, Data *sendData, long *sendSizes, long *sdispls, long *recvSizes, long *rdispls );
 
 /* Keep C++ compilers from getting confused */
 #if defined(__cplusplus)
