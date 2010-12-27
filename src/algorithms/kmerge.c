@@ -71,82 +71,92 @@ struct Min_val {
 	}
 };
 	
-void fusion ( int *sorting, int left, int right, int size, int* merging) 
+//invariant: all buckets have equal size 
+void fusion ( Data *data_owned, int runs ) 
 {
 	priority_queue<Min_val> heap;
-	int i, runs = (right - left) / size; //== min(k, active_proc)
-	int *runs_indexes = (int*) calloc ( sizeof(int), runs );   
-	
+	int 	*runs_indexes 	= (int*) calloc ( sizeof(int), runs );   
+	int 	*merging 		= (int*) malloc ( sizeof(int) * data_owned->size * runs ); /*TODO: needs to be limited somehow to the memory size*/;  
+	int 	i;
+
 	//initializing the heap
 	for ( i = 0; i < runs; i++ )
-		heap.push ( Min_val ( sorting[i*size], i ) );
+		heap.push ( Min_val ( data_owned[i].array[0], i ) );
 	
 	//merging
-	for ( i = 0; i < right; i++ ) {
+	for ( i = 0; i < data_owned->size * runs; i++ ) {
 		Min_val min = heap.top();
 		heap.pop();
 		merging[i] = min.val;
-		if ( ++(runs_indexes[min.run_index]) != size ) 	
-			heap.push ( Min_val ( sorting[min.run_index*size + runs_indexes[min.run_index]], min.run_index ) );
+		
+		if ( ++(runs_indexes[min.run_index]) != data_owned[min.run_index].size ) 	
+			heap.push ( Min_val ( data_owned[min.run_index].array[runs_indexes[min.run_index]], min.run_index ) );
 	}
 	
-	//final copy
-	for ( i = 0; i < right; i++ )
-		sorting[i] = merging[i]; 
+	//realloc + final copy
+	reallocDataArray ( data_owned, data_owned->size * runs );
+	for ( i = 0; i < data_owned->size; i++ )
+		data_owned->array[i] = merging[i]; 
 	
 	free ( runs_indexes );
+	free ( merging );
 }
 
-//invariant: given n = #processors, k = #ways, q an integer, it must be n == k^q
+//invariant: given n = #processors, k = #ways, q an integer, it must be n == k * q
 void mk_mergesort ( const TestInfo *ti, Data *data_local )
 {
-	const int 	total_size = GET_M ( ti );
-	int 		size = GET_LOCAL_M ( ti );
-	int 		rank = GET_ID ( ti );
+	const int 	total_size	= GET_M ( ti );
+	int 		size 		= GET_LOCAL_M ( ti );
+	const int 	rank 		= GET_ID ( ti );
+	const int 	k 			= ti->algoVar[PARAM_K]; 
 	int 		active_proc = GET_N ( ti );
 
-	int 		k = ti->algoVar[PARAM_K]; 
-	Data 		*merging;  
-
+	Data		*data_owned = (Data*) malloc ( sizeof(Data) * k ); 
 	PhaseHandle scatterP, localP, gatherP;
 
+	data_owned[0] = *data_local;	
+	
 	//scattering data partitions
 	scatterP = startPhase( ti, "Scattering" );
-	scatter ( ti, data_local, GET_LOCAL_M ( ti ), 0 )
+	scatter ( ti, data_owned, GET_LOCAL_M ( ti ), 0 );
 	stopPhase( ti, scatterP );
 	
 	//sorting local partition
 	localP = startPhase( ti, "Sorting" );
-	sequentialSort ( ti, data_local );
+	sequentialSort ( ti, data_owned );
 
 	//for each merge-step, this array contains the ranks of the k processes from which partitions will be received. 
 	int *dests = (int*) calloc ( sizeof(int), k-1 ); 
 	
 	while ( active_proc > 1 ) {
 		if ( do_i_receive( rank, k, active_proc ) ) {
+
 			//receiving k-1 partitions
-			int receiving = 0, n_dests;
+			int receiving, n_dests;
 			from_who( rank, k, active_proc, dests, &n_dests );
-			for ( ; receiving < n_dests; receiving++ ) 
-				_MPI_Recv ( (int*)sorting + (receiving+1)*size, size, MPI_INT, dests[receiving] , 0, MPI_COMM_WORLD, &stat );
+			for ( receiving = 0; receiving < n_dests; receiving++ ) 
+				receive ( ti, data_owned + receiving + 1, total_size / active_proc, dests[receiving] );
 			
 			//fusion phase
 			if ( active_proc >= k )
-				fusion ( sorting, 0, size + (total_size * (k-1) / active_proc), size, merging );
+				fusion ( data_owned, k );
 			else 
-				fusion ( sorting, 0, total_size, size, merging ); //case of unbalanced tree, latest step
+				fusion ( data_owned, active_proc ); //case of unbalanced tree, latest step
 				
-			size += ( total_size * (k-1) / active_proc ); //size of the locally ordered sequence
 		}
 		else if ( do_i_send ( rank, k, active_proc ) ) 
-			_MPI_Send ( sorting, size, MPI_INT, to_who( rank, k, active_proc ), 0, MPI_COMM_WORLD );
+			send ( ti, data_owned, to_who( rank, k, active_proc ));
 		
+		//keeps updated the number of processes that partecipate to the sorting in the next step
 		active_proc /= k;
 	}
 	
 	stopPhase( ti, localP );
 	
-	free ( merging );
+	//frees memory
+	int i;
+	for ( i = 1; i < k; i++ )
+		destroyData ( data_owned + i );
 	free ( dests );
 }
 
@@ -156,6 +166,7 @@ extern "C"
 	{
 		Data data_local;
 		mk_mergesort ( ti, &data_local );
+		destroyData ( &data_local );
 	}
 
 	void mainSort( const TestInfo *ti, Data *data_local )
