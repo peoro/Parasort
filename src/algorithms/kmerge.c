@@ -106,7 +106,6 @@ void fusion ( Data *data_owned, int runs )
 void mk_mergesort ( const TestInfo *ti, Data *data_local )
 {
 	const int 	total_size	= GET_M ( ti );
-	int 		size 		= GET_LOCAL_M ( ti );
 	const int 	rank 		= GET_ID ( ti );
 	const int 	k 			= ti->algoVar[PARAM_K]; 
 	int 		active_proc = GET_N ( ti );
@@ -136,7 +135,7 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 			from_who( rank, k, active_proc, dests, &n_dests );
 			for ( receiving = 0; receiving < n_dests; receiving++ ) 
 				receive ( ti, data_owned + receiving + 1, total_size / active_proc, dests[receiving] );
-			
+				
 			//fusion phase
 			if ( active_proc >= k )
 				fusion ( data_owned, k );
@@ -152,6 +151,9 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 	}
 	
 	stopPhase( ti, localP );
+	//TODO: swap need to be handled by framework
+	data_local->array = data_owned->array;
+	data_local->size = data_owned->size;
 	
 	//frees memory
 	int i;
@@ -171,7 +173,7 @@ extern "C"
 
 	void mainSort( const TestInfo *ti, Data *data_local )
 	{	
-		mk_mergesort ( ti, data_local );	
+		mk_mergesort ( ti, data_local );
 	}
 }
 
