@@ -1,5 +1,7 @@
 Our algorithms must be able to handle big data set to some extent, for example we can easily think of a scenario where each core has to sort half a gigabyte of data, and we are using 256 cores; the total memory used, among the whole system, is 128 gigabytes of data.
 At least the first phases of any algorithm (before data is fully distributed), and the last phases (while data is getting gathered) will have for sure to support datasets that cannot fit in principal memory, and will be forced to run their computations on some files allocated in secondary memory.
+This is a big issue, since it would force us to explicitly re-design any algorithm in order to make it handle both the mediums data could be stored in.
+In order to limit the complexity of algorithms we decided to separate medium handling from actual algorithm code, thus creating a new abstraction layer in our application model.
 
 \begin{wrapfigure}{r}{0.3\textwidth}
   \begin{center}
