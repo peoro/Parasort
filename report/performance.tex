@@ -37,7 +37,7 @@ These consideration aims at justifing the non-ideal scalability of the algorithm
 	\caption{Completion Time of the algorithms on Pianosa for large data sets.}
 	\label{large-tc}
 \end{figure}
-
+ 
 \subsubsection*{Small data sets}
 All our algorithms do not scale on Pianosa when the data set to sort is small (i.e. its size is of the order of hundreds of kilobytes); even worse, increasing the parallelism degree of the algorithm causes an increase of the completion time too. Figure~\ref{small-samplesort} shows the specific case of Samplesort; all other algorithms behave like Samplesort. This behaviour is mainly due to the cost of communications between processes. If we model the cost of a $send$ as we did in~\ref{test-env} and if we look at the result obtained in~\ref{test-env-pianosa}, we can clearly see that the cost of sending a few kilobytes is of the order of milliseconds. On the other hand, the cost of sorting a small data set is of the order of milliseconds too (see Figure~\ref{small-sequential}; scale is not logaritmic to a better comparison with the other figures). These characteristics leads us to say, from a qualitative point of view, that the higher the parallelism degree, the higher both the number of communications and the overall time spent in sending data, so higher is even the overhead introduced by the parallelization. 
 
