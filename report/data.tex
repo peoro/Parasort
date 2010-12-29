@@ -8,9 +8,10 @@ In order to limit the complexity of algorithms we decided to separate medium han
     \includegraphics[scale=0.50]{levels}
   \end{center}
   \caption{Our abstract model}
+  \label{levels}
 \end{wrapfigure}
 
-At this porpose we decided to add a further abstraction layer below the actual sorting algorithm: we decided to introduce a new data structure called \texttt{Data} that represents a dataset indipendently on its form or position: it can represent both an array allocated on principal memory or a file allocated on the hard disk, and it has been thought to be able to represent even other kind of data representation (eg: a compressed dataset). The sorting algorithm, which is our higher abstraction level, doesn't need to know about how or where \texttt{Data} is allocated, and use it in a transparent way.
+The new abstraction layer is located below the actual sorting algorithm, as shown in figure~\ref{levels}: we decided to introduce a new data structure called \texttt{Data} that represents a dataset indipendently on its form or position: it can represent both an array allocated on principal memory or a file allocated on the hard disk, and it has been thought to be able to represent even other kind of data representation (eg: a compressed dataset). The sorting algorithm, which is our higher abstraction level, doesn't need to know about how or where \texttt{Data} is allocated, and use it in a transparent way.
 We needed to write some kind of run-time support for this level, which is logically placed just below the algorithm sorting: since we want to save the algorithm from actually care about how Data is allocated, it needs to use some functions that will take care of it exposing a data-independent signature. Our rule of thumb is that all and only the functions logically placed at this abstraction level are the only ones actually working with a \texttt{Data} object (ie: accessing its field directly or indirectly) and vice-versa.
 Functions at this abstraction level will one (or more) \texttt{Data} object, will see wether it's allocated on primary or secondary memory, and according to this they'll run some data-dependent codes, optimized for the medium where the \texttt{Data} object is allocated.
 
