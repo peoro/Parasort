@@ -1,5 +1,5 @@
-set terminal png size 1149, 861 crop
- set output "/home/nico/tmp/mpi_comm_perf/pianosa/tsend_4.png"
+set terminal postscript eps enhanced color
+ set output "/home/nico/Projects/SPD_LAB/Project/spd-project/tests/mpi_comm_perf/pianosa/tsend_4.eps"
  set xlabel "Size (bytes)"
  set ylabel "time (us)"
  set title "Send performance for MPI (pianosa) type blocking"

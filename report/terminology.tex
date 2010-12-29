@@ -14,7 +14,7 @@ $\varphi = \frac{\sum_{i=0}^m \frac{E[X_i]}{P}}{m} = \frac{\sum_{i=0}^m E[X_i]}{
 \end{center}
 The efficiency is a formal tool to establish how much an algorithm exploits the parallelism degree of a machine. $\varphi \rightarrow 1$ means that the algorithm, in each step, tends to use all the available processor of the machine. Obviously, $\varphi \rightarrow 1$ does not means that the algorithm is ''good''; indeed, for such claim, the value of both $m$ and $T_i$ must be considered. For instance, we might have $\varphi \rightarrow 1$ and $T_i \rightarrow\infty$, meaning that each step requires a lot of time; or even worse, $m \rightarrow\infty$, meaning that the algorithm requires a lot of steps in which almost all the processors are involved.
 
-As we said, a parallel sorting algorithm is composed of some steps of computation. During each step, a process can do basically three things, obviouslly not mutual exclusive each other:
+As we said, a parallel sorting algorithm is composed of some steps of computation. During each step, a process can do basically three things, obviously not mutual exclusive each other:
 \begin{itemize}
 \item it can send data to other processes (the process is a \textit{sender} of that step)
 \item it can receive data from other processes (the process is a \textit{receiver} of that step)

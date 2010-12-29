@@ -1,5 +1,5 @@
-set terminal png size 1149, 861 crop
- set output "/home/nico/tmp/prova2/mpi_comm_perf/pianosa/bisect_logscale.png"
+set terminal postscript eps enhanced color
+ set output "/home/nico/Projects/SPD_LAB/Project/spd-project/tests/mpi_comm_perf/pianosa/bisect_logscale.eps"
  set xlabel "Size (bytes)"
  set ylabel "time (us)"
  set title "Bisection performance for MPI (pianosa) type blocking"

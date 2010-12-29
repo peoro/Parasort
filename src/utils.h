@@ -82,7 +82,7 @@ int getBucketIndex( const int *ele, const int *splitters, const int length )
 *
 * @param[in] data       	The data object containing data to be distributed
 * @param[in] splitters  	The array of splitters
-* @param[in] n     			The number of processes
+* @param[in] n     			The number of buckets
 * @param[out] lengths    	The array that will contain the small bucket lengths
 */
 void getSmallBucketLengths( Data *data, const int *splitters, const int n, long *lengths )
