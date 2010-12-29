@@ -8,47 +8,54 @@
 * @version 0.0.01
 */
 
+#include <assert.h>
 #include <string.h>
 #include "../sorting.h"
 #include "../utils.h"
 
 /**
-* @brief Compare and Exchange operation on the low part of two sequences sorted in ascending order
+* @brief Compare and Exchange operation on the low part of two data objects with integers sorted in ascending order
 *
-* @param[in] 	length			The length of the sequences
-* @param[in] 	firstSeq		The first sequence
-* @param[in] 	secondSeq    	The second sequence
-* @param[out] 	mergedSeq		The merged sequence
+* @param[in] 	d1			The first data object
+* @param[out] 	d2			The second data object that will also contain the merging result
 */
-void compareLow( const int length, int *firstSeq, int *secondSeq, int* mergedSeq )
+void compareLow( Data *d1, Data *d2 )
 {
 	int i, j, k;
+	Data d3;
+	assert( allocDataArray( &d3, d2->size ) );
 
-	for ( i=j=k=0; i<length; i++ )
-		if ( secondSeq[j] <= firstSeq[k] )
-			mergedSeq[i] = secondSeq[j++];
+	for ( i=j=k=0; i<d2->size; i++ )
+		if ( d2->array[j] <= d1->array[k] )
+			d3.array[i] = d2->array[j++];
 		else
-			mergedSeq[i] = firstSeq[k++];
+			d3.array[i] = d1->array[k++];
+
+	free( d2->array );
+	d2->array = d3.array;
 }
 
 
 /**
-* @brief Compare and Exchange operation on the high part of two sequences sorted in ascending order
+* @brief Compare and Exchange operation on the high part of two data objects with integers sorted in ascending order
 *
-* @param[in] 	length			The length of the sequences
-* @param[in] 	firstSeq		The first sequence
-* @param[in] 	secondSeq    	The second sequence
-* @param[out] 	mergedSeq		The merged sequence
+* @param[in] 	d1			The first data object
+* @param[out] 	d2			The second data object that will also contain the merging result
 */
-void compareHigh( const int length, int *firstSeq, int *secondSeq, int* mergedSeq )
+void compareHigh( Data *d1, Data *d2 )
 {
 	int i, j, k;
+	Data d3;
+	assert( allocDataArray( &d3, d2->size ) );
 
-	for ( i=j=k=length-1; i>=0; i-- )
-		if ( secondSeq[j] >= firstSeq[k] )
-			mergedSeq[i] = secondSeq[j--];
+	for ( i=j=k=d2->size-1; i>=0; i-- )
+		if ( d2->array[j] >= d1->array[k] )
+			d3.array[i] = d2->array[j--];
 		else
-			mergedSeq[i] = firstSeq[k--];
+			d3.array[i] = d1->array[k--];
+
+	free( d2->array );
+	d2->array = d3.array;
 }
 
 /**
@@ -57,49 +64,29 @@ void compareHigh( const int length, int *firstSeq, int *secondSeq, int* mergedSe
 * @param[in] ti        The TestInfo Structure
 * @param[in] data      Data to be sorted
 */
-void bitonicSort( const TestInfo *ti, int *data )
+void bitonicSort( const TestInfo *ti, Data *data )
 {
 	const int		root = 0;                           //Rank (ID) of the root process
 	const int		id = GET_ID( ti );                  //Rank (ID) of the process
 	const int		n = GET_N( ti );                    //Number of processes
 	const long		M = GET_M( ti );                    //Number of data elements
 	const long		local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
-	const long		maxLocal_M = M / n + (0 < M%n);     //Max number of elements assigned to a process
-	int				*localData = 0;	                	//Local section of the input data
 
-	int				*recvData = 0;
-	int				*mergedData = 0;
+	Data			recvData;
+	long 			recvCount = local_M;				//Number of elements that will be received from partner
 
-	MPI_Status 		status;
-
-	int 			counts[n];							//Number of elements in send/receive buffers
-	int				displs[n];							//Send/receive buffer displacements
-
-	int				mask, mask2, partner, recvCount, length;
-	int				i, j, k, z, flag;
+	int				mask, mask2, partner;
+	long			i, j, k, z, flag;
 
 	PhaseHandle 	scatterP, localP, mergeP, gatherP;
-
-	/* Allocating memory */
-	localData = (int*) malloc( local_M * sizeof(int) );
-	recvData = (int*) malloc( maxLocal_M * sizeof(int) );
-	mergedData = (int*) malloc( maxLocal_M * sizeof(int) );
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
 /***************************************************************************************************************/
 	scatterP = startPhase( ti, "scattering" );
 
-	/* Computing the number of elements to be sent to each process and relative displacements */
-	if ( id == root ) {
-		for ( k=0, i=0; i<n; i++ ) {
-			displs[i] = k;
-			counts[i] = M/n + (i < M%n);
-			k += counts[i];
-		}
-	}
 	/* Scattering data */
-	MPI_Scatterv( data, counts, displs, MPI_INT, localData, maxLocal_M, MPI_INT, root, MPI_COMM_WORLD );
+	scatter( ti, data, local_M, root );
 
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -111,7 +98,7 @@ void bitonicSort( const TestInfo *ti, int *data )
 	localP = startPhase( ti, "local sorting" );
 
 	/* Sorting local data */
-	qsort( localData, local_M, sizeof(int), compare );
+	sequentialSort( ti, data );
 
 	stopPhase( ti, localP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -132,22 +119,15 @@ void bitonicSort( const TestInfo *ti, int *data )
 
 		for ( j=0; j<i; j++, mask2>>=1 ) {
 			partner = id ^ mask2;				//Selects as partner the process with rank that differs from id only at the j-th bit
-			recvCount = M/n + (partner < M%n);	//Number of elements that will be received from partner
-
-			/* Length of the merged sequence */
-			length = recvCount < local_M ? recvCount : local_M;
 
 			/* Exchanging data with partner */
-			MPI_Sendrecv( localData, local_M, MPI_INT, partner, 100, recvData, recvCount, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
+			sendrecv( ti, data, local_M, 0, &recvData, recvCount, 0, partner );
 
 			/* Each process must call the dual function of its partner */
 			if ( (id-partner) * flag > 0 )
-				compareLow( length, recvData, localData, mergedData );
+				compareLow( &recvData, data );
 			else
-				compareHigh( length, recvData, localData, mergedData );
-
-			/* Saving the merged sequence as local data for the next step */
-			memcpy( localData, mergedData, length*sizeof(int) );
+				compareHigh( &recvData, data );
 		}
 	}
 
@@ -161,23 +141,24 @@ void bitonicSort( const TestInfo *ti, int *data )
 	gatherP = startPhase( ti, "gathering" );
 
 	/* Gathering sorted data */
-	MPI_Gatherv( localData, local_M, MPI_INT, data, counts, displs, MPI_INT, root, MPI_COMM_WORLD );
+	gather( ti, data, M, root );
 
 	stopPhase( ti, gatherP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
 	/* Freeing memory */
-	free( localData );
-	free( recvData );
-	free( mergedData );
+	if ( id != root )
+		destroyData( data );
+	destroyData( &recvData );
 }
 
-void mainSort( const TestInfo *ti, int *data, long size )
+void mainSort( const TestInfo *ti, Data *data )
 {
 	bitonicSort( ti, data );
 }
 
 void sort( const TestInfo *ti )
 {
-	bitonicSort( ti, 0 );
+	Data data;
+	bitonicSort( ti, &data );
 }

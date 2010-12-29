@@ -120,7 +120,6 @@ void bucketSort( const TestInfo *ti, Data *data )
 			k += recvCounts[i];
 		}
 	}
-
 	/* Gathering sorted data */
 	gatherv( ti, data, recvCounts, rdispls, root );
 

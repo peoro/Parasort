@@ -25,6 +25,8 @@ int _MPI_Alltoall( void *sendbuf, long sendcount, MPI_Datatype sendtype, void *r
 void send( const TestInfo *ti, Data *data, int dest );
 void receive( const TestInfo *ti, Data *data, long size, int source );
 
+void sendrecv( const TestInfo *ti, Data *sdata, long scount, long sdispl, Data* rdata, long rcount, long rdispl, int partner );
+
 void scatterSend( const TestInfo *ti, Data *data );
 void scatterReceive( const TestInfo *ti, Data *data, long size, int root );
 void scatter( const TestInfo *ti, Data *data, long size, int root );
@@ -32,6 +34,11 @@ void scatter( const TestInfo *ti, Data *data, long size, int root );
 void scattervSend( const TestInfo *ti, Data *data, long *sizes, long *displs );
 void scattervReceive( const TestInfo *ti, Data *data, long size, int root );
 void scatterv( const TestInfo *ti, Data *data, long *sizes, long *displs, int root );
+
+
+void gatherSend( const TestInfo *ti, Data *data, int root );
+void gatherReceive( const TestInfo *ti, Data *data, long size );
+void gather( const TestInfo *ti, Data *data, long size, int root );
 
 void gathervSend( const TestInfo *ti, Data *data, int root );
 void gathervReceive( const TestInfo *ti, Data *data, long *sizes, long *displs );
