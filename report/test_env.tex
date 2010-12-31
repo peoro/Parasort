@@ -1,19 +1,19 @@
 \section{Performance evaluation}
 
-\subsection{Test environment}
-\subsubsection{Pianosa}
-\subsubsection{''Physics cluster''}
-
 \subsection{Performance measurement approach}
 \label{test-env}
-There are two different approaches to measure performance: profiling and benchmarking.
+There are two different common approaches to evaluate performance: profiling and benchmarking.
 
 Profiling is used to measure the performance of a given application by adding time measuring and logging code. After the execution has been completed, one can retrace and check how much time had been spent in which function call. This is useful for application developers to find potential bottlenecks and inefficient implemented functions.
 
 Benchmarking addresses mainly the levels underneath the application level, for instance the performance
 of the MPI-implementation, the performance of the network and devices. Most interesting results are latencies and bandwidths and their course for various packet or messages sizes. Benchmarking is done by performing numerous iterations of computation and/or communication and measuring the elapsed time.
 
-We used the latter technique to measure the performance of the two message-passing environments, and a combination of both benchmarking and profiling techniques to measure the performance of the different sorting algorithms.
+We used the latter technique to measure the performance of MPI on our test environments, and a combination of both benchmarking and profiling techniques to measure the performance of the different sorting algorithms.
+
+\subsection{Test environment}
+\subsubsection{Pianosa}
+\subsubsection{''Physics cluster''}
 
 \subsection{MPI cost model}
 In a simplified view, the cost of sending a message between two tasks located on different processors can be represented by two parameters: the message startup time $T_{setup}$, which is the time required to initiate the communication, and the transmission time $T_{trasm}$ per word, which is determined by the physical bandwidth of the communication channel linking the source and destination processors. The time required to send a message of size L words is then
@@ -39,7 +39,7 @@ In the bisection test the complete system is logically divided into two subsyste
 
 \subsubsection*{Pianosa}
 \label{test-env-pianosa}
-Below are the results obtained on Pianosa:
+Figures~\ref{pianosa-mpi-1},~\ref{pianosa-mpi-2},~\ref{pianosa-mpi-3} show the results obtained on Pianosa:
 %\begin{figure}[h!]
 %	\centering
 %  	\subfloat[Messages of length from 0 to 32 bytes (stride 4 bytes).]{\label{tsend_32}\includegraphics[width=0.5\textwidth]{../tests/mpi_comm_perf/pianosa/tsend_4}}  
@@ -69,13 +69,18 @@ Below are the results obtained on Pianosa:
 	\hspace*{20pt}
   	\subfloat[Messages of length from 0 to 1024 bytes (stride 32 bytes).]{\label{tsend_32}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/pianosa/tsend_32}}  
 	\caption{Performance of blocking send between two processes.}
+	\label{pianosa-mpi-1}
 	
 	\centering
   	\subfloat[Messages of length from 0 to 32768 bytes (stride $2^i$ bytes).]{\label{tsend_logscale}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/pianosa/tsend_logscale}}  
 	\hspace*{20pt}
   	\subfloat[Bisection test with 4, 8 and 16 processors.]{\label{bisect_logscale}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/pianosa/bisect_logscale}}  
 	\caption{Performance of blocking send and bisection test.}
+	\label{pianosa-mpi-2}	
 	
 	\centering {\label{bcast}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/pianosa/bcast}}  
 	\caption{Performance of broadcast with 4, 8 and 16 processors.}
+	\label{pianosa-mpi-3}
 \end{figure}
+
+\input{performance}

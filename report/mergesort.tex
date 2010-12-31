@@ -1,4 +1,4 @@
-\subsection{Mergesort}
+\subsubsection{Mergesort}
 Mergesort is a well-known sorting algorithm based on the Divide$\&$Conquer paradigm. Thinking to a parallel version of Mergesort is therefore quite natural. First of all, $S$ is scattered among the $N$ processes. Each process locally sorts its own portion of $\frac{n}{N}$ elements, using a standard sequential sorting algorithm, like \textit{qsort}. At this point, a sequence of $\lceil \log_{2}{N} \rceil$ steps starts; in everyone of them, a \textit{distribution} phase precedes a \textit{merging} phase. The distribution phase is performed \textit{between different processes}: for instance, $rank$ $1$ sends its data to $rank$ $0$, while $rank$ $3$ to $rank$ $2$ and so on. On the other hand, the merging phase is done locally by all the processes that received a portion of data. Figure~\ref{merge-dist} clarifies these concepts. Further, we observe that as its sequential counterpart, our version of mergesort needs an auxiliary array of size $n$. 
 \begin{algorithmic}[1]  
 	\medskip

@@ -38,21 +38,10 @@ sensitive=false}
 
 \input{algorithms}
 
-\section{Assumptions [draft]}
-\input{assumptions}
-
-\section{Structuring the framework}
-\subsection{DAL: Data Abstraction Layer}
-\input{data}
-\subsection{Data generation}
-\subsection{Long MPI [draft title]}
-\subsection{API}
-
-\input{test_env}
-
-\pagebreak
-
-\section{Description and performance evaluation of the algorithms}
+\section{Structuring the project: a top-down approach}
+\subsection{Abstraction Layers}
+\input{framework}
+\subsection{Sorting Algorithms}
 \input{terminology}
 \input{mergesort}
 \input{kmerge}
@@ -62,8 +51,13 @@ sensitive=false}
 \input{bitonicsort}
 \input{bucketsort}
 \input{samplesort}
+\subsection{DAL: Data Abstraction Layer}
+\input{data}
+\subsection{Sorting Framework}
+\subsection*{Data generation}
+\subsection*{API}
 
-\input{performance}
+\input{test_env}
 
 \input{futureworks}
 

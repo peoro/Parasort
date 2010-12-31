@@ -1,4 +1,4 @@
-\subsection{Load-Balanced Merge Sort}
+\subsubsection{Load-Balanced Merge Sort}
 When we refer to load balancing, we ideally want all the processes to be operating continuously in the overall computation, which would lead to the minimum execution time. Achieving this goal by spreading the work evenly across processes is called load balancing.
 
 The main limit of the classic approach in parallelizing merge sort is due to the number of idle processes that keeps growing during the merging phase. The active processes are halved at each step. Therefore, the maximum achievable efficiency is severely limited. The aim of the \textit{Load-Balanced Merge Sort} we implemented is to force each process to participate in the entire merging phase in order to obtain higher parallelism and increase efficiency.
