@@ -13,6 +13,27 @@
 #include "../utils.h"
 
 /**
+* @brief Gets the number of element to be inserted in each small bucket
+*
+* @param[in] data       	The data object containing data to be distributed
+* @param[in] splitters  	The array of splitters
+* @param[in] n     			The number of buckets
+* @param[out] lengths    	The array that will contain the small bucket lengths
+*/
+void getSmallBucketLengths( Data *data, const int *splitters, const int n, long *lengths )
+{
+	/* TODO: Implement it the right way!! */
+
+	int i, j;
+
+		/* Computing the number of integers to be sent to each process */
+	for ( i=0; i<data->size; i++ ) {
+		j = getBucketIndex( &data->array[i], splitters, n-1 );
+		lengths[j]++;
+	}
+}
+
+/**
 * @brief Sorts input data by using a parallel version of Sample Sort
 *
 * @param[in] ti        The TestInfo Structure
@@ -167,5 +188,6 @@ void mainSort( const TestInfo *ti, Data *data )
 void sort( const TestInfo *ti )
 {
 	Data data;
+	initData( &data );
 	sampleSort( ti, &data );
 }

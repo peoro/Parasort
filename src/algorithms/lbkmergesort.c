@@ -8,6 +8,7 @@
 * @version 0.0.01
 */
 
+#include <assert.h>
 #include <string.h>
 #include <queue>
 #include "../sorting.h"
@@ -33,31 +34,55 @@ struct Min_val {
 * @param[in] 	lengths			Array containing the length of each run
 * @param[in] 	displs			Displacements of each run
 * @param[in] 	mergedLength    Length of the final merged sequence
-* @param[out] 	mergedSeq		The merged sequence
+* @param[out] 	mergedData		The merged sequence
 */
-void kmerge( int *runs, int k, int* lengths, int* displs, int mergedLength, int *mergedSeq )
+void kmerge( Data *runs, int k, long* lengths, long* displs, long mergedLength, Data *mergedData )
 {
+	/* TODO: Implement it the right way!! */
+
 	std::priority_queue<Min_val> heap;
 	int *runs_indexes = (int*) calloc( sizeof(int), k );
 	int i;
 
+	assert( reallocDataArray( mergedData, mergedLength ) );
+
 	/* Initializing the heap */
 	for ( i=0; i<k; i++ ) {
 		if ( lengths[i] )
-			heap.push( Min_val( runs[displs[i]], i ) );
+			heap.push( Min_val( runs->array[displs[i]], i ) );
 	}
 	/* Merging the runs */
 	for ( i=0; i<mergedLength; i++ ) {
 		Min_val min = heap.top();
 		heap.pop();
-		mergedSeq[i] = min.val;
+		mergedData->array[i] = min.val;
 
 		if ( ++(runs_indexes[min.run_index]) != lengths[min.run_index] )
-			heap.push( Min_val( runs[displs[min.run_index] + runs_indexes[min.run_index]], min.run_index ) );
+			heap.push( Min_val( runs->array[displs[min.run_index] + runs_indexes[min.run_index]], min.run_index ) );
 	}
 	free( runs_indexes );
 }
 
+/**
+* @brief Gets the number of element to be inserted in each small bucket
+*
+* @param[in] data       	The data object containing data to be distributed
+* @param[in] splitters  	The array of splitters
+* @param[in] n     			The number of buckets
+* @param[out] lengths    	The array that will contain the small bucket lengths
+*/
+void getSendCounts( Data *data, const int *splitters, const int n, long *lengths )
+{
+	/* TODO: Implement it the right way!! */
+
+	int i, j;
+
+		/* Computing the number of integers to be sent to each process */
+	for ( i=0; i<data->size; i++ ) {
+		j = getBucketIndex( &data->array[i], splitters, n-1 );
+		lengths[j]++;
+	}
+}
 
 /**
 * @brief Sorts input data by using a parallel version of Mergesort with load balancing
@@ -65,7 +90,7 @@ void kmerge( int *runs, int k, int* lengths, int* displs, int mergedLength, int 
 * @param[in] ti        The TestInfo Structure
 * @param[in] data      Data to be sorted
 */
-void lbkmergesort( const TestInfo *ti, int *data )
+void lbkmergesort( const TestInfo *ti, Data *data )
 {
 	const int	root = 0;                          	//Rank (ID) of the root process
 	const int	id = GET_ID( ti );                	//Rank (ID) of the process
@@ -74,11 +99,11 @@ void lbkmergesort( const TestInfo *ti, int *data )
 	const long	maxLocal_M = M / n + (0 < M%n);    	//Max number of elements assigned to a process
 	const int	buffSize = 4*maxLocal_M;			//Max number of received elements (using the sampling technique, it is shown that each process will have, at the end, a maximum of 4*M/n elements to sort)
 
-	int			*localData, *recvData;
+	Data		recvData;
 	long 		dataLength = GET_LOCAL_M( ti );     //Number of elements assigned to this process
 
-	int 		sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
-	int			sdispls[n], rdispls[n];				//Send/receive buffer displacements
+	long 		sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
+	long		sdispls[n], rdispls[n];				//Send/receive buffer displacements
 
 	MPI_Status 	status;
 
@@ -86,13 +111,12 @@ void lbkmergesort( const TestInfo *ti, int *data )
 	int			*allSplitters = 0;                 	//All splitters (will include all the local splitters)
 	int			*globalSplitters = 0;            	//Global splitters (will be selected from the allSplitters array)
 
-	int			i, j, k, h, z, flag;
+	long		i, j, k, h, z, flag;
 	PhaseHandle scatterP, localP, samplingP, multiwayMergeP, gatherP;
 	int 		groupSize, idInGroup, partner, pairedGroupRoot, groupRoot;
 
-	/* Allocating memory */
-	localData = (int*) malloc( buffSize * sizeof(int) );
-	recvData = (int*) malloc( buffSize * sizeof(int) );
+	/* Initializing data objects */
+	initData( &recvData );
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
@@ -108,7 +132,7 @@ void lbkmergesort( const TestInfo *ti, int *data )
 		}
 	}
 	/* Scattering data */
-	MPI_Scatterv( data, sendCounts, sdispls, MPI_INT, localData, maxLocal_M, MPI_INT, root, MPI_COMM_WORLD );
+	scatterv( ti, data, sendCounts, sdispls, root );
 
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -120,7 +144,7 @@ void lbkmergesort( const TestInfo *ti, int *data )
 	localP = startPhase( ti, "local sorting" );
 
 	/* Sorting local data */
-	qsort( localData, dataLength, sizeof(int), compare );
+	sequentialSort( ti, data );
 
 	stopPhase( ti, localP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -132,8 +156,8 @@ void lbkmergesort( const TestInfo *ti, int *data )
 
 	samplingP = startPhase( ti, "sampling" );
 
-	/* Choosing local splitters (n-1 equidistant elements of the data array) */
-	chooseSplitters( localData, dataLength, n, localSplitters );
+	/* Choosing local splitters (n-1 equidistant elements of the data object) */
+	chooseSplittersFromData( data, n, localSplitters );
 
 	/* Gathering all splitters to the root process */
 	if ( id == root )
@@ -161,13 +185,10 @@ void lbkmergesort( const TestInfo *ti, int *data )
 	multiwayMergeP = startPhase( ti, "parallel multiway merge" );
 
 	/* Initializing the sendCounts array */
-	memset( sendCounts, 0, n*sizeof(int) );
+	memset( sendCounts, 0, n*sizeof(long) );
 
-	/* Computing the number of integers to be sent to each process of the paired group */
-	for ( j=0; j<dataLength; j++ ) {
-		k = getBucketIndex( &localData[j], globalSplitters, n-1 );
-		sendCounts[k]++;
-	}
+	/* Computing the number of integers to be sent to each process */
+	getSendCounts( data, globalSplitters, n, sendCounts );
 
 	/* Computing the displacements */
 	for ( k=0, j=0; j<n; j++ ) {
@@ -188,19 +209,16 @@ void lbkmergesort( const TestInfo *ti, int *data )
 
 		/* Exchanging data with the paired group avoiding deadlocks */
 		for ( h=1, j=partner; h<=groupSize; h++ ) {
-			MPI_Sendrecv( &localData[sdispls[j]], sendCounts[j], MPI_INT, j, 100, &recvData[dataLength], buffSize, MPI_INT, j, 100, MPI_COMM_WORLD, &status );
-
-			MPI_Get_count( &status, MPI_INT, &k);
+			k = sendrecv( ti, data, sendCounts[j], sdispls[j], &recvData, buffSize, dataLength, j );
 			dataLength += k;
 			recvCounts[z++] = k;
 
 			j = ((id + h*flag) % groupSize + groupRoot) ^ groupSize;		//Selects the next partner to avoid deadlocks
 		}
 	}
-	/* Copying local section of data */
- 	memcpy( &recvData[dataLength], &localData[sdispls[id]], sendCounts[id]*sizeof(int) );
- 	recvCounts[z] = sendCounts[id];
- 	dataLength += recvCounts[z];
+	k = sendrecv( ti, data, sendCounts[id], sdispls[id], &recvData, sendCounts[id], dataLength, id );
+	dataLength += k;
+	recvCounts[z] = k;
 
 	/* Computing the displacements */
 	for ( k=0, i=0; i<n; i++ ) {
@@ -208,7 +226,7 @@ void lbkmergesort( const TestInfo *ti, int *data )
 		k += recvCounts[i];
 	}
 	/* Merging received data */
-	kmerge ( recvData, n, recvCounts, rdispls, dataLength, localData );
+	kmerge ( &recvData, n, recvCounts, rdispls, dataLength, data );
 
 	stopPhase( ti, multiwayMergeP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -220,7 +238,7 @@ void lbkmergesort( const TestInfo *ti, int *data )
 	gatherP = startPhase( ti, "gathering" );
 
 	/* Gathering the lengths of the all buckets */
-	MPI_Gather( &dataLength, 1, MPI_INT, recvCounts, 1, MPI_INT, root, MPI_COMM_WORLD );
+	MPI_Gather( &dataLength, 1, MPI_LONG, recvCounts, 1, MPI_LONG, root, MPI_COMM_WORLD );
 
 	/* Computing displacements relative to the output array at which to place the incoming data from each process  */
 	if ( id == root ) {
@@ -232,25 +250,26 @@ void lbkmergesort( const TestInfo *ti, int *data )
 		free( allSplitters );
 	}
 	/* Gathering sorted data */
-	MPI_Gatherv( localData, dataLength, MPI_INT, data, recvCounts, rdispls, MPI_INT, root, MPI_COMM_WORLD );
+	gatherv( ti, data, recvCounts, rdispls, root );
 
 	stopPhase( ti, gatherP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
 	/* Freeing memory */
-	free( localData );
-	free( recvData );
+	destroyData( &recvData );
 }
 
 extern "C"
 {
-	void mainSort( const TestInfo *ti, int *data, long size )
+	void mainSort( const TestInfo *ti, Data *data )
 	{
 		lbkmergesort( ti, data );
 	}
 
 	void sort( const TestInfo *ti )
 	{
-		lbkmergesort( ti, 0 );
+		Data data;
+		initData( &data );
+		lbkmergesort( ti, &data );
 	}
 }

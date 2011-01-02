@@ -90,11 +90,19 @@ long GET_FILE_SIZE( const char *path )
 	return len;
 }
 
+void initData( Data *data ) {
+	data->medium = NoMedium;
+	data->size = 0;
+	data->array = NULL;
+}
+
 void destroyData( Data *data )
 {
 	if( data->medium == Array ) {
-		data->medium = NoMedium;
 		free( data->array );
+		data->medium = NoMedium;
+		data->array = NULL;
+		data->size = 0;
 	}
 }
 
@@ -116,6 +124,7 @@ bool reallocDataArray ( Data *data, int size )
 	if( ! data->array ) {
 		return 0;
 	}
+	data->medium = Array;
 	data->size = size;
 	return 1;
 }

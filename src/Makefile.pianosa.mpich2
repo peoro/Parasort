@@ -8,22 +8,22 @@ INSTALLDIR = $(HOME)/.spd
 DATADIR = $(INSTALLDIR)/data
 LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
-ALGOS = mergesort quicksort samplesort bucketsort bitonicsort lbmergesort nosort sequential
+ALGOS = mergesort samplesort bucketsort bitonicsort lbmergesort sequential # quicksort nosort
 ALGOSPP = kmerge lbkmergesort
-OBJECTS = longmpi.o
+OBJECTS = communication.o sorting.o
 
 all: $(ALGOS) $(ALGOSPP) main
 
-$(ALGOS): longmpi.o
+$(ALGOS): $(OBJECTS)
 	@echo "Compiling "$@"..."
 	$(MPICC) -lm $(ALGOCFLAGS) -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
 
-$(ALGOSPP): longmpi.o
+$(ALGOSPP): $(OBJECTS)
 	@echo "Compiling "$@"..."
 	$(MPICPP) $(ALGOCFLAGS) -DMPICH_IGNORE_CXX_SEEK -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
 
-longmpi.o:
-	$(MPICC) $(ALGOCFLAGS) -c longmpi.c
+$(OBJECTS):
+	$(MPICC) $(ALGOCFLAGS) -c $$( echo $@ | sed -rs "s/\.o/.c/" )
 
 install:
 	mkdir -p $(LIBDIR) $(DATADIR)
@@ -31,17 +31,17 @@ install:
 
 main: spd spddbg spdlog
 
-spd: spd.c
+spd: spd.c  $(OBJECTS)
 	@echo "Compiling spd..."
-	$(MPICC) spd.c $(CFLAGS) $(SPDFLAGS) -o spd
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -o spd
 
-spddbg: spd.c
+spddbg: spd.c $(OBJECTS)
 	@echo "Compiling spddbg (debug mode)..."
-	$(MPICC) spd.c $(CFLAGS) $(SPDFLAGS) -DDEBUG -o spddbg
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -DDEBUG -o spddbg
 
 spdlog: spd.c
 	@echo "Compiling spdlog (profiling mode)..."
-	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c -mpe=mpilog -o spdlog
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -mpe=mpilog -o spdlog
 
 clean:
-	rm -f *~ *.o *.clog2 spd spddbg
+	rm -f *~ *.o *.clog2 spd spddbg spdlog

@@ -21,6 +21,8 @@
 */
 void compareLow( Data *d1, Data *d2 )
 {
+	/* TODO: Implement it the right way!! */
+
 	int i, j, k;
 	Data d3;
 	assert( allocDataArray( &d3, d2->size ) );
@@ -44,6 +46,8 @@ void compareLow( Data *d1, Data *d2 )
 */
 void compareHigh( Data *d1, Data *d2 )
 {
+	/* TODO: Implement it the right way!! */
+
 	int i, j, k;
 	Data d3;
 	assert( allocDataArray( &d3, d2->size ) );
@@ -79,6 +83,9 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	long			i, j, k, z, flag;
 
 	PhaseHandle 	scatterP, localP, mergeP, gatherP;
+
+	/* Initializing data objects */
+	initData( &recvData );
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
@@ -160,5 +167,6 @@ void mainSort( const TestInfo *ti, Data *data )
 void sort( const TestInfo *ti )
 {
 	Data data;
+	initData( &data );
 	bitonicSort( ti, &data );
 }

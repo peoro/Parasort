@@ -14,6 +14,27 @@
 #include "../utils.h"
 
 /**
+* @brief Gets the number of element to be inserted in each small bucket
+*
+* @param[in] data       	The data object containing data to be distributed
+* @param[in] n     			The number of buckets
+* @param[out] lengths    	The array that will contain the small bucket lengths
+*/
+void getSendCounts( Data *data, const int n, long *lengths )
+{
+	/* TODO: Implement it the right way!! */
+
+	int i, j;
+	const double 	range = INT_MAX / n;				//Range of elements in each bucket
+
+		/* Computing the number of integers to be sent to each process */
+	for ( i=0; i<data->size; i++ ) {
+		j = ((double) data->array[i]) / range;
+		lengths[j]++;
+	}
+}
+
+/**
 * @brief Sorts input data by using a parallel version of Bucket Sort
 *
 * @param[in] ti        The TestInfo Structure
@@ -27,7 +48,6 @@ void bucketSort( const TestInfo *ti, Data *data )
 	const long		M = GET_M( ti );                    //Number of data elements
 	const long		local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
 
-	const double 	range = INT_MAX / n;				//Range of elements in each bucket
 
 	long 			sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
 	long			sdispls[n], rdispls[n];				//Send/receive buffer displacements
@@ -78,10 +98,8 @@ void bucketSort( const TestInfo *ti, Data *data )
 	memset( sendCounts, 0, n*sizeof(long) );
 
 	/* Computing the number of integers to be sent to each process */
-/*TODO*/	for ( i=0; i<local_M; i++ ) {
-/*TODO*/		j = ((double) data->array[i]) / range;
-/*TODO*/		sendCounts[j]++;
-/*TODO*/	}
+	getSendCounts( data, n, sendCounts );
+
 	/* Informing all processes on the number of elements that will receive */
 	MPI_Alltoall( sendCounts, 1, MPI_LONG, recvCounts, 1, MPI_LONG, MPI_COMM_WORLD );
 
@@ -139,5 +157,6 @@ void mainSort( const TestInfo *ti, Data *data )
 void sort( const TestInfo *ti )
 {
 	Data data;
+	initData( &data );
 	bucketSort( ti, &data );
 }

@@ -51,6 +51,7 @@ char * GET_SORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen );
 
 long GET_FILE_SIZE( const char *path );
 
+void initData( Data *data );
 void destroyData( Data *data );
 bool allocDataArray( Data *data, int size );
 bool reallocDataArray ( Data *data, int size );
