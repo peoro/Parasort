@@ -1,10 +1,10 @@
 #ifndef _SORTING_H_
 #define _SORTING_H_
 
-#include <mpi.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "communication.h"
 
 /* Keep C++ compilers from getting confused */
 #if defined(__cplusplus)
@@ -12,31 +12,7 @@ extern "C" {
 #endif
 
 
-typedef struct
-{
-	bool verbose;
-	bool threaded; // use multithread between cores
 
-    long M; //data count
-    long seed;
-    char algo[64];
-    int algoVar[3];
-} TestInfo;
-
-
-typedef struct
-{
-	enum { NoMedium, File, Array } medium;
-
-	int *array;
-	long size;
-} Data;
-
-
-int GET_ID ( const TestInfo *ti );
-int GET_N ( const TestInfo *ti );
-long GET_M ( const TestInfo *ti );
-long GET_LOCAL_M ( const TestInfo *ti );
 const char* GET_ALGO ( const TestInfo *ti );
 long GET_SEED ( const TestInfo *ti );
 char * GET_ALGORITHM_PATH( const char *algo, char *path, int pathLen );
@@ -48,13 +24,6 @@ char * GET_SORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen );
 char * GET_UNSORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen );
 char * GET_SORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen );
 #endif
-
-long GET_FILE_SIZE( const char *path );
-
-void initData( Data *data );
-void destroyData( Data *data );
-bool allocDataArray( Data *data, int size );
-bool reallocDataArray ( Data *data, int size );
 
 
 /*!

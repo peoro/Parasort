@@ -38,7 +38,18 @@ inline int compare (const void * a, const void * b)
 /// sequential sort function
 void sequentialSort( const TestInfo *ti, Data *data )
 {
-	qsort( data->array, data->size, sizeof(int), compare );
+	switch( data->medium ) {
+		case File: {
+			UNSUPPORTED_DATA( data );
+			break;
+		}
+		case Array: {
+			qsort( data->array.data, data->array.size, sizeof(int), compare );
+			break;
+		}
+		default:
+			UNSUPPORTED_DATA( data );
+	}
 }
 
 
@@ -112,7 +123,7 @@ void chooseSplittersFromData( Data *data, const int n, int *newSplitters )
 {
 	/* TODO: Implement it the right way!! */
 
-	chooseSplitters( data->array, data->size, n, newSplitters );
+	chooseSplitters( data->array.data, data->array.size, n, newSplitters );
 }
 
 #endif

@@ -2,6 +2,144 @@
 #include<assert.h>
 #include "communication.h"
 
+
+// TODO: pure debugging, move in debug.c ...
+#include <execinfo.h>
+void print_trace( void )
+{
+	void *array[64];
+	size_t size;
+	char **strings;
+	size_t i;
+
+	size = backtrace( array, 64 );
+	strings = backtrace_symbols( array, size );
+
+	printf( "\n" );
+	printf( "Tracebak (%zd stack frames):\n", size );
+
+	for( i = 0; i < size; ++ i ) {
+		printf( "  %s\n", strings[i] );
+	}
+	printf( "\n" );
+
+	free( strings );
+}
+
+
+long GET_FILE_SIZE( const char *path )
+{
+	FILE *f;
+	long len;
+
+	f = fopen( path, "rb" );
+	if( ! f ) {
+		return -1;
+	}
+
+	fseek( f, 0, SEEK_END );
+	len = ftell( f );
+	// rewind( f );
+
+	fclose( f );
+
+	return len;
+}
+const char *DAL_mediumName( enum Medium m )
+{
+	switch( m ) {
+		case NoMedium:
+			return "no medium";
+		case File:
+			return "file [disk]";
+		case Array:
+			return "array [primary memory]";
+		default:
+			return "unknown medium code";
+	}
+}
+char * DAL_dataToString( Data *d, char *s, int size )
+{
+	switch( d->medium ) {
+		case NoMedium:
+			strncpy( s, DAL_mediumName(d->medium), size );
+			break;
+		case File:
+			snprintf( s, size, "\"%s\" [file on disk] of %ld bytes", d->file.name, GET_FILE_SIZE(d->file.name) );
+			break;
+		case Array:
+			snprintf( s, size, "array [on principal memory @ %p] of %ld bytes", d->array.data, d->array.size );
+			break;
+		default:
+			snprintf( s, size, "Unknow medium code %d [%s]", d->medium, DAL_mediumName(d->medium) );
+	}
+	return s;
+}
+
+
+
+
+bool DAL_isInitialized( Data *data )
+{
+	return data->medium == NoMedium;
+}
+void DAL_init( Data *data )
+{
+	data->medium = NoMedium;
+}
+
+void DAL_destroy( Data *data )
+{
+	switch( data->medium ) {
+		case NoMedium: {
+			break;
+		}
+		case File: {
+			UNSUPPORTED_DATA( data );
+			break;
+		}
+		case Array: {
+			free( data->array.data );
+			break;
+		}
+		default:
+			UNSUPPORTED_DATA( data );
+	}
+	DAL_init( data );
+}
+
+bool DAL_allocArray( Data *data, int size )
+{
+	ASSERT_DATA( DAL_isInitialized(data), data, "data should have been initialized" );
+	
+	data->array.data = (int*) malloc( size * sizeof(int) );
+	if( ! data->array.data ) {
+		return 0;
+	}
+	data->array.size = size;
+	
+	data->medium = Array;
+	
+	return 1;
+}
+
+bool DAL_reallocArray ( Data *data, int size )
+{
+	ASSERT_DATA( data->medium == Array, data, "only Array data can be reallocated" );
+
+	data->array.data = (int*) realloc( data->array.data, size * sizeof(int) );
+	if( ! data->array.data ) {
+		return 0;
+	}
+	data->array.size = size;
+	
+	data->medium = Array;
+	
+	return 1;
+}
+
+
+
 /**
 * @brief Sends data to dest
 *
@@ -9,9 +147,20 @@
 * @param[in] data  		Data to be sent
 * @param[in] dest     	Rank of the receiver process
 */
-void send( const TestInfo *ti, Data *data, int dest )
+void DAL_send( const TestInfo *ti, Data *data, int dest )
 {
-	MPI_Send( data->array, data->size, MPI_INT, dest, 0, MPI_COMM_WORLD );
+	switch( data->medium ) {
+		case File: {
+			UNSUPPORTED_DATA( data );
+			break;
+		}
+		case Array: {
+			MPI_Send( data->array.data, data->array.size, MPI_INT, dest, 0, MPI_COMM_WORLD );
+			break;
+		}
+		default:
+			UNSUPPORTED_DATA( data );
+	}
 }
 
 /**
@@ -22,20 +171,12 @@ void send( const TestInfo *ti, Data *data, int dest )
 * @param[in] size  		Max number of integers to be received
 * @param[in] source    	Rank of the sender process
 */
-void receive( const TestInfo *ti, Data *data, long size, int source )
+void DAL_receive( const TestInfo *ti, Data *data, long size, int source )
 {
 	MPI_Status 	stat;
-	assert( allocDataArray( data, size ) );
-	MPI_Recv( data->array, size, MPI_INT, source, 0, MPI_COMM_WORLD, &stat );
+	assert( DAL_allocArray( data, size ) );
+	MPI_Recv( data->array.data, size, MPI_INT, source, 0, MPI_COMM_WORLD, &stat );
 }
-
-
-
-
-
-
-
-
 
 
 /**
@@ -50,23 +191,23 @@ void receive( const TestInfo *ti, Data *data, long size, int source )
 * @param[in] rdispl		Displacement for the receive buffer
 * @param[in] partner	Rank of the partner process
 */
-long sendrecv( const TestInfo *ti, Data *sdata, long scount, long sdispl, Data* rdata, long rcount, long rdispl, int partner )
+long DAL_sendrecv( const TestInfo *ti, Data *sdata, long scount, long sdispl, Data* rdata, long rcount, long rdispl, int partner )
 {
 	int recvCount = rcount;
 	int sendCount = scount;
 	int recvDispl = rdispl;
 	int sendDispl = sdispl;
 
-	assert( reallocDataArray( rdata, recvDispl+recvCount ) );
+	assert( DAL_reallocArray( rdata, recvDispl+recvCount ) );
 
 	MPI_Status 	status;
-	MPI_Sendrecv( sdata->array+sendDispl, sendCount, MPI_INT, partner, 100, rdata->array+recvDispl, recvCount, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
+	MPI_Sendrecv( sdata->array.data+sendDispl, sendCount, MPI_INT, partner, 100, rdata->array.data+recvDispl, recvCount, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
 
 	MPI_Get_count( &status, MPI_INT, &recvCount );
 	if ( recvCount || recvDispl )
-		assert( reallocDataArray( rdata, recvDispl+recvCount ) );
+		assert( DAL_reallocArray( rdata, recvDispl+recvCount ) );
 	else
-		destroyData( rdata );
+		DAL_destroy( rdata );
 
 	rcount = recvCount;
 	return rcount;
@@ -77,18 +218,27 @@ long sendrecv( const TestInfo *ti, Data *sdata, long scount, long sdispl, Data* 
 
 
 
-
-
-void scatterSend( const TestInfo *ti, Data *data )
+void DAL_scatterSend( const TestInfo *ti, Data *data )
 {
-	assert( data->size % GET_N( ti ) == 0 );
-	MPI_Scatter( data->array, data->size/GET_N( ti ), MPI_INT, MPI_IN_PLACE, data->size/GET_N( ti ), MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
-	assert( reallocDataArray( data, data->size/GET_N( ti ) ) );
+	switch( data->medium ) {
+		case File: {
+			UNSUPPORTED_DATA( data );
+			break;
+		}
+		case Array: {
+			assert( data->array.size % GET_N( ti ) == 0 );
+			MPI_Scatter( data->array.data, data->array.size/GET_N( ti ), MPI_INT, MPI_IN_PLACE, data->array.size/GET_N( ti ), MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
+			assert( DAL_reallocArray( data, data->array.size/GET_N( ti ) ) );
+			break;
+		}
+		default:
+			UNSUPPORTED_DATA( data );
+	}
 }
-void scatterReceive( const TestInfo *ti, Data *data, long size, int root )
+void DAL_scatterReceive( const TestInfo *ti, Data *data, long size, int root )
 {
-	assert( allocDataArray( data, size ) );
-	MPI_Scatter( NULL, 0, MPI_INT, data->array, size, MPI_INT, root, MPI_COMM_WORLD );
+	assert( DAL_allocArray( data, size ) );
+	MPI_Scatter( NULL, 0, MPI_INT, data->array.data, size, MPI_INT, root, MPI_COMM_WORLD );
 }
 /**
 * @brief Scatters data among all processes
@@ -98,13 +248,13 @@ void scatterReceive( const TestInfo *ti, Data *data, long size, int root )
 * @param[in] size     	Number of integers per process
 * @param[in] root     	Rank of the root process
 */
-void scatter( const TestInfo *ti, Data *data, long size, int root )
+void DAL_scatter( const TestInfo *ti, Data *data, long size, int root )
 {
 	if( GET_ID( ti ) == root ) {
-		return scatterSend( ti, data );
+		return DAL_scatterSend( ti, data );
 	}
 	else {
-		return scatterReceive( ti, data, size, root );
+		return DAL_scatterReceive( ti, data, size, root );
 	}
 }
 
@@ -112,15 +262,26 @@ void scatter( const TestInfo *ti, Data *data, long size, int root )
 
 
 
-void gatherSend( const TestInfo *ti, Data *data, int root )
+void DAL_gatherSend( const TestInfo *ti, Data *data, int root )
 {
-	MPI_Gather( data->array, data->size, MPI_INT, NULL, 0, MPI_INT, root, MPI_COMM_WORLD );
+	switch( data->medium ) {
+		case File: {
+			UNSUPPORTED_DATA( data );
+			break;
+		}
+		case Array: {
+			MPI_Gather( data->array.data, data->array.size, MPI_INT, NULL, 0, MPI_INT, root, MPI_COMM_WORLD );
+			break;
+		}
+		default:
+			UNSUPPORTED_DATA( data );
+	}
 }
-void gatherReceive( const TestInfo *ti, Data *data, long size )
+void DAL_gatherReceive( const TestInfo *ti, Data *data, long size )
 {
 	assert( size % GET_N( ti ) == 0 );
-	assert( reallocDataArray( data, size ) );
-	MPI_Gather( MPI_IN_PLACE, size/GET_N( ti ), MPI_INT, data->array, size/GET_N( ti ), MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
+	assert( DAL_reallocArray( data, size ) );
+	MPI_Gather( MPI_IN_PLACE, size/GET_N( ti ), MPI_INT, data->array.data, size/GET_N( ti ), MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
 }
 /**
 * @brief Gathers data from all processes
@@ -130,13 +291,13 @@ void gatherReceive( const TestInfo *ti, Data *data, long size )
 * @param[in] 		size     	Number of integers to be gathered
 * @param[in] 		root     	Rank of the root process
 */
-void gather( const TestInfo *ti, Data *data, long size, int root )
+void DAL_gather( const TestInfo *ti, Data *data, long size, int root )
 {
 	if( GET_ID( ti ) == root ) {
-		return gatherReceive( ti, data, size );
+		return DAL_gatherReceive( ti, data, size );
 	}
 	else {
-		return gatherSend( ti, data, root );
+		return DAL_gatherSend( ti, data, root );
 	}
 }
 
@@ -146,23 +307,34 @@ void gather( const TestInfo *ti, Data *data, long size, int root )
 
 
 
-void scattervSend( const TestInfo *ti, Data *data, long *sizes, long *displs )
+void DAL_scattervSend( const TestInfo *ti, Data *data, long *sizes, long *displs )
 {
-	int scounts[GET_N( ti )];
-	int sdispls[GET_N( ti )];
-	int i;
+	switch( data->medium ) {
+		case File: {
+			UNSUPPORTED_DATA( data );
+			break;
+		}
+		case Array: {
+			int scounts[GET_N( ti )];
+			int sdispls[GET_N( ti )];
+			int i;
 
-	for ( i=0; i<GET_N( ti ); i++ ) {
-		scounts[i] = sizes[i];
-		sdispls[i] = displs[i];
+			for ( i=0; i<GET_N( ti ); i++ ) {
+				scounts[i] = sizes[i];
+				sdispls[i] = displs[i];
+			}
+		 	MPI_Scatterv( data->array.data, scounts, sdispls, MPI_INT, MPI_IN_PLACE, sizes[0], MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
+			assert( DAL_reallocArray( data, data->array.size/GET_N( ti ) ) );
+			break;
+		}
+		default:
+			UNSUPPORTED_DATA( data );
 	}
- 	MPI_Scatterv( data->array, scounts, sdispls, MPI_INT, MPI_IN_PLACE, sizes[0], MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
-	assert( reallocDataArray( data, data->size/GET_N( ti ) ) );
 }
-void scattervReceive( const TestInfo *ti, Data *data, long size, int root )
+void DAL_scattervReceive( const TestInfo *ti, Data *data, long size, int root )
 {
-	assert( allocDataArray( data, size ) );
- 	MPI_Scatterv( NULL, NULL, NULL, MPI_INT, data->array, size, MPI_INT, root, MPI_COMM_WORLD );
+	assert( DAL_allocArray( data, size ) );
+ 	MPI_Scatterv( NULL, NULL, NULL, MPI_INT, data->array.data, size, MPI_INT, root, MPI_COMM_WORLD );
 }
 /**
 * @brief Scatters data among all processes
@@ -173,28 +345,35 @@ void scattervReceive( const TestInfo *ti, Data *data, long size, int root )
 * @param[in] 		displs     	Array of displacements
 * @param[in] 		root     	Rank of the root process
 */
-void scatterv( const TestInfo *ti, Data *data, long *sizes, long *displs, int root )
+void DAL_scatterv( const TestInfo *ti, Data *data, long *sizes, long *displs, int root )
 {
 	if( GET_ID( ti ) == root ) {
-		return scattervSend( ti, data, sizes, displs );
+		return DAL_scattervSend( ti, data, sizes, displs );
 	}
 	else {
-		return scattervReceive( ti, data, GET_LOCAL_M(ti), root );
+		return DAL_scattervReceive( ti, data, GET_LOCAL_M(ti), root );
 	}
 }
 
 
 
 
-
-
-
-
-void gathervSend( const TestInfo *ti, Data *data, int root )
+void DAL_gathervSend( const TestInfo *ti, Data *data, int root )
 {
-	MPI_Gatherv( data->array, data->size, MPI_INT, NULL, NULL, NULL, MPI_INT, root, MPI_COMM_WORLD );
+	switch( data->medium ) {
+		case File: {
+			UNSUPPORTED_DATA( data );
+			break;
+		}
+		case Array: {
+			MPI_Gatherv( data->array.data, data->array.size, MPI_INT, NULL, NULL, NULL, MPI_INT, root, MPI_COMM_WORLD );
+			break;
+		}
+		default:
+			UNSUPPORTED_DATA( data );
+	}
 }
-void gathervReceive( const TestInfo *ti, Data *data, long *sizes, long *displs )
+void DAL_gathervReceive( const TestInfo *ti, Data *data, long *sizes, long *displs )
 {
 	int rcounts[GET_N( ti )];
 	int rdispls[GET_N( ti )];
@@ -204,8 +383,8 @@ void gathervReceive( const TestInfo *ti, Data *data, long *sizes, long *displs )
 		rcounts[i] = sizes[i];
 		rdispls[i] = displs[i];
 	}
-	assert( reallocDataArray( data, GET_M( ti ) ) );
-	MPI_Gatherv( MPI_IN_PLACE, rcounts[GET_ID( ti )], MPI_INT, data->array, rcounts, rdispls, MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
+	assert( DAL_reallocArray( data, GET_M( ti ) ) );
+	MPI_Gatherv( MPI_IN_PLACE, rcounts[GET_ID( ti )], MPI_INT, data->array.data, rcounts, rdispls, MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
 }
 /**
 * @brief Gathers data from all processes
@@ -216,23 +395,15 @@ void gathervReceive( const TestInfo *ti, Data *data, long *sizes, long *displs )
 * @param[in] 		displs     	Array of displacements
 * @param[in] 		root     	Rank of the root process
 */
-void gatherv( const TestInfo *ti, Data *data, long *sizes, long *displs, int root )
+void DAL_gatherv( const TestInfo *ti, Data *data, long *sizes, long *displs, int root )
 {
 	if( GET_ID( ti ) == root ) {
-		return gathervReceive( ti, data, sizes, displs );
+		return DAL_gathervReceive( ti, data, sizes, displs );
 	}
 	else {
-		return gathervSend( ti, data, root );
+		return DAL_gathervSend( ti, data, root );
 	}
 }
-
-
-
-
-
-
-
-
 
 /**
 * @brief Sends data from all to all processes
@@ -244,8 +415,10 @@ void gatherv( const TestInfo *ti, Data *data, long *sizes, long *displs, int roo
 * @param[in] 		recvSizes  	Array containing the number of integers to be received from each process
 * @param[in] 		rdispls     Array of displacements
 */
-void alltoallv( const TestInfo *ti, Data *data, long *sendSizes, long *sdispls, long *recvSizes, long *rdispls )
+void DAL_alltoallv( const TestInfo *ti, Data *data, long *sendSizes, long *sdispls, long *recvSizes, long *rdispls )
 {
+	UNSUPPORTED_DATA( data );
+	
 	int scounts[GET_N( ti )];
 	int sd[GET_N( ti )];
 	int rcounts[GET_N( ti )];
@@ -264,12 +437,14 @@ void alltoallv( const TestInfo *ti, Data *data, long *sendSizes, long *sdispls, 
 	}
 	Data *recvData = (Data*)malloc( sizeof(Data) );
 
-	assert( recvData != NULL && allocDataArray(recvData, rcount) );
+	assert( recvData != NULL && DAL_allocArray(recvData, rcount) );
 
-	MPI_Alltoallv( data->array, scounts, sd, MPI_INT, recvData->array, rcounts, rd, MPI_INT, MPI_COMM_WORLD );
+	MPI_Alltoallv( data->array.data, scounts, sd, MPI_INT, recvData->array.data, rcounts, rd, MPI_INT, MPI_COMM_WORLD );
 
-	destroyData( data );
+	DAL_destroy( data );
 	data->medium = Array;
-	data->array = recvData->array;
-	data->size = recvData->size;
+	data->array.data = recvData->array.data;
+	data->array.size = recvData->array.size;
 }
+
+

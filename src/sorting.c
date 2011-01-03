@@ -71,64 +71,6 @@ char * GET_SORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen )
 }
 #endif
 
-long GET_FILE_SIZE( const char *path )
-{
-	FILE *f;
-	long len;
-
-	f = fopen( path, "rb" );
-	if( ! f ) {
-		return -1;
-	}
-
-	fseek( f, 0, SEEK_END );
-	len = ftell( f );
-	// rewind( f );
-
-	fclose( f );
-
-	return len;
-}
-
-void initData( Data *data ) {
-	data->medium = NoMedium;
-	data->size = 0;
-	data->array = NULL;
-}
-
-void destroyData( Data *data )
-{
-	if( data->medium == Array ) {
-		free( data->array );
-		data->medium = NoMedium;
-		data->array = NULL;
-		data->size = 0;
-	}
-}
-
-bool allocDataArray( Data *data, int size )
-{
-	data->medium = NoMedium;
-	data->array = (int*) malloc( size * sizeof(int) );
-	if( ! data->array ) {
-		return 0;
-	}
-	data->medium = Array;
-	data->size = size;
-	return 1;
-}
-
-bool reallocDataArray ( Data *data, int size )
-{
-	data->array = (int*) realloc( data->array, size * sizeof(int) );
-	if( ! data->array ) {
-		return 0;
-	}
-	data->medium = Array;
-	data->size = size;
-	return 1;
-}
-
 #if defined(__cplusplus)
 }
 #endif

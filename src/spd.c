@@ -298,31 +298,33 @@ int loadData( const TestInfo *ti, Data *data )
 	}
 
 #ifndef DEBUG
-	data->size = GET_FILE_SIZE( path ) / sizeof(int);
-	if( data->size != GET_M(ti) ) {
+	data->array.size = GET_FILE_SIZE( path ) / sizeof(int);
+	if( data->array.size != GET_M(ti) ) {
 		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
-				path, GET_M(ti), GET_M(ti), data->size*sizeof(int) );
+				path, GET_M(ti), GET_M(ti), data->array.size*sizeof(int) );
 		fclose( f );
 		return 0;
 	}
-	data->array = (int*) malloc( data->size*sizeof(int) );
+	data->array.data = (int*) malloc( data->array.size*sizeof(int) );
 
-	if( ! fread( data->array, data->size*sizeof(int), 1, f ) ) {
-		printf( "Couldn't read %ld bytes from %s\n", data->size*sizeof(int), path );
+	if( ! fread( data->array.data, data->array.size*sizeof(int), 1, f ) ) {
+		printf( "Couldn't read %ld bytes from %s\n", data->array.size*sizeof(int), path );
 		fclose( f );
 		return 0;
 	}
 #else
-	data->size = GET_M(ti);
-	data->array = (int*) malloc( data->size*sizeof(int) );
+	data->array.size = GET_M(ti);
+	data->array.data = (int*) malloc( data->array.size*sizeof(int) );
 	for( i = 0; i < GET_M(ti); ++ i ) {
-		if( fscanf( f, "%d ", & data->array[i] ) == EOF ) {
-			printf( "Couldn't read %ld-th element (of value %d) from %s\n", i, data->array[i], path );
+		if( fscanf( f, "%d ", & data->array.data[i] ) == EOF ) {
+			printf( "Couldn't read %ld-th element (of value %d) from %s\n", i, data->array.data[i], path );
 			fclose( f );
 			return 0;
 		}
 	}
 #endif
+
+	data->medium = Array;
 
 	fclose( f );
 
@@ -350,29 +352,29 @@ int storeData( const TestInfo *ti, Data *data )
 	}
 
 #ifndef DEBUG
-	if( ! fwrite( data->array, data->size, 1, f ) ) {
-		printf( "Couldn't write %ld bytes to %s\n", data->size, path );
+	if( ! fwrite( data->array.data, data->array.size, 1, f ) ) {
+		printf( "Couldn't write %ld bytes to %s\n", data->array.size, path );
 		fclose( f );
 		return 0;
 	}
 #else
-	if( fprintf( f, "%d\n", data->array[0] ) < 0 ) {
-		printf( "Couldn't write %d-th element (of value %d) to %s\n", 0, data->array[0], path );
+	if( fprintf( f, "%d\n", data->array.data[0] ) < 0 ) {
+		printf( "Couldn't write %d-th element (of value %d) to %s\n", 0, data->array.data[0], path );
 		fclose( f );
 		return 0;
 	}
-	tmp = data->array[0];
+	tmp = data->array.data[0];
 
 	for( i = 1; i < GET_M(ti); ++ i ) {
-		if( tmp > data->array[i] ) {
-			printf( "Sorting Failed: %ld-th element (of value %d) is bigger than %ld-th element (of value %d)\n", i, tmp, i+1, data->array[i] );
+		if( tmp > data->array.data[i] ) {
+			printf( "Sorting Failed: %ld-th element (of value %d) is bigger than %ld-th element (of value %d)\n", i, tmp, i+1, data->array.data[i] );
 			fclose( f );
 			return 0;
 		}
-		tmp = data->array[i];
+		tmp = data->array.data[i];
 
-		if( fprintf( f, "%d\n", data->array[i] ) < 0 ) {
-			printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, data->array[i], path );
+		if( fprintf( f, "%d\n", data->array.data[i] ) < 0 ) {
+			printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, data->array.data[i], path );
 			fclose( f );
 			return 0;
 		}
@@ -486,7 +488,7 @@ int main( int argc, char **argv )
 				if( ! handle ) {
 					printf( "Task %d couldn't load %s (%s): %s\n"
 							"%s\n", GET_ID(&ti), ti.algo, path, strerror(errno), dlerror() );
-					destroyData( &data );
+					DAL_destroy( &data );
 					MPI_Finalize( );
 					return 1;
 				}
@@ -497,7 +499,7 @@ int main( int argc, char **argv )
 					printf( "Task %d couldn't load %s (%s)'s mainSort() function: %s\n"
 							"%s\n", GET_ID(&ti), ti.algo, path, strerror(errno), dlerror() );
 					dlclose( handle );
-					destroyData( &data );
+					DAL_destroy( &data );
 					MPI_Finalize( );
 					return 1;
 				}
@@ -512,11 +514,11 @@ int main( int argc, char **argv )
 			r = storeData( &ti, &data );
 			if( ! r ) {
 				printf( "Error storing data for task %d\n", GET_ID(&ti) );
-				destroyData( &data );
+				DAL_destroy( &data );
 				MPI_Finalize( );
 				return 1;
 			}
-			destroyData( &data );
+			DAL_destroy( &data );
 		}
 
 		// gathering phases
