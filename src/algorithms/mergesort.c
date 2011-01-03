@@ -130,5 +130,3 @@ void mainSort( const TestInfo *ti, Data *data )
 {	
 	mergesort ( ti, data );	
 }
-
-
