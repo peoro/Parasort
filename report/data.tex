@@ -4,11 +4,49 @@ At least the first phases of any algorithm (before data is fully distributed), a
 This is a big issue, since it would force us to explicitly re-design any algorithm in order to make it handle both the mediums data could be stored in.
 In order to limit the complexity of algorithms we decided to separate medium handling from actual algorithm code, thus creating a new abstraction layer in our application model.
 
-At this purpose we decided to add a further abstraction layer below the actual sorting algorithm: we decided to introduce a new data structure called \texttt{Data} that represents a dataset independently on its form or position: it can represent both an array allocated on principal memory or a file allocated on the hard disk, and it has been thought to be able to represent even other kind of data representation (eg: a compressed dataset). The sorting algorithm, which is our higher abstraction level, doesn't need to know about how or where \texttt{Data} is allocated, and use it in a transparent way.
+At this purpose we decided to add a further abstraction layer below the actual Sorting Algorithm: we introduced a new data structure called \texttt{Data} that represents a dataset independently on its form or position: it can represent both an array allocated on principal memory or a file allocated on the hard disk, and it has been thought to be able to represent even other kind of data representation (eg: a compressed dataset). The sorting algorithm, which is our higher abstraction level, doesn't need to know about how or where \texttt{Data} is allocated, and use it in a transparent way.
 We needed to write some kind of run-time support for this level, which is logically placed just below the algorithm sorting: since we want to save the algorithm from actually care about how Data is allocated, it needs to use some functions that will take care of it exposing a data-independent signature. Our rule of thumb is that all and only the functions logically placed at this abstraction level are the only ones actually working with a \texttt{Data} object (ie: accessing its field directly or indirectly) and vice-versa.
 Functions at this abstraction level will one (or more) \texttt{Data} object, will see whether it's allocated on primary or secondary memory, and according to this they'll run some data-dependent codes, optimized for the medium where the \texttt{Data} object is allocated.
 
+\subsection*{Data Abstraction Layer - API}
+\texttt{Data} is the key datatype of the DAL. Designing a Sorting Algorithm does not require to know the internal structure of \texttt{Data}, but just what it represent: a sequence of elements. Indeed, all the processes of a Sorting Algorithm declare their own \texttt{Data} (eventually more than one, depending on the specific algorithm) which will be passed as parameter to the functions of the DAL's API. For instance, if a process wanted to sort the elements inside \texttt{Data}, than it would perform a call to
+\begin{lstlisting}
+void sequentialSort( Data *data )
+\end{lstlisting}
+Obviously, processes of a Sorting Algorithm have to collaborate somehow: DAL provides them with a set of communication functions. The most important ones are:
+\begin{lstlisting}
+void send( Data *data, int dest );
+void receive( Data *data, long size, int source );
+void scatter( Data *data, long size, int root );
+void gather( Data *data, long size, int root );
+void alltoallv( Data *sendData, long *sendSizes, long *sdispls, long *recvSizes, long *rdispls );
+\end{lstlisting}
+The semantic of these functions is the same of the ones provided by MPI having analogous name. Notice that all the processes of the Sorting Algorithm, except the one of Rank $0$, starts with an empty \texttt{Data}, as consequence of the choice of starting with a centralized data set (see~\ref{assumptions}). Anyway, a very simple way to initialize \texttt{Data} to all processes is to perform an initial scatter of the data set.
 
+\subsection*{Data Abstraction Layer - Implementation}
+The declaration of \texttt{Data} is the following:
+\begin{lstlisting}
+typedef struct {
+	enum { NoMedium, File, Array } medium;
+
+	int *array;
+	long size;
+} Data;
+\end{lstlisting}
+Depending on the value of $medium$, a \texttt{Data} represents a sequence of elements that are currently being stored in main memory ($Array$), on disk ($File$) or not initialized yet ($NoMedium$). A \texttt{Data} can be manipulated through the following functions: 
+\begin{lstlisting}
+void initData( Data *data );
+void destroyData( Data *data );
+bool allocDataArray( Data *data, int size );
+bool reallocDataArray ( Data *data, int size );
+\end{lstlisting}
+The semantic of these functions follow directly from their signature: that is, a \texttt{Data} must be always first initialized and finally destroyed ($initData$ and $destroyData$), while once allocated it will represent a sequence of elements allocated either in memory ($allocDataArray$ returns $true$) or on disk. The $reallocDataArray$ simply resize a \texttt{Data} preserving its contents; notice that a call to this function may cause the change of the medium. All these functions, except the $destroyData$, are not visible to the user.
+
+To give an idea of how we implemented the DAL functions, we focus on the specific case of the primitive $send$. For implementing all other primitives we adopted a very similar approach; anyway, notice that other functions, like the $AllToAll$, are really trickier than the $send$. 
+\begin{lstlisting}
+void send( const TestInfo *ti, Data *data, int dest )
+\end{lstlisting}
+TODO
 %\subsubsection*{TODO}
 %Di che altro c'e' da parlare?
 %\begin{itemize}
