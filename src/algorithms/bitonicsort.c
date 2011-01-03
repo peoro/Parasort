@@ -25,15 +25,16 @@ void compareLow( Data *d1, Data *d2 )
 
 	int i, j, k;
 	Data d3;
-	assert( allocDataArray( &d3, d2->size ) );
+	DAL_init( &d3 );
+	assert( DAL_allocArray( &d3, d2->array.size ) );
 
-	for ( i=j=k=0; i<d2->size; i++ )
-		if ( d2->array[j] <= d1->array[k] )
-			d3.array[i] = d2->array[j++];
+	for ( i=j=k=0; i<d2->array.size; i++ )
+		if ( d2->array.data[j] <= d1->array.data[k] )
+			d3.array.data[i] = d2->array.data[j++];
 		else
-			d3.array[i] = d1->array[k++];
+			d3.array.data[i] = d1->array.data[k++];
 
-	free( d2->array );
+	free( d2->array.data );
 	d2->array = d3.array;
 }
 
@@ -50,15 +51,16 @@ void compareHigh( Data *d1, Data *d2 )
 
 	int i, j, k;
 	Data d3;
-	assert( allocDataArray( &d3, d2->size ) );
+	DAL_init( &d3 );
+	assert( DAL_allocArray( &d3, d2->array.size ) );
 
-	for ( i=j=k=d2->size-1; i>=0; i-- )
-		if ( d2->array[j] >= d1->array[k] )
-			d3.array[i] = d2->array[j--];
+	for ( i=j=k=d2->array.size-1; i>=0; i-- )
+		if ( d2->array.data[j] >= d1->array.data[k] )
+			d3.array.data[i] = d2->array.data[j--];
 		else
-			d3.array[i] = d1->array[k--];
+			d3.array.data[i] = d1->array.data[k--];
 
-	free( d2->array );
+	free( d2->array.data );
 	d2->array = d3.array;
 }
 
@@ -85,7 +87,7 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	PhaseHandle 	scatterP, localP, mergeP, gatherP;
 
 	/* Initializing data objects */
-	initData( &recvData );
+	DAL_init( &recvData );
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
@@ -93,7 +95,7 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	scatterP = startPhase( ti, "scattering" );
 
 	/* Scattering data */
-	scatter( ti, data, local_M, root );
+	DAL_scatter( ti, data, local_M, root );
 
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -128,7 +130,7 @@ void bitonicSort( const TestInfo *ti, Data *data )
 			partner = id ^ mask2;				//Selects as partner the process with rank that differs from id only at the j-th bit
 
 			/* Exchanging data with partner */
-			sendrecv( ti, data, local_M, 0, &recvData, recvCount, 0, partner );
+			DAL_sendrecv( ti, data, local_M, 0, &recvData, recvCount, 0, partner );
 
 			/* Each process must call the dual function of its partner */
 			if ( (id-partner) * flag > 0 )
@@ -148,15 +150,15 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	gatherP = startPhase( ti, "gathering" );
 
 	/* Gathering sorted data */
-	gather( ti, data, M, root );
+	DAL_gather( ti, data, M, root );
 
 	stopPhase( ti, gatherP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
 	/* Freeing memory */
 	if ( id != root )
-		destroyData( data );
-	destroyData( &recvData );
+		DAL_destroy( data );
+	DAL_destroy( &recvData );
 }
 
 void mainSort( const TestInfo *ti, Data *data )
@@ -167,6 +169,6 @@ void mainSort( const TestInfo *ti, Data *data )
 void sort( const TestInfo *ti )
 {
 	Data data;
-	initData( &data );
+	DAL_init( &data );
 	bitonicSort( ti, &data );
 }

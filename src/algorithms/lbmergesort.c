@@ -31,26 +31,26 @@ void merge( long firstLength, long fdispl, Data *d1, long secondLength, long sdi
 	i = 0; j = fdispl; k = sdispl;
 
 	Data merged;
-	assert( allocDataArray( &merged, firstLength+secondLength ) );
+	DAL_init( &merged );
+	assert( DAL_allocArray( &merged, firstLength+secondLength ) );
 
 	firstLength += fdispl;
 	secondLength += sdispl;
 
 	while ( j < firstLength && k < secondLength )
-		if ( d1->array[j] < d2->array[k] )
-			merged.array[i++] = d1->array[j++];
+		if ( d1->array.data[j] < d2->array.data[k] )
+			merged.array.data[i++] = d1->array.data[j++];
 		else
-			merged.array[i++] = d2->array[k++];
+			merged.array.data[i++] = d2->array.data[k++];
 
 	while ( j < firstLength )
-		merged.array[i++] = d1->array[j++];
+		merged.array.data[i++] = d1->array.data[j++];
 
 	while ( k < secondLength )
-		merged.array[i++] = d2->array[k++];
+		merged.array.data[i++] = d2->array.data[k++];
 
-	free( d2->array );
+	free( d2->array.data );
 	d2->array = merged.array;
-	d2->size = merged.size;
 }
 
 
@@ -71,8 +71,8 @@ void getSendCounts( Data *data, const int *splitters, const int n, const int sta
 	int i, j;
 
 		/* Computing the number of integers to be sent to each process */
-	for ( i=0; i<data->size; i++ ) {
-		j = getBucketIndex( &data->array[i], splitters, n-1 );
+	for ( i=0; i<data->array.size; i++ ) {
+		j = getBucketIndex( &data->array.data[i], splitters, n-1 );
 		lengths[start+j]++;
 	}
 }
@@ -95,15 +95,13 @@ void lbmergesort( const TestInfo *ti, Data *data )
 	long		dataLength = GET_LOCAL_M( ti );         //Number of elements assigned to this process
 	long		recvDataLength, sentDataLength;
 
-	long 		sendCounts[n], recvCounts[n];			//Number of elements in send/receive buffers
+	long 		*sendCounts, *recvCounts;				//Number of elements in send/receive buffers
 	long		sdispls[n], rdispls[n];					//Send/receive buffer displacements
 
 	Data		recvData;
 
-	int			localSplitters[n-1];               	//Local splitters (n-1 equidistant elements of the data array)
-	int			*allSplitters = 0;                 	//All splitters (will include all the local splitters)
+	int			*splitters = 0;                		//Local splitters (n-1 equidistant elements of the data array)
 	int			*globalSplitters = 0;            	//Global splitters (will be selected from the allSplitters array)
-	int			splitters[n-1];
 	int 		splittersCount = 0;
 
 	int 		groupSize, idInGroup, partner, pairedGroupRoot, groupRoot;
@@ -111,7 +109,10 @@ void lbmergesort( const TestInfo *ti, Data *data )
 	PhaseHandle scatterP, localP, samplingP, mergeP, gatherP;
 
 	/* Initializing data objects */
-	initData( &recvData );
+	DAL_init( &recvData );
+
+	sendCounts = (long*)malloc( n * sizeof(long) );
+	recvCounts = (long*)malloc( n * sizeof(long) );
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
@@ -127,7 +128,7 @@ void lbmergesort( const TestInfo *ti, Data *data )
 		}
 	}
 	/* Scattering data */
-	scatterv( ti, data, sendCounts, sdispls, root );
+	DAL_scatterv( ti, data, sendCounts, sdispls, root );
 
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -151,23 +152,22 @@ void lbmergesort( const TestInfo *ti, Data *data )
 
 	samplingP = startPhase( ti, "sampling" );
 
+	splitters = (int*) malloc ( (n-1) * sizeof(int) );
+
 	/* Choosing local splitters (n-1 equidistant elements of the data object) */
-	chooseSplittersFromData( data, n, localSplitters );
+	chooseSplittersFromData( data, n, splitters );
 
 	/* Gathering all splitters to the root process */
-	if ( id == root )
-		allSplitters = (int*) malloc ( ((n-1)*n) * sizeof(int) );
-	MPI_Gather( localSplitters, n-1, MPI_INT, allSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+	DAL_i_gather( ti, &splitters, (n-1)*n, root );
 
 	/* Choosing global splitters (n-1 equidistant elements of the allSplitters array) */
-	globalSplitters = localSplitters;     //--> To save space but keeping the correct semantics!!! :F
-
 	if ( id == root ) {
-		qsort( allSplitters, (n-1)*n, sizeof(int), compare );
-		chooseSplitters( allSplitters, (n-1)*n, n, globalSplitters );
+		qsort( splitters, (n-1)*n, sizeof(int), compare );
+		globalSplitters = (int*) malloc ( (n-1) * sizeof(int) );
+		chooseSplitters( splitters, (n-1)*n, n, globalSplitters );
 	}
 	/* Broadcasting global splitters */
-	MPI_Bcast( globalSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+	DAL_i_bcast( ti, &globalSplitters, n-1, root );
 
 	stopPhase( ti, samplingP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -211,14 +211,14 @@ void lbmergesort( const TestInfo *ti, Data *data )
 
 		/* Exchanging data with the paired group avoiding deadlocks */
 		for ( h=1, j=partner; h<=groupSize; h++ ) {
-			recvDataLength += sendrecv( ti, data, sendCounts[j], sdispls[j], &recvData, buffSize, recvDataLength, j );
+			recvDataLength += DAL_sendrecv( ti, data, sendCounts[j], sdispls[j], &recvData, buffSize, recvDataLength, j );
 			sentDataLength += sendCounts[j];
 
 			j = ((id + h*flag) % groupSize + groupRoot) ^ groupSize;		//Selects the next partner to avoid deadlocks
 		}
  		merge( recvDataLength, 0, &recvData, dataLength-sentDataLength, sdispls[groupRoot], data );
 		dataLength = dataLength - sentDataLength + recvDataLength;
-		destroyData( &recvData );
+		DAL_destroy( &recvData );
 	}
 
 	stopPhase( ti, mergeP );
@@ -231,7 +231,8 @@ void lbmergesort( const TestInfo *ti, Data *data )
 	gatherP = startPhase( ti, "gathering" );
 
 	/* Gathering the lengths of the all buckets */
-	MPI_Gather( &dataLength, 1, MPI_LONG, recvCounts, 1, MPI_LONG, root, MPI_COMM_WORLD );
+	recvCounts[0] = dataLength;
+	DAL_l_gather( ti, &recvCounts, n, root );
 
 	/* Computing displacements relative to the output array at which to place the incoming data from each process  */
 	if ( id == root ) {
@@ -239,18 +240,16 @@ void lbmergesort( const TestInfo *ti, Data *data )
 			rdispls[i] = k;
 			k += recvCounts[i];
 		}
-		/* Freeing memory */
-		free( allSplitters );
 	}
 	/* Gathering sorted data */
-	gatherv( ti, data, recvCounts, rdispls, root );
+	DAL_gatherv( ti, data, recvCounts, rdispls, root );
 
 	stopPhase( ti, gatherP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
 	if ( id != root )
-		destroyData( data );
-	destroyData( &recvData );
+		DAL_destroy( data );
+	DAL_destroy( &recvData );
 }
 
 void mainSort( const TestInfo *ti, Data *data )
@@ -261,6 +260,6 @@ void mainSort( const TestInfo *ti, Data *data )
 void sort( const TestInfo *ti )
 {
 	Data data;
-	initData( &data );
+	DAL_init( &data );
 	lbmergesort( ti, &data );
 }

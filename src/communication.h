@@ -44,7 +44,7 @@ typedef struct
 		File = 1,
 		Array = 2
 	} medium;
-	
+
 	union
 	{
 		struct
@@ -57,7 +57,7 @@ typedef struct
 			char name[128];
 		} file;
 	};
-	
+
 } Data;
 
 
@@ -100,21 +100,18 @@ bool DAL_isInitialized( Data *data );
 void DAL_init( Data *data );
 void DAL_destroy( Data *data );
 bool DAL_allocArray( Data *data, int size );
-bool DAL_reallocrray ( Data *data, int size ); // TODO: who needs this?
+bool DAL_reallocArray ( Data *data, int size ); // TODO: who needs this?
 
 
-/*
-// functions to re-implement
-int _MPI_Bcast ( void *buffer, long count, MPI_Datatype datatype, int root, MPI_Comm comm );
-int _MPI_Scatter ( void *sendbuf, long sendcnt, MPI_Datatype sendtype, void *recvbuf, long recvcnt, MPI_Datatype recvtype, int root, MPI_Comm comm );
-int _MPI_Alltoall( void *sendbuf, long sendcount, MPI_Datatype sendtype, void *recvbuf, long recvcnt, MPI_Datatype recvtype, MPI_Comm comm );
-+ scatterv, sendU, receiveU, scatterU, scattervU ...
-*/
+
+/***************************************************************************************************************/
+/************************************* [Data] Communication Primitives *****************************************/
+/***************************************************************************************************************/
 
 void DAL_send( const TestInfo *ti, Data *data, int dest );
 void DAL_receive( const TestInfo *ti, Data *data, long size, int source );
 
-long DAL_sendrecv( const TestInfo *ti, Data *sdata, long scount, long sdispl, Data* rdata, long rcount, long rdispl, int partner );
+long DAL_sendrecv( const TestInfo *ti, Data *sdata, long scount, long sdispl, Data *rdata, long rcount, long rdispl, int partner );
 
 void DAL_scatterSend( const TestInfo *ti, Data *data );
 void DAL_scatterReceive( const TestInfo *ti, Data *data, long size, int root );
@@ -124,7 +121,6 @@ void DAL_scattervSend( const TestInfo *ti, Data *data, long *sizes, long *displs
 void DAL_scattervReceive( const TestInfo *ti, Data *data, long size, int root );
 void DAL_scatterv( const TestInfo *ti, Data *data, long *sizes, long *displs, int root );
 
-
 void DAL_gatherSend( const TestInfo *ti, Data *data, int root );
 void DAL_gatherReceive( const TestInfo *ti, Data *data, long size );
 void DAL_gather( const TestInfo *ti, Data *data, long size, int root );
@@ -133,7 +129,98 @@ void DAL_gathervSend( const TestInfo *ti, Data *data, int root );
 void DAL_gathervReceive( const TestInfo *ti, Data *data, long *sizes, long *displs );
 void DAL_gatherv( const TestInfo *ti, Data *data, long *sizes, long *displs, int root );
 
-void DAL_alltoallv( const TestInfo *ti, Data *sendData, long *sendSizes, long *sdispls, long *recvSizes, long *rdispls );
+void DAL_alltoall( const TestInfo *ti, Data *data, long size );
+
+void DAL_alltoallv( const TestInfo *ti, Data *data, long *sendSizes, long *sdispls, long *recvSizes, long *rdispls );
+
+void DAL_bcastSend( const TestInfo *ti, Data *data );
+void DAL_bcastReceive( const TestInfo *ti, Data *data, long size, int root );
+void DAL_bcast( const TestInfo *ti, Data *data, long size, int root );
+
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+
+
+
+/***************************************************************************************************************/
+/********************************* [Integer] Communication Primitives ******************************************/
+/***************************************************************************************************************/
+
+void DAL_i_send( const TestInfo *ti, int **array, int size, int dest );
+int DAL_i_receive( const TestInfo *ti, int **array, int size, int source );
+
+int DAL_i_sendrecv( const TestInfo *ti, int **sarray, int scount, int sdispl, int **rarray, int rcount, int rdispl, int partner );
+
+void DAL_i_scatterSend( const TestInfo *ti, int **array, int size );
+void DAL_i_scatterReceive( const TestInfo *ti, int **array, int size, int root );
+void DAL_i_scatter( const TestInfo *ti, int **array, int size, int root );
+
+void DAL_i_scattervSend( const TestInfo *ti, int **array, int *sizes, int *displs );
+void DAL_i_scattervReceive( const TestInfo *ti, int **array, int size, int root );
+void DAL_i_scatterv( const TestInfo *ti, int **array, int *sizes, int *displs, int root );
+
+void DAL_i_gatherSend( const TestInfo *ti, int **array, int size, int root );
+void DAL_i_gatherReceive( const TestInfo *ti, int **array, int size );
+void DAL_i_gather( const TestInfo *ti, int **array, int size, int root );
+
+void DAL_i_gathervSend( const TestInfo *ti, int **array, int size, int root );
+void DAL_i_gathervReceive( const TestInfo *ti, int **array, int *sizes, int *displs );
+void DAL_i_gatherv( const TestInfo *ti, int **array, int *sizes, int *displs, int root );
+
+void DAL_i_alltoall( const TestInfo *ti, int **array, int size );
+
+void DAL_i_alltoallv( const TestInfo *ti, int **array, int *sendSizes, int *sdispls, int *recvSizes, int *rdispls );
+
+void DAL_i_bcastSend( const TestInfo *ti, int **array, int size );
+void DAL_i_bcastReceive( const TestInfo *ti, int **array, int size, int root );
+void DAL_i_bcast( const TestInfo *ti, int **array, int size, int root );
+
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+
+
+
+/***************************************************************************************************************/
+/*********************************** [Long] Communication Primitives *******************************************/
+/***************************************************************************************************************/
+
+void DAL_l_send( const TestInfo *ti, long **array, int size, int dest );
+int DAL_l_receive( const TestInfo *ti, long **array, int size, int source );
+
+int DAL_l_sendrecv( const TestInfo *ti, long **sarray, int scount, int sdispl, long **rarray, int rcount, int rdispl, int partner );
+
+void DAL_l_scatterSend( const TestInfo *ti, long **array, int size );
+void DAL_l_scatterReceive( const TestInfo *ti, long **array, int size, int root );
+void DAL_l_scatter( const TestInfo *ti, long **array, int size, int root );
+
+void DAL_l_scattervSend( const TestInfo *ti, long **array, int *sizes, int *displs );
+void DAL_l_scattervReceive( const TestInfo *ti, long **array, int size, int root );
+void DAL_l_scatterv( const TestInfo *ti, long **array, int *sizes, int *displs, int root );
+
+void DAL_l_gatherSend( const TestInfo *ti, long **array, int size, int root );
+void DAL_l_gatherReceive( const TestInfo *ti, long **array, int size );
+void DAL_l_gather( const TestInfo *ti, long **array, int size, int root );
+
+void DAL_l_gathervSend( const TestInfo *ti, long **array, int size, int root );
+void DAL_l_gathervReceive( const TestInfo *ti, long **array, int *sizes, int *displs );
+void DAL_l_gatherv( const TestInfo *ti, long **array, int *sizes, int *displs, int root );
+
+void DAL_l_alltoall( const TestInfo *ti, long **array, int size );
+
+void DAL_l_alltoallv( const TestInfo *ti, long **array, int *sendSizes, int *sdispls, int *recvSizes, int *rdispls );
+
+void DAL_l_bcastSend( const TestInfo *ti, long **array, int size );
+void DAL_l_bcastReceive( const TestInfo *ti, long **array, int size, int root );
+void DAL_l_bcast( const TestInfo *ti, long **array, int size, int root );
+
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+
+
+
 
 /* Keep C++ compilers from getting confused */
 #if defined(__cplusplus)

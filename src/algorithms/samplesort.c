@@ -8,6 +8,7 @@
 * @version 0.0.01
 */
 
+#include <assert.h>
 #include <string.h>
 #include "../sorting.h"
 #include "../utils.h"
@@ -27,8 +28,8 @@ void getSmallBucketLengths( Data *data, const int *splitters, const int n, long 
 	int i, j;
 
 		/* Computing the number of integers to be sent to each process */
-	for ( i=0; i<data->size; i++ ) {
-		j = getBucketIndex( &data->array[i], splitters, n-1 );
+	for ( i=0; i<data->array.size; i++ ) {
+		j = getBucketIndex( &data->array.data[i], splitters, n-1 );
 		lengths[j]++;
 	}
 }
@@ -46,15 +47,20 @@ void sampleSort( const TestInfo *ti, Data *data )
 	const int	n = GET_N( ti );                    //Number of processes
 	const long	M = GET_M( ti );                    //Number of data elements
 
-	int			localSplitters[n-1];               	//Local splitters (n-1 equidistant elements of the data array)
-	int			*allSplitters = 0;                 	//All splitters (will include all the local splitters)
+// 	int			localSplitters[n-1];               	//Local splitters (n-1 equidistant elements of the data array)
+	int			*splitters = 0;                 	//Local splitters (n-1 equidistant elements of the data array)
 	int			*globalSplitters = 0;            	//Global splitters (will be selected from the allSplitters array)
 
-	long 		sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
+	long 		*sendCounts, *recvCounts;			//Number of elements in send/receive buffers
 	long		sdispls[n], rdispls[n];				//Send/receive buffer displacements
 	long		i, j, k;
 
 	PhaseHandle scatterP, localP, samplingP, bucketsP, gatherP;
+
+	assert( GET_LOCAL_M( ti ) >= n );
+
+	sendCounts = (long*)malloc( n * sizeof(long) );
+	recvCounts = (long*)malloc( n * sizeof(long) );
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
@@ -70,7 +76,7 @@ void sampleSort( const TestInfo *ti, Data *data )
 		}
 	}
 	/* Scattering data */
-	scatterv( ti, data, sendCounts, sdispls, root );
+	DAL_scatterv( ti, data, sendCounts, sdispls, root );
 
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -95,26 +101,29 @@ void sampleSort( const TestInfo *ti, Data *data )
 
 	samplingP = startPhase( ti, "sampling" );
 
+	splitters = (int*) malloc ( (n-1) * sizeof(int) );
+
 	/* Choosing local splitters (n-1 equidistant elements of the data object) */
-	chooseSplittersFromData( data, n, localSplitters );
+	chooseSplittersFromData( data, n, splitters );
 
 	/* Gathering all splitters to the root process */
-	if ( id == root )
-		allSplitters = (int*) malloc ( ((n-1)*n) * sizeof(int) );
-	MPI_Gather( localSplitters, n-1, MPI_INT, allSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+	DAL_i_gather( ti, &splitters, (n-1)*n, root );
 
 	/* Choosing global splitters (n-1 equidistant elements of the allSplitters array) */
-	globalSplitters = localSplitters;     //--> To save space but keeping the correct semantics!!! :F
-
 	if ( id == root ) {
-		qsort( allSplitters, (n-1)*n, sizeof(int), compare );
-		chooseSplitters( allSplitters, (n-1)*n, n, globalSplitters );
+		qsort( splitters, (n-1)*n, sizeof(int), compare );
+		globalSplitters = (int*) malloc ( (n-1) * sizeof(int) );
+		chooseSplitters( splitters, (n-1)*n, n, globalSplitters );
 	}
 	/* Broadcasting global splitters */
-	MPI_Bcast( globalSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+	DAL_i_bcast( ti, &globalSplitters, n-1, root );
+
+	free( splitters );
 
 	stopPhase( ti, samplingP );
 /*--------------------------------------------------------------------------------------------------------------*/
+
+
 
 
 /***************************************************************************************************************/
@@ -130,7 +139,8 @@ void sampleSort( const TestInfo *ti, Data *data )
 	getSmallBucketLengths( data, globalSplitters, n, sendCounts );
 
 	/* Informing all processes on the number of elements that will receive */
-	MPI_Alltoall( sendCounts, 1, MPI_LONG, recvCounts, 1, MPI_LONG, MPI_COMM_WORLD );
+	memcpy( recvCounts, sendCounts, n*sizeof(long) );
+	DAL_l_alltoall( ti, &recvCounts, 1 );
 
 	/* Computing the displacements */
 	for ( j=0, k=0, i=0; i<n; i++ ) {
@@ -143,7 +153,7 @@ void sampleSort( const TestInfo *ti, Data *data )
 		j += recvCounts[i];
 	}
 	/* Sending data to the appropriate processes */
-	alltoallv( ti, data, sendCounts, sdispls, recvCounts, rdispls );
+	DAL_alltoallv( ti, data, sendCounts, sdispls, recvCounts, rdispls );
 
 	/* Sorting local bucket */
 	sequentialSort( ti, data );
@@ -157,8 +167,10 @@ void sampleSort( const TestInfo *ti, Data *data )
 /***************************************************************************************************************/
 	gatherP = startPhase( ti, "gathering" );
 
+
 	/* Gathering the lengths of the all buckets */
-	MPI_Gather( &j, 1, MPI_LONG, recvCounts, 1, MPI_LONG, root, MPI_COMM_WORLD );
+	recvCounts[0] = j;
+	DAL_l_gather( ti, &recvCounts, n, root );
 
 	/* Computing displacements relative to the output array at which to place the incoming data from each process  */
 	if ( id == root ) {
@@ -166,18 +178,18 @@ void sampleSort( const TestInfo *ti, Data *data )
 			rdispls[i] = k;
 			k += recvCounts[i];
 		}
-		/* Freeing memory */
-		free( allSplitters );
 	}
 	/* Gathering sorted data */
-	gatherv( ti, data, recvCounts, rdispls, root );
+	DAL_gatherv( ti, data, recvCounts, rdispls, root );
 
 	stopPhase( ti, gatherP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
 	/* Freeing memory */
 	if ( id != root )
-		destroyData( data );
+		DAL_destroy( data );
+	free( globalSplitters );
+
 }
 
 void mainSort( const TestInfo *ti, Data *data )
@@ -188,6 +200,6 @@ void mainSort( const TestInfo *ti, Data *data )
 void sort( const TestInfo *ti )
 {
 	Data data;
-	initData( &data );
+	DAL_init( &data );
 	sampleSort( ti, &data );
 }
