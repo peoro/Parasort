@@ -10,6 +10,7 @@
 
 #include <limits.h>
 #include <string.h>
+#include <mpi.h>
 #include "../sorting.h"
 #include "../utils.h"
 
@@ -49,14 +50,11 @@ void bucketSort( const TestInfo *ti, Data *data )
 	const long		local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
 
 
-	long 			*sendCounts, *recvCounts;			//Number of elements in send/receive buffers
+	long 			sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
 	long			sdispls[n], rdispls[n];				//Send/receive buffer displacements
 	long			i, j, k;
 
 	PhaseHandle 	scatterP, localP, bucketsP, gatherP;
-
-	sendCounts = (long*)malloc( n * sizeof(long) );
-	recvCounts = (long*)malloc( n * sizeof(long) );
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
@@ -102,7 +100,7 @@ void bucketSort( const TestInfo *ti, Data *data )
 	getSendCounts( data, n, sendCounts );
 
 	/* Informing all processes on the number of elements that will receive */
-	DAL_type_alltoall( ti, sendCounts, recvCounts, 1, DAL_LONG );
+	MPI_Alltoall( sendCounts, 1, MPI_LONG, recvCounts, 1, MPI_LONG, MPI_COMM_WORLD );
 
 	/* Computing the displacements */
 	for ( j=0, k=0, i=0; i<n; i++ ) {
@@ -130,8 +128,7 @@ void bucketSort( const TestInfo *ti, Data *data )
 	gatherP = startPhase( ti, "gathering" );
 
 	/* Gathering the lengths of the all buckets */
-	recvCounts[0] = j;
-	DAL_type_gather( ti, recvCounts, n, DAL_LONG, root );
+	MPI_Gather( &j, 1, MPI_LONG, recvCounts, 1, MPI_LONG, root, MPI_COMM_WORLD );
 
 	/* Computing displacements relative to the output array at which to place the incoming data from each process  */
 	if ( id == root ) {

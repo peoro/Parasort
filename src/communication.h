@@ -33,25 +33,6 @@ typedef struct
 int GET_ID ( const TestInfo *ti );
 int GET_N ( const TestInfo *ti );
 
-typedef enum {
-	DAL_CHAR,
-	DAL_SIGNED_CHAR,
-	DAL_UNSIGNED_CHAR,
-	DAL_BYTE,
-	DAL_WCHAR,
-	DAL_SHORT,
-	DAL_UNSIGNED_SHORT,
-	DAL_INT,
-	DAL_UNSIGNED,
-	DAL_LONG,
-	DAL_UNSIGNED_LONG,
-	DAL_FLOAT,
-	DAL_DOUBLE,
-	DAL_LONG_DOUBLE,
-	DAL_LONG_LONG_INT,
-	DAL_LONG_LONG,
-	DAL_UNSIGNED_LONG_LONG
-} DAL_Type;
 
 typedef enum DataMedium {
 	NoMedium = 0,
@@ -156,44 +137,6 @@ void DAL_bcast( const TestInfo *ti, Data *data, long size, int root );
 
 /*--------------------------------------------------------------------------------------------------------------*/
 
-
-
-
-
-/***************************************************************************************************************/
-/********************************* [DAL_Type] Communication Primitives *****************************************/
-/***************************************************************************************************************/
-
-void DAL_type_send( const TestInfo *ti, void *array, int size, DAL_Type type, int dest );
-int DAL_type_receive( const TestInfo *ti, void *array, int size, DAL_Type type, int source );
-
-int DAL_type_sendrecv( const TestInfo *ti, void *sarray, int scount, void *rarray, int rcount, DAL_Type type, int partner );
-
-void DAL_type_scatterSend( const TestInfo *ti, void *array, int size, DAL_Type type );
-void DAL_type_scatterReceive( const TestInfo *ti, void *array, int size, DAL_Type type, int root );
-void DAL_type_scatter( const TestInfo *ti, void *array, int size, DAL_Type type, int root );
-
-void DAL_type_scattervSend( const TestInfo *ti, void *array, int *sizes, int *displs, DAL_Type type );
-void DAL_type_scattervReceive( const TestInfo *ti, void *array, int size, DAL_Type type, int root );
-void DAL_type_scatterv( const TestInfo *ti, void *array, int *sizes, int *displs, DAL_Type type, int root );
-
-void DAL_type_gatherSend( const TestInfo *ti, void *array, int size, DAL_Type type, int root );
-void DAL_type_gatherReceive( const TestInfo *ti, void *array, int size, DAL_Type type );
-void DAL_type_gather( const TestInfo *ti, void *array, int size, DAL_Type type, int root );
-
-void DAL_type_gathervSend( const TestInfo *ti, void *array, int size, DAL_Type type, int root );
-void DAL_type_gathervReceive( const TestInfo *ti, void *array, int *sizes, int *displs, DAL_Type type );
-void DAL_type_gatherv( const TestInfo *ti, void *array, int *sizes, int *displs, DAL_Type type, int root );
-
-void DAL_type_alltoall( const TestInfo *ti, void *sarray, void *rarray, int size, DAL_Type type );
-
-void DAL_type_alltoallv( const TestInfo *ti, void *sarray, int *sendSizes, int *sdispls, void *rarray, int *recvSizes, int *rdispls, DAL_Type type );
-
-void DAL_type_bcastSend( const TestInfo *ti, void *array, int size, DAL_Type type );
-void DAL_type_bcastReceive( const TestInfo *ti, void *array, int size, DAL_Type type, int root );
-void DAL_type_bcast( const TestInfo *ti, void *array, int size, DAL_Type type, int root );
-
-/*--------------------------------------------------------------------------------------------------------------*/
 
 
 
