@@ -272,5 +272,6 @@ extern "C"
 		Data data;
 		DAL_init( &data );
 		lbkmergesort( ti, &data );
+		DAL_destroy( &data );
 	}
 }

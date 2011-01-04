@@ -424,18 +424,19 @@ void DAL_gatherv( Data *data, long *sizes, long *displs, int root )
 void DAL_alltoall( Data *data, long size )
 {
 // 	DAL_UNSUPPORTED( data );
+
 	int count = size;
 	int i;
 
-	Data *recvData = (Data*)malloc( sizeof(Data) );
-	DAL_init( recvData );
-	assert( recvData != NULL && DAL_allocArray(recvData, count) );
+	Data recvData;
+	DAL_init( &recvData );
+	assert( DAL_allocArray( &recvData, count ) );
 
-	MPI_Alltoall( data->array.data, count, MPI_INT, recvData, count, MPI_INT, MPI_COMM_WORLD );
+	MPI_Alltoall( data->array.data, count, MPI_INT, recvData.array.data, count, MPI_INT, MPI_COMM_WORLD );
 
 	DAL_destroy( data );
 	data->medium = Array;
-	data->array = recvData->array;
+	data->array = recvData.array;
 }
 
 
@@ -477,15 +478,15 @@ void DAL_alltoallv( Data *data, long *sendSizes, long *sdispls, long *recvSizes,
 
 		rcount += rcounts[i];
 	}
-	Data *recvData = (Data*)malloc( sizeof(Data) );
-	DAL_init( recvData );
-	assert( recvData != NULL && DAL_allocArray(recvData, rcount) );
+	Data recvData;
+	DAL_init( &recvData );
+	assert( DAL_allocArray( &recvData, rcount ) );
 
-	MPI_Alltoallv( data->array.data, scounts, sd, MPI_INT, recvData->array.data, rcounts, rd, MPI_INT, MPI_COMM_WORLD );
+	MPI_Alltoallv( data->array.data, scounts, sd, MPI_INT, recvData.array.data, rcounts, rd, MPI_INT, MPI_COMM_WORLD );
 
 	DAL_destroy( data );
 	data->medium = Array;
-	data->array = recvData->array;
+	data->array = recvData.array;
 }
 
 

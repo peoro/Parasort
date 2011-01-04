@@ -156,8 +156,6 @@ void bitonicSort( const TestInfo *ti, Data *data )
 /*--------------------------------------------------------------------------------------------------------------*/
 
 	/* Freeing memory */
-	if ( id != root )
-		DAL_destroy( data );
 	DAL_destroy( &recvData );
 }
 
@@ -171,4 +169,5 @@ void sort( const TestInfo *ti )
 	Data data;
 	DAL_init( &data );
 	bitonicSort( ti, &data );
+	DAL_destroy( &data );
 }

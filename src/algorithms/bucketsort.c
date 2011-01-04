@@ -142,10 +142,6 @@ void bucketSort( const TestInfo *ti, Data *data )
 
 	stopPhase( ti, gatherP );
 /*--------------------------------------------------------------------------------------------------------------*/
-
-	/* Freeing memory */
-	if ( id != root )
-		DAL_destroy( data );
 }
 
 void mainSort( const TestInfo *ti, Data *data )
@@ -158,4 +154,5 @@ void sort( const TestInfo *ti )
 	Data data;
 	DAL_init( &data );
 	bucketSort( ti, &data );
+	DAL_destroy( &data );
 }
