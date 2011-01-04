@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <mpi.h>
 #include "sorting.h"
 
 #ifndef _GNU_SOURCE

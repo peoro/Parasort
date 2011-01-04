@@ -1,4 +1,5 @@
 #include "sorting.h"
+#include <mpi.h>
 
 /* Keep C++ compilers from getting confused */
 #if defined(__cplusplus)

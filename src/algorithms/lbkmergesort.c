@@ -124,12 +124,10 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 	scatterP = startPhase( ti, "scattering" );
 
 	/* Computing the number of elements to be sent to each process and relative displacements */
-	if ( id == root ) {
-		for ( k=0, i=0; i<n; i++ ) {
-			sdispls[i] = k;
-			sendCounts[i] = M/n + (i < M%n);
-			k += sendCounts[i];
-		}
+	for ( k=0, i=0; i<n; i++ ) {
+		sdispls[i] = k;
+		sendCounts[i] = M/n + (i < M%n);
+		k += sendCounts[i];
 	}
 	/* Scattering data */
 	DAL_scatterv( ti, data, sendCounts, sdispls, root );
@@ -156,22 +154,25 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 
 	samplingP = startPhase( ti, "sampling" );
 
-	splitters = (int*) malloc ( (n-1) * sizeof(int) );
+	if (id == root)
+		splitters = (int*) malloc ( (n-1) * n * sizeof(int) );
+	else
+		splitters = (int*) malloc ( (n-1) * sizeof(int) );
+	globalSplitters = (int*) malloc ( (n-1) * sizeof(int) );
 
 	/* Choosing local splitters (n-1 equidistant elements of the data object) */
 	chooseSplittersFromData( data, n, splitters );
 
 	/* Gathering all splitters to the root process */
-	DAL_i_gather( ti, &splitters, (n-1)*n, root );
+	DAL_type_gather( ti, splitters, (n-1)*n, DAL_INT, root );
 
 	/* Choosing global splitters (n-1 equidistant elements of the allSplitters array) */
 	if ( id == root ) {
 		qsort( splitters, (n-1)*n, sizeof(int), compare );
-		globalSplitters = (int*) malloc ( (n-1) * sizeof(int) );
 		chooseSplitters( splitters, (n-1)*n, n, globalSplitters );
 	}
 	/* Broadcasting global splitters */
-	DAL_i_bcast( ti, &globalSplitters, n-1, root );
+	DAL_type_bcast( ti, globalSplitters, n-1, DAL_INT, root );
 
 	free( splitters );
 
@@ -240,7 +241,7 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 
 	/* Gathering the lengths of the all buckets */
 	recvCounts[0] = dataLength;
-	DAL_l_gather( ti, &recvCounts, n, root );
+	DAL_type_gather( ti, recvCounts, n, DAL_LONG, root );
 
 	/* Computing displacements relative to the output array at which to place the incoming data from each process  */
 	if ( id == root ) {

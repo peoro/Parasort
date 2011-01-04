@@ -64,12 +64,10 @@ void bucketSort( const TestInfo *ti, Data *data )
 	scatterP = startPhase( ti, "scattering" );
 
 	/* Computing the number of elements to be sent to each process and relative displacements */
-	if ( id == root ) {
-		for ( k=0, i=0; i<n; i++ ) {
-			sdispls[i] = k;
-			sendCounts[i] = M/n + (i < M%n);
-			k += sendCounts[i];
-		}
+	for ( k=0, i=0; i<n; i++ ) {
+		sdispls[i] = k;
+		sendCounts[i] = M/n + (i < M%n);
+		k += sendCounts[i];
 	}
 	/* Scattering data */
 	DAL_scatterv( ti, data, sendCounts, sdispls, root );
@@ -104,8 +102,7 @@ void bucketSort( const TestInfo *ti, Data *data )
 	getSendCounts( data, n, sendCounts );
 
 	/* Informing all processes on the number of elements that will receive */
-	memcpy( recvCounts, sendCounts, n*sizeof(long) );
-	DAL_l_alltoall( ti, &recvCounts, 1 );
+	DAL_type_alltoall( ti, sendCounts, recvCounts, 1, DAL_LONG );
 
 	/* Computing the displacements */
 	for ( j=0, k=0, i=0; i<n; i++ ) {
@@ -134,7 +131,7 @@ void bucketSort( const TestInfo *ti, Data *data )
 
 	/* Gathering the lengths of the all buckets */
 	recvCounts[0] = j;
-	DAL_l_gather( ti, &recvCounts, n, root );
+	DAL_type_gather( ti, recvCounts, n, DAL_LONG, root );
 
 	/* Computing displacements relative to the output array at which to place the incoming data from each process  */
 	if ( id == root ) {

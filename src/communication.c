@@ -1,5 +1,6 @@
 
 #include<assert.h>
+#include <mpi.h>
 #include "communication.h"
 
 
@@ -25,6 +26,32 @@ void print_trace( void )
 
 	free( strings );
 }
+
+
+int DAL_getTypeMPI( DAL_Type type ) {
+	switch ( type ) {
+        case DAL_CHAR: return MPI_CHAR;
+        case DAL_SIGNED_CHAR: return MPI_SIGNED_CHAR;
+        case DAL_UNSIGNED_CHAR: return MPI_UNSIGNED_CHAR;
+        case DAL_BYTE: return MPI_BYTE;
+        case DAL_WCHAR: return MPI_WCHAR;
+        case DAL_SHORT: return MPI_SHORT;
+        case DAL_UNSIGNED_SHORT: return MPI_UNSIGNED_SHORT;
+        case DAL_INT: return MPI_INT;
+        case DAL_UNSIGNED: return MPI_UNSIGNED;
+        case DAL_LONG: return MPI_LONG;
+        case DAL_UNSIGNED_LONG: return MPI_UNSIGNED_LONG;
+        case DAL_FLOAT: return MPI_FLOAT;
+        case DAL_DOUBLE: return MPI_DOUBLE;
+        case DAL_LONG_DOUBLE: return MPI_LONG_DOUBLE;
+        case DAL_LONG_LONG_INT: return MPI_LONG_LONG_INT;
+        case DAL_LONG_LONG: return MPI_LONG_LONG;
+        case DAL_UNSIGNED_LONG_LONG: return MPI_UNSIGNED_LONG_LONG;
+		default: return MPI_INT;
+	}
+}
+
+
 
 
 long GET_FILE_SIZE( const char *path )
@@ -171,7 +198,7 @@ void DAL_send( const TestInfo *ti, Data *data, int dest )
 *
 * @param[in] ti       	The test info
 * @param[in] data		Data buffer to store received elements
-* @param[in] size  		Max number of integers to be received
+* @param[in] size  		Max number of elements to be received
 * @param[in] source    	Rank of the sender process
 */
 void DAL_receive( const TestInfo *ti, Data *data, long size, int source )
@@ -187,10 +214,10 @@ void DAL_receive( const TestInfo *ti, Data *data, long size, int source )
 *
 * @param[in] ti       	The test info
 * @param[in] sdata		Data to be sent
-* @param[in] scount		Number of integers to be sent
+* @param[in] scount		Number of elements to be sent
 * @param[in] sdispl		Displacement for the send buffer
 * @param[in] rdata		Data buffer to store received elements
-* @param[in] rcount		Max number of integers to be received
+* @param[in] rcount		Max number of elements to be received
 * @param[in] rdispl		Displacement for the receive buffer
 * @param[in] partner	Rank of the partner process
 *
@@ -253,7 +280,7 @@ void DAL_scatterReceive( const TestInfo *ti, Data *data, long size, int root )
 *
 * @param[in] ti       	The test info
 * @param[in] data  		Data to be scattered
-* @param[in] size     	Number of integers per process
+* @param[in] size     	Number of elements per process
 * @param[in] root     	Rank of the root process
 */
 void DAL_scatter( const TestInfo *ti, Data *data, long size, int root )
@@ -296,7 +323,7 @@ void DAL_gatherReceive( const TestInfo *ti, Data *data, long size )
 *
 * @param[in] 		ti       	The test info
 * @param[in,out] 	data  		Data to be gathered/sent
-* @param[in] 		size     	Number of integers to be gathered
+* @param[in] 		size     	Number of elements to be gathered
 * @param[in] 		root     	Rank of the root process
 */
 void DAL_gather( const TestInfo *ti, Data *data, long size, int root )
@@ -349,7 +376,7 @@ void DAL_scattervReceive( const TestInfo *ti, Data *data, long size, int root )
 *
 * @param[in] 		ti       	The test info
 * @param[in,out] 	data  		Data to be scattered/received
-* @param[in] 		sizes     	Array containing the number of integers to be sent to each process
+* @param[in] 		sizes     	Array containing the number of elements to be sent to each process
 * @param[in] 		displs     	Array of displacements
 * @param[in] 		root     	Rank of the root process
 */
@@ -359,7 +386,7 @@ void DAL_scatterv( const TestInfo *ti, Data *data, long *sizes, long *displs, in
 		return DAL_scattervSend( ti, data, sizes, displs );
 	}
 	else {
-		return DAL_scattervReceive( ti, data, GET_LOCAL_M(ti), root );
+		return DAL_scattervReceive( ti, data, sizes[0], root );
 	}
 }
 
@@ -385,13 +412,16 @@ void DAL_gathervReceive( const TestInfo *ti, Data *data, long *sizes, long *disp
 {
 	int rcounts[GET_N( ti )];
 	int rdispls[GET_N( ti )];
+	int rcount = 0;
 	int i;
 
 	for ( i=0; i<GET_N( ti ); i++ ) {
 		rcounts[i] = sizes[i];
 		rdispls[i] = displs[i];
+
+		rcount += sizes[i];
 	}
-	assert( DAL_reallocArray( data, GET_M( ti ) ) );
+	assert( DAL_reallocArray( data, rcount ) );
 	MPI_Gatherv( MPI_IN_PLACE, rcounts[GET_ID( ti )], MPI_INT, data->array.data, rcounts, rdispls, MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
 }
 /**
@@ -399,7 +429,7 @@ void DAL_gathervReceive( const TestInfo *ti, Data *data, long *sizes, long *disp
 *
 * @param[in] 		ti       	The test info
 * @param[in,out] 	data  		Data to be gathered/sent
-* @param[in] 		sizes     	Array containing the number of integers to be gathered from each process
+* @param[in] 		sizes     	Array containing the number of elements to be gathered from each process
 * @param[in] 		displs     	Array of displacements
 * @param[in] 		root     	Rank of the root process
 */
@@ -424,7 +454,7 @@ void DAL_gatherv( const TestInfo *ti, Data *data, long *sizes, long *displs, int
 *
 * @param[in] 		ti       	The test info
 * @param[in,out] 	data  		Data to be sent/received
-* @param[in] 		size  		Number of integers to be sent/received to/from each process
+* @param[in] 		size  		Number of elements to be sent/received to/from each process
 */
 void DAL_alltoall( const TestInfo *ti, Data *data, long size )
 {
@@ -457,9 +487,9 @@ void DAL_alltoall( const TestInfo *ti, Data *data, long size )
 *
 * @param[in] 		ti       	The test info
 * @param[in,out] 	data  		Data to be sent/received
-* @param[in] 		sendSizes  	Array containing the number of integers to be sent to each process
+* @param[in] 		sendSizes  	Array containing the number of elements to be sent to each process
 * @param[in] 		sdispls     Array of displacements
-* @param[in] 		recvSizes  	Array containing the number of integers to be received from each process
+* @param[in] 		recvSizes  	Array containing the number of elements to be received from each process
 * @param[in] 		rdispls     Array of displacements
 */
 void DAL_alltoallv( const TestInfo *ti, Data *data, long *sendSizes, long *sdispls, long *recvSizes, long *rdispls )
@@ -522,7 +552,7 @@ void DAL_bcastReceive( const TestInfo *ti, Data *data, long size, int root )
 *
 * @param[in] ti       	The test info
 * @param[in] data  		Data to be scattered
-* @param[in] size     	Number of integers per process
+* @param[in] size     	Number of elements per process
 * @param[in] root     	Rank of the root process
 */
 void DAL_bcast( const TestInfo *ti, Data *data, long size, int root )
@@ -538,20 +568,21 @@ void DAL_bcast( const TestInfo *ti, Data *data, long size, int root )
 
 
 /***************************************************************************************************************/
-/********************************* [Integer] Communication Primitives ******************************************/
+/********************************* [DAL_Type] Communication Primitives *****************************************/
 /***************************************************************************************************************/
 
 /**
 * @brief Sends array to dest
 *
 * @param[in] ti         The test info
-* @param[in] array      Pointer to an array of integers to be sent
-* @param[in] size       Length of the array array
+* @param[in] array      Array of elements to be sent
+* @param[in] size       Length of the array
+* @param[in] type       Type of the array elements
 * @param[in] dest       Rank of the receiver process
 */
-void DAL_i_send( const TestInfo *ti, int **array, int size, int dest )
+void DAL_type_send( const TestInfo *ti, void *array, int size, DAL_Type type, int dest )
 {
-    MPI_Send( *array, size, MPI_INT, dest, 0, MPI_COMM_WORLD );
+    MPI_Send( array, size, DAL_getTypeMPI( type ), dest, 0, MPI_COMM_WORLD );
 }
 
 /**
@@ -559,19 +590,21 @@ void DAL_i_send( const TestInfo *ti, int **array, int size, int dest )
 *
 * @param[in] ti         The test info
 * @param[in] array      Array buffer to store received elements
-* @param[in] size       Max number of integers to be received
+* @param[in] size       Max number of elements to be received
+* @param[in] type       Type of the array elements
 * @param[in] source     Rank of the sender process
 *
-* @returns Number of received integers
+* @returns Number of received elements
 */
-int DAL_i_receive( const TestInfo *ti, int **array, int size, int source )
+int DAL_type_receive( const TestInfo *ti, void *array, int size, DAL_Type type, int source )
 {
     MPI_Status  status;
-    *array = (int*)malloc( size * sizeof(int) );
-    assert( *array != NULL );
-    MPI_Recv( *array, size, MPI_INT, source, 0, MPI_COMM_WORLD, &status );
 
-    MPI_Get_count( &status, MPI_INT, &size );
+    assert( array != NULL );
+
+    MPI_Recv( array, size, DAL_getTypeMPI( type ), source, 0, MPI_COMM_WORLD, &status );
+
+    MPI_Get_count( &status, DAL_getTypeMPI( type ), &size );
 
     return size;
 }
@@ -584,31 +617,32 @@ int DAL_i_receive( const TestInfo *ti, int **array, int size, int source )
 * @brief Sends and receives array from partner
 *
 * @param[in] ti         The test info
-* @param[in] sarray     Pointer to an array of integers to be sent
-* @param[in] scount     Number of integers to be sent
+* @param[in] sarray     Array of elements to be sent
+* @param[in] scount     Number of elements to be sent
 * @param[in] sdispl     Displacement for the send buffer
 * @param[in] rarray     Buffer to store received elements
-* @param[in] rcount     Max number of integers to be received
+* @param[in] rcount     Max number of elements to be received
 * @param[in] rdispl     Displacement for the receive buffer
+* @param[in] type       Type of the array elements
 * @param[in] partner    Rank of the partner process
 *
-* @returns Number of received integers
+* @returns Number of received elements
 */
-int DAL_i_sendrecv( const TestInfo *ti, int **sarray, int scount, int sdispl, int **rarray, int rcount, int rdispl, int partner )
+int DAL_type_sendrecv( const TestInfo *ti, void *sarray, int scount, int sdispl, void *rarray, int rcount, int rdispl, DAL_Type type, int partner )
 {
-    *rarray = (int*)realloc( *rarray, (rdispl+rcount)*sizeof(int) );
-    assert( *rarray != NULL );
+    assert( sarray != NULL );
+    assert( rarray != NULL );
 
     MPI_Status  status;
-    MPI_Sendrecv( *sarray+sdispl, scount, MPI_INT, partner, 100, *rarray+rdispl, rcount, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
+    MPI_Sendrecv( sarray+sdispl, scount, DAL_getTypeMPI( type ), partner, 100, rarray+rdispl, rcount, DAL_getTypeMPI( type ), partner, 100, MPI_COMM_WORLD, &status );
 
-    MPI_Get_count( &status, MPI_INT, &rcount );
+    MPI_Get_count( &status, DAL_getTypeMPI( type ), &rcount );
     if ( rcount || rdispl ) {
-        *rarray = (int*)realloc( *rarray, (rdispl+rcount)*sizeof(int) );
-        assert( *rarray != NULL );
+        rarray = (int*)realloc( rarray, (rdispl+rcount)*sizeof(int) );
+        assert( rarray != NULL );
     }
     else
-        free( *rarray );
+        free( rarray );
 
     return rcount;
 }
@@ -619,35 +653,33 @@ int DAL_i_sendrecv( const TestInfo *ti, int **sarray, int scount, int sdispl, in
 
 
 
-void DAL_i_scatterSend( const TestInfo *ti, int **array, int size )
+void DAL_type_scatterSend( const TestInfo *ti, void *array, int size, DAL_Type type )
 {
     assert( size % GET_N( ti ) == 0 );
-    MPI_Scatter( *array, size, MPI_INT, MPI_IN_PLACE, size, MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
-
-    *array = (int*)realloc( *array, size*sizeof(int) );
-    assert( *array != NULL );
+    MPI_Scatter( array, size, DAL_getTypeMPI( type ), MPI_IN_PLACE, size, DAL_getTypeMPI( type ), GET_ID( ti ), MPI_COMM_WORLD );
 }
-void DAL_i_scatterReceive( const TestInfo *ti, int **array, int size, int root )
+void DAL_type_scatterReceive( const TestInfo *ti, void *array, int size, DAL_Type type, int root )
 {
-    *array = (int*)malloc( size * sizeof(int) );
-    assert( *array != NULL );
-    MPI_Scatter( NULL, 0, MPI_INT, *array, size, MPI_INT, root, MPI_COMM_WORLD );
+    MPI_Scatter( NULL, 0, DAL_getTypeMPI( type ), array, size, DAL_getTypeMPI( type ), root, MPI_COMM_WORLD );
 }
 /**
 * @brief Scatters array among all processes
 *
 * @param[in] ti         The test info
-* @param[in] array      Pointer to an array of integers to be scattered
-* @param[in] size       Number of integers per process
+* @param[in] array      Array of elements to be scattered
+* @param[in] size       Number of elements per process
+* @param[in] type       Type of the array elements
 * @param[in] root       Rank of the root process
 */
-void DAL_i_scatter( const TestInfo *ti, int **array, int size, int root )
+void DAL_type_scatter( const TestInfo *ti, void *array, int size, DAL_Type type, int root )
 {
+    assert( array != NULL );
+
     if( GET_ID( ti ) == root ) {
-        return DAL_i_scatterSend( ti, array, size );
+        return DAL_type_scatterSend( ti, array, size, type );
     }
     else {
-        return DAL_i_scatterReceive( ti, array, size, root );
+        return DAL_type_scatterReceive( ti, array, size, type, root );
     }
 }
 
@@ -657,32 +689,33 @@ void DAL_i_scatter( const TestInfo *ti, int **array, int size, int root )
 
 
 
-void DAL_i_gatherSend( const TestInfo *ti, int **array, int size, int root )
+void DAL_type_gatherSend( const TestInfo *ti, void *array, int size, DAL_Type type, int root )
 {
-    MPI_Gather( *array, size, MPI_INT, NULL, 0, MPI_INT, root, MPI_COMM_WORLD );
+    MPI_Gather( array, size, DAL_getTypeMPI( type ), NULL, 0, DAL_getTypeMPI( type ), root, MPI_COMM_WORLD );
 }
-void DAL_i_gatherReceive( const TestInfo *ti, int **array, int size )
+void DAL_type_gatherReceive( const TestInfo *ti, void *array, int size, DAL_Type type )
 {
     assert( size % GET_N( ti ) == 0 );
-    *array = (int*)realloc( *array, size*sizeof(int) );
-    assert( *array != NULL );
-    MPI_Gather( MPI_IN_PLACE, size/GET_N( ti ), MPI_INT, *array, size/GET_N( ti ), MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
+    MPI_Gather( MPI_IN_PLACE, size/GET_N( ti ), DAL_getTypeMPI( type ), array, size/GET_N( ti ), DAL_getTypeMPI( type ), GET_ID( ti ), MPI_COMM_WORLD );
 }
 /**
 * @brief Gathers array from all processes
 *
 * @param[in]        ti          The test info
-* @param[in,out]    array       Pointer to an array of integers to be gathered/sent
-* @param[in]        size        Number of integers to be gathered
+* @param[in,out]    array       Array of elements to be gathered/sent
+* @param[in]        size        Number of elements to be gathered
+* @param[in]        type       Type of the array elements
 * @param[in]        root        Rank of the root process
 */
-void DAL_i_gather( const TestInfo *ti, int **array, int size, int root )
+void DAL_type_gather( const TestInfo *ti, void *array, int size, DAL_Type type, int root )
 {
+    assert( array != NULL );
+
     if( GET_ID( ti ) == root ) {
-        return DAL_i_gatherReceive( ti, array, size );
+        return DAL_type_gatherReceive( ti, array, size, type );
     }
     else {
-        return DAL_i_gatherSend( ti, array, size/GET_N( ti ), root );
+        return DAL_type_gatherSend( ti, array, size/GET_N( ti ), type, root );
     }
 }
 
@@ -693,35 +726,33 @@ void DAL_i_gather( const TestInfo *ti, int **array, int size, int root )
 
 
 
-void DAL_i_scattervSend( const TestInfo *ti, int **array, int *sizes, int *displs )
+void DAL_type_scattervSend( const TestInfo *ti, void *array, int *sizes, int *displs, DAL_Type type )
 {
-    MPI_Scatterv( *array, sizes, displs, MPI_INT, MPI_IN_PLACE, sizes[0], MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
-
-    *array = (int*)realloc( *array, sizes[0]*sizeof(int) );
-    assert( *array != NULL );
+    MPI_Scatterv( array, sizes, displs, DAL_getTypeMPI( type ), MPI_IN_PLACE, sizes[0], DAL_getTypeMPI( type ), GET_ID( ti ), MPI_COMM_WORLD );
 }
-void DAL_i_scattervReceive( const TestInfo *ti, int **array, int size, int root )
+void DAL_type_scattervReceive( const TestInfo *ti, void *array, int size, DAL_Type type, int root )
 {
-    *array = (int*)malloc( size * sizeof(int) );
-    assert( *array != NULL );
-    MPI_Scatterv( NULL, NULL, NULL, MPI_INT, *array, size, MPI_INT, root, MPI_COMM_WORLD );
+    MPI_Scatterv( NULL, NULL, NULL, DAL_getTypeMPI( type ), array, size, DAL_getTypeMPI( type ), root, MPI_COMM_WORLD );
 }
 /**
 * @brief Scatters array among all processes
 *
 * @param[in]        ti          The test info
-* @param[in,out]    array       Pointer to an array of integers to be scattered/received
-* @param[in]        sizes       Array containing the number of integers to be sent to each process
+* @param[in,out]    array       Array of elements to be scattered/received
+* @param[in]        sizes       Array containing the number of elements to be sent to each process
 * @param[in]        displs      Array of displacements
+* @param[in]        type       Type of the array elements
 * @param[in]        root        Rank of the root process
 */
-void DAL_i_scatterv( const TestInfo *ti, int **array, int *sizes, int *displs, int root )
+void DAL_type_scatterv( const TestInfo *ti, void *array, int *sizes, int *displs, DAL_Type type, int root )
 {
-    if( GET_ID( ti ) == root ) {
-        return DAL_i_scattervSend( ti, array, sizes, displs );
+    assert( array != NULL );
+
+     if( GET_ID( ti ) == root ) {
+        return DAL_type_scattervSend( ti, array, sizes, displs, type );
     }
     else {
-        return DAL_i_scattervReceive( ti, array, GET_LOCAL_M(ti), root );
+        return DAL_type_scattervReceive( ti, array, sizes[0], type, root );
     }
 }
 
@@ -732,355 +763,39 @@ void DAL_i_scatterv( const TestInfo *ti, int **array, int *sizes, int *displs, i
 
 
 
-void DAL_i_gathervSend( const TestInfo *ti, int **array, int size, int root )
+void DAL_type_gathervSend( const TestInfo *ti, void *array, int size, DAL_Type type, int root )
 {
-    MPI_Gatherv( *array, size, MPI_INT, NULL, NULL, NULL, MPI_INT, root, MPI_COMM_WORLD );
+    MPI_Gatherv( array, size, DAL_getTypeMPI( type ), NULL, NULL, NULL, DAL_getTypeMPI( type ), root, MPI_COMM_WORLD );
 }
-void DAL_i_gathervReceive( const TestInfo *ti, int **array, int *sizes, int *displs )
-{
-    *array = (int*)realloc( *array, GET_M( ti )*sizeof(int) );
-    assert( *array != NULL );
-    MPI_Gatherv( MPI_IN_PLACE, sizes[GET_ID( ti )], MPI_INT, *array, sizes, displs, MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
-}
-/**
-* @brief Gathers array from all processes
-*
-* @param[in]        ti          The test info
-* @param[in,out]    array       Pointer to an array of integers to be gathered/sent
-* @param[in]        sizes       Array containing the number of integers to be gathered from each process
-* @param[in]        displs      Array of displacements
-* @param[in]        root        Rank of the root process
-*/
-void DAL_i_gatherv( const TestInfo *ti, int **array, int *sizes, int *displs, int root )
-{
-    if( GET_ID( ti ) == root ) {
-        return DAL_i_gathervReceive( ti, array, sizes, displs );
-    }
-    else {
-        return DAL_i_gathervSend( ti, array, sizes[0], root );
-    }
-}
-
-
-
-
-
-
-/**
-* @brief Sends data from all to all processes
-*
-* @param[in] 		ti       	The test info
-* @param[in,out] 	data  		Data to be sent/received
-* @param[in] 		size  		Number of integers to be sent/received to/from each process
-*/
-void DAL_i_alltoall( const TestInfo *ti, int **array, int size )
-{
-    int *recvArray = (int*)malloc( size * GET_N( ti ) * sizeof(int) );
-    assert( recvArray != NULL );
-
-	MPI_Alltoall( *array, size, MPI_INT, recvArray, size, MPI_INT, MPI_COMM_WORLD );
-
-    free( *array );
-    *array = recvArray;
-}
-
-
-
-
-
-
-
-/**
-* @brief Sends array from all to all processes
-*
-* @param[in]        ti          The test info
-* @param[in,out]    array       Pointer to an array of integers to be sent/received
-* @param[in]        sendSizes   Array containing the number of integers to be sent to each process
-* @param[in]        sdispls     Array of displacements
-* @param[in]        recvSizes   Array containing the number of integers to be received from each process
-* @param[in]        rdispls     Array of displacements
-*/
-void DAL_i_alltoallv( const TestInfo *ti, int **array, int *sendSizes, int *sdispls, int *recvSizes, int *rdispls )
+void DAL_type_gathervReceive( const TestInfo *ti, void *array, int *sizes, int *displs, DAL_Type type )
 {
     int rcount = 0;
     int i;
 
     for ( i=0; i<GET_N( ti ); i++ ) {
-        rcount += recvSizes[i];
+        rcount += sizes[i];
     }
-    int *recvArray = (int*)malloc( rcount*sizeof(int) );
-    assert( recvArray != NULL );
-
-    MPI_Alltoallv( *array, sendSizes, sdispls, MPI_INT, recvArray, recvSizes, rdispls, MPI_INT, MPI_COMM_WORLD );
-
-    free( *array );
-    *array = recvArray;
-}
-
-
-
-
-
-
-void DAL_i_bcastSend( const TestInfo *ti, int **array, int size )
-{
-	MPI_Bcast( *array, size, MPI_INT, GET_ID( ti ), MPI_COMM_WORLD );
-}
-void DAL_i_bcastReceive( const TestInfo *ti, int **array, int size, int root )
-{
-    *array = (int*)malloc( size * sizeof(int) );
-    assert( *array != NULL );
-    MPI_Bcast( *array, size, MPI_INT, root, MPI_COMM_WORLD );
-}
-/**
-* @brief Broadcasts array to processes
-*
-* @param[in] ti         The test info
-* @param[in] array      Pointer to an array of integers to be broadcast
-* @param[in] size       Number of integers per process
-* @param[in] root       Rank of the root process
-*/
-void DAL_i_bcast( const TestInfo *ti, int **array, int size, int root )
-{
-    if( GET_ID( ti ) == root ) {
-        return DAL_i_bcastSend( ti, array, size );
-    }
-    else {
-        return DAL_i_bcastReceive( ti, array, size, root );
-    }
-}
-
-/*--------------------------------------------------------------------------------------------------------------*/
-
-
-
-
-
-
-
-
-
-/***************************************************************************************************************/
-/*********************************** [Long] Communication Primitives *******************************************/
-/***************************************************************************************************************/
-
-/**
-* @brief Sends array to dest
-*
-* @param[in] ti         The test info
-* @param[in] array      Pointer to an array of longs to be sent
-* @param[in] size       Length of the array array
-* @param[in] dest       Rank of the receiver process
-*/
-void DAL_l_send( const TestInfo *ti, long **array, int size, int dest )
-{
-    MPI_Send( *array, size, MPI_LONG, dest, 0, MPI_COMM_WORLD );
-}
-
-/**
-* @brief Receives array from source
-*
-* @param[in] ti         The test info
-* @param[in] array      Array buffer to store received elements
-* @param[in] size       Max number of longs to be received
-* @param[in] source     Rank of the sender process
-*
-* @returns Number of received longs
-*/
-int DAL_l_receive( const TestInfo *ti, long **array, int size, int source )
-{
-    MPI_Status  status;
-    *array = (long*)malloc( size * sizeof(long) );
-    assert( *array != NULL );
-    MPI_Recv( *array, size, MPI_LONG, source, 0, MPI_COMM_WORLD, &status );
-
-    MPI_Get_count( &status, MPI_LONG, &size );
-
-    return size;
-}
-
-
-
-
-
-/**
-* @brief Sends and receives array from partner
-*
-* @param[in] ti         The test info
-* @param[in] sarray     Pointer to an array of longs to be sent
-* @param[in] scount     Number of longs to be sent
-* @param[in] sdispl     Displacement for the send buffer
-* @param[in] rarray     Buffer to store received elements
-* @param[in] rcount     Max number of longs to be received
-* @param[in] rdispl     Displacement for the receive buffer
-* @param[in] partner    Rank of the partner process
-*
-* @returns Number of received longs
-*/
-int DAL_l_sendrecv( const TestInfo *ti, long **sarray, int scount, int sdispl, long **rarray, int rcount, int rdispl, int partner )
-{
-    *rarray = (long*)realloc( *rarray, (rdispl+rcount)*sizeof(long) );
-    assert( *rarray != NULL );
-
-    MPI_Status  status;
-    MPI_Sendrecv( *sarray+sdispl, scount, MPI_LONG, partner, 100, *rarray+rdispl, rcount, MPI_LONG, partner, 100, MPI_COMM_WORLD, &status );
-
-    MPI_Get_count( &status, MPI_LONG, &rcount );
-    if ( rcount || rdispl ) {
-        *rarray = (long*)realloc( *rarray, (rdispl+rcount)*sizeof(long) );
-        assert( *rarray != NULL );
-    }
-    else
-        free( *rarray );
-
-    return rcount;
-}
-
-
-
-
-
-
-
-void DAL_l_scatterSend( const TestInfo *ti, long **array, int size )
-{
-    assert( size % GET_N( ti ) == 0 );
-    MPI_Scatter( *array, size, MPI_LONG, MPI_IN_PLACE, size, MPI_LONG, GET_ID( ti ), MPI_COMM_WORLD );
-
-    *array = (long*)realloc( *array, size*sizeof(long) );
-    assert( *array != NULL );
-}
-void DAL_l_scatterReceive( const TestInfo *ti, long **array, int size, int root )
-{
-    *array = (long*)malloc( size * sizeof(long) );
-    assert( *array != NULL );
-    MPI_Scatter( NULL, 0, MPI_LONG, *array, size, MPI_LONG, root, MPI_COMM_WORLD );
-}
-/**
-* @brief Scatters array among all processes
-*
-* @param[in] ti         The test info
-* @param[in] array      Pointer to an array of longs to be scattered
-* @param[in] size       Number of longs per process
-* @param[in] root       Rank of the root process
-*/
-void DAL_l_scatter( const TestInfo *ti, long **array, int size, int root )
-{
-    if( GET_ID( ti ) == root ) {
-        return DAL_l_scatterSend( ti, array, size );
-    }
-    else {
-        return DAL_l_scatterReceive( ti, array, size, root );
-    }
-}
-
-
-
-
-
-
-
-void DAL_l_gatherSend( const TestInfo *ti, long **array, int size, int root )
-{
-    MPI_Gather( *array, size, MPI_LONG, NULL, 0, MPI_LONG, root, MPI_COMM_WORLD );
-}
-void DAL_l_gatherReceive( const TestInfo *ti, long **array, int size )
-{
-    assert( size % GET_N( ti ) == 0 );
-    *array = (long*)realloc( *array, size*sizeof(long) );
-    assert( *array != NULL );
-    MPI_Gather( MPI_IN_PLACE, size/GET_N( ti ), MPI_LONG, *array, size/GET_N( ti ), MPI_LONG, GET_ID( ti ), MPI_COMM_WORLD );
+    MPI_Gatherv( MPI_IN_PLACE, sizes[GET_ID( ti )], DAL_getTypeMPI( type ), array, sizes, displs, DAL_getTypeMPI( type ), GET_ID( ti ), MPI_COMM_WORLD );
 }
 /**
 * @brief Gathers array from all processes
 *
 * @param[in]        ti          The test info
-* @param[in,out]    array       Pointer to an array of longs to be gathered/sent
-* @param[in]        size        Number of longs to be gathered
-* @param[in]        root        Rank of the root process
-*/
-void DAL_l_gather( const TestInfo *ti, long **array, int size, int root )
-{
-    if( GET_ID( ti ) == root ) {
-        return DAL_l_gatherReceive( ti, array, size );
-    }
-    else {
-        return DAL_l_gatherSend( ti, array, size/GET_N( ti ), root );
-    }
-}
-
-
-
-
-
-
-
-
-void DAL_l_scattervSend( const TestInfo *ti, long **array, int *sizes, int *displs )
-{
-    MPI_Scatterv( *array, sizes, displs, MPI_LONG, MPI_IN_PLACE, sizes[0], MPI_LONG, GET_ID( ti ), MPI_COMM_WORLD );
-
-    *array = (long*)realloc( *array, sizes[0]*sizeof(long) );
-    assert( *array != NULL );
-}
-void DAL_l_scattervReceive( const TestInfo *ti, long **array, int size, int root )
-{
-    *array = (long*)malloc( size * sizeof(long) );
-    assert( *array != NULL );
-    MPI_Scatterv( NULL, NULL, NULL, MPI_LONG, *array, size, MPI_LONG, root, MPI_COMM_WORLD );
-}
-/**
-* @brief Scatters array among all processes
-*
-* @param[in]        ti          The test info
-* @param[in,out]    array       Pointer to an array of longs to be scattered/received
-* @param[in]        sizes       Array containing the number of longs to be sent to each process
+* @param[in,out]    array       Array of elements to be gathered/sent
+* @param[in]        sizes       Array containing the number of elements to be gathered from each process
 * @param[in]        displs      Array of displacements
+* @param[in]        type       Type of the array elements
 * @param[in]        root        Rank of the root process
 */
-void DAL_l_scatterv( const TestInfo *ti, long **array, int *sizes, int *displs, int root )
+void DAL_type_gatherv( const TestInfo *ti, void *array, int *sizes, int *displs, DAL_Type type, int root )
 {
+    assert( array != NULL );
+
     if( GET_ID( ti ) == root ) {
-        return DAL_l_scattervSend( ti, array, sizes, displs );
+        return DAL_type_gathervReceive( ti, array, sizes, displs, type );
     }
     else {
-        return DAL_l_scattervReceive( ti, array, GET_LOCAL_M(ti), root );
-    }
-}
-
-
-
-
-
-
-
-
-void DAL_l_gathervSend( const TestInfo *ti, long **array, int size, int root )
-{
-    MPI_Gatherv( *array, size, MPI_LONG, NULL, NULL, NULL, MPI_LONG, root, MPI_COMM_WORLD );
-}
-void DAL_l_gathervReceive( const TestInfo *ti, long **array, int *sizes, int *displs )
-{
-    *array = (long*)realloc( *array, GET_M( ti )*sizeof(long) );
-    assert( *array != NULL );
-    MPI_Gatherv( MPI_IN_PLACE, sizes[GET_ID( ti )], MPI_LONG, *array, sizes, displs, MPI_LONG, GET_ID( ti ), MPI_COMM_WORLD );
-}
-/**
-* @brief Gathers array from all processes
-*
-* @param[in]        ti          The test info
-* @param[in,out]    array       Pointer to an array of longs to be gathered/sent
-* @param[in]        sizes       Array containing the number of longs to be gathered from each process
-* @param[in]        displs      Array of displacements
-* @param[in]        root        Rank of the root process
-*/
-void DAL_l_gatherv( const TestInfo *ti, long **array, int *sizes, int *displs, int root )
-{
-    if( GET_ID( ti ) == root ) {
-        return DAL_l_gathervReceive( ti, array, sizes, displs );
-    }
-    else {
-        return DAL_l_gathervSend( ti, array, sizes[0], root );
+        return DAL_type_gathervSend( ti, array, sizes[0], type, root );
     }
 }
 
@@ -1093,18 +808,16 @@ void DAL_l_gatherv( const TestInfo *ti, long **array, int *sizes, int *displs, i
 * @brief Sends data from all to all processes
 *
 * @param[in]        ti          The test info
-* @param[in,out]    data        Data to be sent/received
-* @param[in]        size        Number of longs to be sent/received to/from each process
+* @param[in,out]    sarray        Data to be sent
+* @param[in]    	rarray      Array of elements to be received
+* @param[in]        size        Number of elements to be sent/received to/from each process
+* @param[in]        type        Type of the array elements
 */
-void DAL_l_alltoall( const TestInfo *ti, long **array, int size )
+void DAL_type_alltoall( const TestInfo *ti, void *sarray, void *rarray, int size, DAL_Type type )
 {
-    long *recvArray = (long*)malloc( size * GET_N( ti ) * sizeof(long) );
-    assert( recvArray != NULL );
-
-    MPI_Alltoall( *array, size, MPI_LONG, recvArray, size, MPI_LONG, MPI_COMM_WORLD );
-
-    free( *array );
-    *array = recvArray;
+    assert( sarray != NULL );
+    assert( rarray != NULL );
+    MPI_Alltoall( sarray, size, DAL_getTypeMPI( type ), rarray, size, DAL_getTypeMPI( type ), MPI_COMM_WORLD );
 }
 
 
@@ -1117,13 +830,15 @@ void DAL_l_alltoall( const TestInfo *ti, long **array, int size )
 * @brief Sends array from all to all processes
 *
 * @param[in]        ti          The test info
-* @param[in,out]    array       Pointer to an array of longs to be sent/received
-* @param[in]        sendSizes   Array containing the number of longs to be sent to each process
+* @param[in]    	sarray      Array of elements to be sent
+* @param[in]        sendSizes   Array containing the number of elements to be sent to each process
 * @param[in]        sdispls     Array of displacements
-* @param[in]        recvSizes   Array containing the number of longs to be received from each process
+* @param[in]    	rarray      Array of elements to be received
+* @param[in]        recvSizes   Array containing the number of elements to be received from each process
 * @param[in]        rdispls     Array of displacements
+* @param[in]        type        Type of the array elements
 */
-void DAL_l_alltoallv( const TestInfo *ti, long **array, int *sendSizes, int *sdispls, int *recvSizes, int *rdispls )
+void DAL_type_alltoallv( const TestInfo *ti, void *sarray, int *sendSizes, int *sdispls, void *rarray, int *recvSizes, int *rdispls, DAL_Type type )
 {
     int rcount = 0;
     int i;
@@ -1131,13 +846,9 @@ void DAL_l_alltoallv( const TestInfo *ti, long **array, int *sendSizes, int *sdi
     for ( i=0; i<GET_N( ti ); i++ ) {
         rcount += recvSizes[i];
     }
-    long *recvArray = (long*)malloc( rcount*sizeof(long) );
-    assert( recvArray != NULL );
-
-    MPI_Alltoallv( *array, sendSizes, sdispls, MPI_LONG, recvArray, recvSizes, rdispls, MPI_LONG, MPI_COMM_WORLD );
-
-    free( *array );
-    *array = recvArray;
+    assert( sarray != NULL );
+    assert( rarray != NULL );
+    MPI_Alltoallv( sarray, sendSizes, sdispls, DAL_getTypeMPI( type ), rarray, recvSizes, rdispls, DAL_getTypeMPI( type ), MPI_COMM_WORLD );
 }
 
 
@@ -1145,31 +856,32 @@ void DAL_l_alltoallv( const TestInfo *ti, long **array, int *sendSizes, int *sdi
 
 
 
-void DAL_l_bcastSend( const TestInfo *ti, long **array, int size )
+void DAL_type_bcastSend( const TestInfo *ti, void *array, int size, DAL_Type type )
 {
-    MPI_Bcast( *array, size, MPI_LONG, GET_ID( ti ), MPI_COMM_WORLD );
+    MPI_Bcast( array, size, DAL_getTypeMPI( type ), GET_ID( ti ), MPI_COMM_WORLD );
 }
-void DAL_l_bcastReceive( const TestInfo *ti, long **array, int size, int root )
+void DAL_type_bcastReceive( const TestInfo *ti, void *array, int size, DAL_Type type, int root )
 {
-    *array = (long*)malloc( size * sizeof(long) );
-    assert( *array != NULL );
-    MPI_Bcast( *array, size, MPI_LONG, root, MPI_COMM_WORLD );
+    MPI_Bcast( array, size, DAL_getTypeMPI( type ), root, MPI_COMM_WORLD );
 }
 /**
 * @brief Broadcasts array to processes
 *
 * @param[in] ti         The test info
-* @param[in] array      Pointer to an array of longs to be broadcast
-* @param[in] size       Number of longs per process
+* @param[in] array      Array of elements to be broadcast
+* @param[in] size       Number of elements per process
+* @param[in] type       Type of the array elements
 * @param[in] root       Rank of the root process
 */
-void DAL_l_bcast( const TestInfo *ti, long **array, int size, int root )
+void DAL_type_bcast( const TestInfo *ti, void *array, int size, DAL_Type type, int root )
 {
+    assert( array != NULL );
+
     if( GET_ID( ti ) == root ) {
-        return DAL_l_bcastSend( ti, array, size );
+        return DAL_type_bcastSend( ti, array, size, type );
     }
     else {
-        return DAL_l_bcastReceive( ti, array, size, root );
+        return DAL_type_bcastReceive( ti, array, size, type, root );
     }
 }
 

@@ -13,6 +13,8 @@ extern "C" {
 
 
 
+long GET_M ( const TestInfo *ti );
+long GET_LOCAL_M ( const TestInfo *ti );
 const char* GET_ALGO ( const TestInfo *ti );
 long GET_SEED ( const TestInfo *ti );
 char * GET_ALGORITHM_PATH( const char *algo, char *path, int pathLen );
