@@ -60,3 +60,18 @@ Figures~\ref{pianosa-mpi-1},~\ref{pianosa-mpi-2},~\ref{pianosa-mpi-3} show the r
 \end{figure}
 
 \input{performance}
+
+\subsection{Algorithms Efficiency}
+In this section, we are going to analyze the theoretical Algorithm Efficiency already defined in~\ref{terminology}. For the sake of commodity, we report here the definition. Given
+\begin{itemize}
+\item $P$, the number of real processors of our machine; 
+\item $m$, the number of steps of the algorithm;
+\item $X_i$, a random variable which counts the number of real processors that contribute to the calculation during the step $i$.
+\end{itemize}
+We defined the Algorithm Efficiency $\varphi$ as:
+\begin{center}
+$\varphi = \frac{\sum_{i=0}^m E[X_i]}{P \times m} $
+\end{center}
+TODO: for each algorithm, give the efficiency.
+
+\subsection{Comparing the results}

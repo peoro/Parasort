@@ -10,8 +10,4 @@ The \textit{scattering} and the \textit{gathering} phases, instead, are a bit tr
 We chose to implement our scattering phase as a binary three: rank 0 will partition its data and send the second partition to a second process, and this will go on recursively until all of our processes get their data. The idea of implementing a linear scattering has been discarded because it would not have allowed a parallelization of the partitioning, which is the most expensive operation of the scattering phase.
 The gathering phase has instead been implemented in a linear way: each process sends its sorted data to rank 0 which will read the data directly in the final array, without needing a further merging operation.
 
-\subsubsection*{Parallel version}
 \subsubsection*{Mapping virtual processors onto different cores}  
-\subsubsection*{Efficiency} 
-\subsubsection*{Statistical analysys}
-

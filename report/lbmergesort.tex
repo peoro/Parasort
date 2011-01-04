@@ -8,9 +8,3 @@ To define the range of numbers on which a process will operate during the merge,
 At this point, a loop of $\log (n)$ steps starts. At each step $i$, groups of processors of size $2^i$ (where $0 \leq i \log(n)$) are defined. Each group is assigned a partner group and all processes of a group will exchange data only with processes of the paired one. The \textit{Send-and-Receive} MPI routine is exploited to decrease communication latency (ideally, only a $T_{setup}$ is paid) and avoid deadlocks. A different partner process from which to start exchanging data is defined for each process inside a group. At step $i$, a subset of $2^{i+1}-1$ splitters are used to identify which elements must be sent to the paired-group processes. Once a process has exchanged data with the partner group, a merge operation on the received data and the local data is performed.
 
 A final gather operation is required to retrieve the whole sorted sequence at the root process.
-
-
-
-\subsubsection*{Parallel version}
-\subsubsection*{Efficiency} 
-\subsubsection*{Statistical analysis}

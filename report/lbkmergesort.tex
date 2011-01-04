@@ -1,8 +1,3 @@
 \subsubsection{Load-Balanced Multi-Way Merge Sort}
 Basically, the weak point of the previous algorithm is given by some redundancy in moving data among processes. In fact, during the merging phase some processes will receive data that doesn't belong to their assigned range, resulting in a waste of time both in communication and computation. By avoiding this redundancy we achieved increase in performance. An extended preprocessing phase is required to determine exactly which elements of the local data fall in what interval according to the $n-1$ splitters. Communications follow the same pattern as in \textit{Load-Balanced Merge Sort}, but a process will receive only numbers that lies within its range. At the end of the loop, only one \textit{n-way merge} is performed on the whole received data and the remaining local data.
 
-
-
-\subsubsection*{Parallel version}
-\subsubsection*{Efficiency} 
-\subsubsection*{Statistical analysis}
