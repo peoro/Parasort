@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "communication.h"
+#include "dal.h"
 
 /* Keep C++ compilers from getting confused */
 #if defined(__cplusplus)
@@ -12,7 +12,19 @@ extern "C" {
 #endif
 
 
+typedef struct
+{
+	bool verbose;
+	bool threaded; // use multithread between cores
 
+    long M; //data count
+    long seed;
+    char algo[64];
+    int algoVar[3];
+} TestInfo;
+
+int GET_ID ( const TestInfo *ti );
+int GET_N ( const TestInfo *ti );
 long GET_M ( const TestInfo *ti );
 long GET_LOCAL_M ( const TestInfo *ti );
 const char* GET_ALGO ( const TestInfo *ti );

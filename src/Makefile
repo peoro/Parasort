@@ -1,6 +1,6 @@
 MPICC = mpicc
 MPICPP = mpic++
-CFLAGS = -Wall -Wextra -Wno-unused -O2 -g
+CFLAGS = -Wall -Wextra -Wno-unused -Werror -O2 -g
 ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC
 
 INSTALLDIR = $(HOME)/.spd
@@ -9,7 +9,7 @@ LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
 ALGOS = mergesort samplesort bucketsort bitonicsort lbmergesort sequential # quicksort nosort
 ALGOSPP = kmerge lbkmergesort
-OBJECTS = communication.o sorting.o
+OBJECTS = dal.o debug.o sorting.o
 
 all: $(ALGOS) $(ALGOSPP) main
 

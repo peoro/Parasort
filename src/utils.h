@@ -2,7 +2,7 @@
 #define _UTILS_H_
 
 #include "sorting.h"
-#include "communication.h"
+#include "dal.h"
 
 /* Keep C++ compilers from getting confused */
 #if defined(__cplusplus)
