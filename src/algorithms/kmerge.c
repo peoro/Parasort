@@ -76,27 +76,27 @@ void fusion ( Data *data_owned, int runs )
 {
 	priority_queue<Min_val> heap;
 	int 	*runs_indexes 	= (int*) calloc ( sizeof(int), runs );   
-	int 	*merging 		= (int*) malloc ( sizeof(int) * data_owned->size * runs ); /*TODO: needs to be limited somehow to the memory size*/;  
+	int 	*merging 		= (int*) malloc ( sizeof(int) * data_owned->array.size * runs ); /*TODO: needs to be limited somehow to the memory size*/;  
 	int 	i;
 
 	//initializing the heap
 	for ( i = 0; i < runs; i++ )
-		heap.push ( Min_val ( data_owned[i].array[0], i ) );
+		heap.push ( Min_val ( data_owned[i].array.data[0], i ) );
 	
 	//merging
-	for ( i = 0; i < data_owned->size * runs; i++ ) {
+	for ( i = 0; i < data_owned->array.size * runs; i++ ) {
 		Min_val min = heap.top();
 		heap.pop();
 		merging[i] = min.val;
 		
-		if ( ++(runs_indexes[min.run_index]) != data_owned[min.run_index].size ) 	
-			heap.push ( Min_val ( data_owned[min.run_index].array[runs_indexes[min.run_index]], min.run_index ) );
+		if ( ++(runs_indexes[min.run_index]) != data_owned[min.run_index].array.size ) 	
+			heap.push ( Min_val ( data_owned[min.run_index].array.data[runs_indexes[min.run_index]], min.run_index ) );
 	}
 	
 	//realloc + final copy
-	reallocDataArray ( data_owned, data_owned->size * runs );
-	for ( i = 0; i < data_owned->size; i++ )
-		data_owned->array[i] = merging[i]; 
+	DAL_reallocArray ( data_owned, data_owned->array.size * runs );
+	for ( i = 0; i < data_owned->array.size; i++ )
+		data_owned->array.data[i] = merging[i]; 
 	
 	free ( runs_indexes );
 	free ( merging );
@@ -112,12 +112,15 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 
 	Data		*data_owned = (Data*) malloc ( sizeof(Data) * k ); 
 	PhaseHandle scatterP, localP, gatherP;
-
+	
+	//initializing datas
 	data_owned[0] = *data_local;	
+	for ( int i = 0; i < k; i ++ )
+		DAL_init ( data_owned + i );
 	
 	//scattering data partitions
 	scatterP = startPhase( ti, "Scattering" );
-	scatter ( ti, data_owned, GET_LOCAL_M ( ti ), 0 );
+	DAL_scatter ( ti, data_owned, GET_LOCAL_M ( ti ), 0 );
 	stopPhase( ti, scatterP );
 	
 	//sorting local partition
@@ -134,7 +137,7 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 			int receiving, n_dests;
 			from_who( rank, k, active_proc, dests, &n_dests );
 			for ( receiving = 0; receiving < n_dests; receiving++ ) 
-				receive ( ti, data_owned + receiving + 1, total_size / active_proc, dests[receiving] );
+				DAL_receive ( ti, data_owned + receiving + 1, total_size / active_proc, dests[receiving] );
 				
 			//fusion phase
 			if ( active_proc >= k )
@@ -144,7 +147,7 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 				
 		}
 		else if ( do_i_send ( rank, k, active_proc ) ) 
-			send ( ti, data_owned, to_who( rank, k, active_proc ));
+			DAL_send ( ti, data_owned, to_who( rank, k, active_proc ));
 		
 		//keeps updated the number of processes that partecipate to the sorting in the next step
 		active_proc /= k;
@@ -153,12 +156,12 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 	stopPhase( ti, localP );
 	//TODO: swap need to be handled by framework
 	data_local->array = data_owned->array;
-	data_local->size = data_owned->size;
+	//data_local->size = data_owned->size;
 	
 	//frees memory
 	int i;
 	for ( i = 1; i < k; i++ )
-		destroyData ( data_owned + i );
+		DAL_destroy ( data_owned + i );
 	free ( dests );
 }
 
@@ -167,8 +170,9 @@ extern "C"
 	void sort ( const TestInfo *ti )
 	{
 		Data data_local;
+		DAL_init ( &data_local );
 		mk_mergesort ( ti, &data_local );
-		destroyData ( &data_local );
+		DAL_destroy ( &data_local );
 	}
 
 	void mainSort( const TestInfo *ti, Data *data_local )
