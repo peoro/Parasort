@@ -166,7 +166,7 @@ void DAL_bcast( const TestInfo *ti, Data *data, long size, int root );
 void DAL_type_send( const TestInfo *ti, void *array, int size, DAL_Type type, int dest );
 int DAL_type_receive( const TestInfo *ti, void *array, int size, DAL_Type type, int source );
 
-int DAL_type_sendrecv( const TestInfo *ti, void *sarray, int scount, int sdispl, void *rarray, int rcount, int rdispl, DAL_Type type, int partner );
+int DAL_type_sendrecv( const TestInfo *ti, void *sarray, int scount, void *rarray, int rcount, DAL_Type type, int partner );
 
 void DAL_type_scatterSend( const TestInfo *ti, void *array, int size, DAL_Type type );
 void DAL_type_scatterReceive( const TestInfo *ti, void *array, int size, DAL_Type type, int root );

@@ -619,30 +619,22 @@ int DAL_type_receive( const TestInfo *ti, void *array, int size, DAL_Type type, 
 * @param[in] ti         The test info
 * @param[in] sarray     Array of elements to be sent
 * @param[in] scount     Number of elements to be sent
-* @param[in] sdispl     Displacement for the send buffer
 * @param[in] rarray     Buffer to store received elements
 * @param[in] rcount     Max number of elements to be received
-* @param[in] rdispl     Displacement for the receive buffer
 * @param[in] type       Type of the array elements
 * @param[in] partner    Rank of the partner process
 *
 * @returns Number of received elements
 */
-int DAL_type_sendrecv( const TestInfo *ti, void *sarray, int scount, int sdispl, void *rarray, int rcount, int rdispl, DAL_Type type, int partner )
+int DAL_type_sendrecv( const TestInfo *ti, void *sarray, int scount, void *rarray, int rcount, DAL_Type type, int partner )
 {
     assert( sarray != NULL );
     assert( rarray != NULL );
 
     MPI_Status  status;
-    MPI_Sendrecv( sarray+sdispl, scount, DAL_getTypeMPI( type ), partner, 100, rarray+rdispl, rcount, DAL_getTypeMPI( type ), partner, 100, MPI_COMM_WORLD, &status );
+    MPI_Sendrecv( sarray, scount, DAL_getTypeMPI( type ), partner, 100, rarray, rcount, DAL_getTypeMPI( type ), partner, 100, MPI_COMM_WORLD, &status );
 
     MPI_Get_count( &status, DAL_getTypeMPI( type ), &rcount );
-    if ( rcount || rdispl ) {
-        rarray = (int*)realloc( rarray, (rdispl+rcount)*sizeof(int) );
-        assert( rarray != NULL );
-    }
-    else
-        free( rarray );
 
     return rcount;
 }
@@ -809,7 +801,7 @@ void DAL_type_gatherv( const TestInfo *ti, void *array, int *sizes, int *displs,
 *
 * @param[in]        ti          The test info
 * @param[in,out]    sarray        Data to be sent
-* @param[in]    	rarray      Array of elements to be received
+* @param[in]        rarray      Array of elements to be received
 * @param[in]        size        Number of elements to be sent/received to/from each process
 * @param[in]        type        Type of the array elements
 */
@@ -830,10 +822,10 @@ void DAL_type_alltoall( const TestInfo *ti, void *sarray, void *rarray, int size
 * @brief Sends array from all to all processes
 *
 * @param[in]        ti          The test info
-* @param[in]    	sarray      Array of elements to be sent
+* @param[in]        sarray      Array of elements to be sent
 * @param[in]        sendSizes   Array containing the number of elements to be sent to each process
 * @param[in]        sdispls     Array of displacements
-* @param[in]    	rarray      Array of elements to be received
+* @param[in]        rarray      Array of elements to be received
 * @param[in]        recvSizes   Array containing the number of elements to be received from each process
 * @param[in]        rdispls     Array of displacements
 * @param[in]        type        Type of the array elements
