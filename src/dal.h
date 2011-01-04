@@ -4,8 +4,8 @@
 * This constrain is due to the fact that functions such as MPI_Send, MPI_Recv, ..., uses an integer to represent the buffer size
 */
 
-#ifndef _COMMUNICATION_H_
-#define _COMMUNICATION_H_
+#ifndef _DAL_H_
+#define _DAL_H_
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -54,15 +54,13 @@ char *DAL_dataToString( Data *d, char *s, int size );
 #define UNSUPPORTED_DATA(d) \
 	{ \
 		char buf[1024]; \
-		printf( BASE_ERROR_STR "cannot handle data (%s).\n", BASE_ERROR_ARGS, DAL_dataToString((d), buf, sizeof(buf)) ); \
-		ASSERT(false); \
+		ERROR( "cannot handle data (%s)", DAL_dataToString((d), buf, sizeof(buf)) ); \
 	}
 
-#define ASSERT_DATA(cond, d, s) \
+#define ASSERT_DATA(cond, d, fmt, ... ) \
 	if( ! (cond) ) { \
 		char buf[1024]; \
-		printf( BASE_ERROR_STR "error with data (%s), %s.\n", BASE_ERROR_ARGS, DAL_dataToString((d), buf, sizeof(buf)), (s) ); \
-		ASSERT(false); \
+		ERROR( "error with data (%s) " fmt, DAL_dataToString((d), buf, sizeof(buf)), ##__VA_ARGS__ ); \
 	}
 
 

@@ -179,7 +179,6 @@ int parseArgs( int argc, char **argv, TestInfo *ti )
 		}
 	}
 
-	#define ERROR { printf( "\n" ); printHelp( argv[0] ); return 1; }
 	if( ! MGiven ) {
 		printf( "M is mandatory!\n" );
 		return -1;
