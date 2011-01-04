@@ -45,36 +45,59 @@ typedef struct Data
 } Data;
 
 
-long GET_FILE_SIZE( const char *path );
 
+/***************************************************************************************************************/
+/****************************************** DAL debugging functions ********************************************/
+/***************************************************************************************************************/
 
 const char *DAL_mediumName( DataMedium m );
 char *DAL_dataToString( Data *d, char *s, int size );
 
-#define UNSUPPORTED_DATA(d) \
+#define DAL_UNSUPPORTED(d) \
 	{ \
 		char buf[1024]; \
-		ERROR( "cannot handle data (%s)", DAL_dataToString((d), buf, sizeof(buf)) ); \
+		SPD_ERROR( "cannot handle data (%s)", DAL_dataToString((d), buf, sizeof(buf)) ); \
 	}
 
-#define ASSERT_DATA(cond, d, fmt, ... ) \
+#define DAL_UNIMPLEMENTED(d) \
+	{ \
+		char buf[1024]; \
+		SPD_ERROR( "support for data (%s) not yet implemented", DAL_dataToString((d), buf, sizeof(buf)) ); \
+	}
+
+#define DAL_ASSERT(cond, d, fmt, ... ) \
 	if( ! (cond) ) { \
 		char buf[1024]; \
-		ERROR( "error with data (%s) " fmt, DAL_dataToString((d), buf, sizeof(buf)), ##__VA_ARGS__ ); \
+		SPD_ERROR( "error with data (%s) " fmt, DAL_dataToString((d), buf, sizeof(buf)), ##__VA_ARGS__ ); \
 	}
 
+/*--------------------------------------------------------------------------------------------------------------*/
 
-// TODO: make them more generic ...
+
+/***************************************************************************************************************/
+/*************************************** DAL file management functions *****************************************/
+/***************************************************************************************************************/
+
+long GET_FILE_SIZE( const char *path );
+
+/*--------------------------------------------------------------------------------------------------------------*/
+
+
+/***************************************************************************************************************/
+/******************************************** DAL Data management **********************************************/
+/***************************************************************************************************************/
+
 bool DAL_isInitialized( Data *data );
 void DAL_init( Data *data );
 void DAL_destroy( Data *data );
 bool DAL_allocArray( Data *data, int size );
 bool DAL_reallocArray ( Data *data, int size ); // TODO: who needs this?
 
+/*--------------------------------------------------------------------------------------------------------------*/
 
 
 /***************************************************************************************************************/
-/************************************* [Data] Communication Primitives *****************************************/
+/*************************************** DAL Communication Primitives ******************************************/
 /***************************************************************************************************************/
 
 void DAL_send( Data *data, int dest );

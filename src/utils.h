@@ -45,7 +45,7 @@ void sequentialSort( const TestInfo *ti, Data *data )
 {
 	switch( data->medium ) {
 		case File: {
-			UNSUPPORTED_DATA( data );
+			DAL_UNIMPLEMENTED( data );
 			break;
 		}
 		case Array: {
@@ -53,7 +53,7 @@ void sequentialSort( const TestInfo *ti, Data *data )
 			break;
 		}
 		default:
-			UNSUPPORTED_DATA( data );
+			DAL_UNSUPPORTED( data );
 	}
 }
 

@@ -87,7 +87,7 @@ void DAL_destroy( Data *data )
 			break;
 		}
 		case File: {
-			UNSUPPORTED_DATA( data );
+			DAL_UNIMPLEMENTED( data );
 			break;
 		}
 		case Array: {
@@ -95,14 +95,14 @@ void DAL_destroy( Data *data )
 			break;
 		}
 		default:
-			UNSUPPORTED_DATA( data );
+			DAL_UNSUPPORTED( data );
 	}
 	DAL_init( data );
 }
 
 bool DAL_allocArray( Data *data, int size )
 {
-	ASSERT_DATA( DAL_isInitialized(data), data, "data should have been initialized" );
+	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
 
 	data->array.data = (int*) malloc( size * sizeof(int) );
 	if( ! data->array.data ) {
@@ -117,7 +117,7 @@ bool DAL_allocArray( Data *data, int size )
 
 bool DAL_reallocArray ( Data *data, int size )
 {
-	ASSERT_DATA( data->medium == Array, data, "only Array data can be reallocated" );
+	DAL_ASSERT( data->medium == Array, data, "only Array data can be reallocated" );
 
 	data->array.data = (int*) realloc( data->array.data, size * sizeof(int) );
 	if( ! data->array.data ) {
@@ -146,7 +146,7 @@ void DAL_send( Data *data, int dest )
 {
 	switch( data->medium ) {
 		case File: {
-			UNSUPPORTED_DATA( data );
+			DAL_UNIMPLEMENTED( data );
 			break;
 		}
 		case Array: {
@@ -154,7 +154,7 @@ void DAL_send( Data *data, int dest )
 			break;
 		}
 		default:
-			UNSUPPORTED_DATA( data );
+			DAL_UNSUPPORTED( data );
 	}
 }
 
@@ -222,7 +222,7 @@ void DAL_scatterSend( Data *data )
 {
 	switch( data->medium ) {
 		case File: {
-			UNSUPPORTED_DATA( data );
+			DAL_UNIMPLEMENTED( data );
 			break;
 		}
 		case Array: {
@@ -232,7 +232,7 @@ void DAL_scatterSend( Data *data )
 			break;
 		}
 		default:
-			UNSUPPORTED_DATA( data );
+			DAL_UNSUPPORTED( data );
 	}
 }
 void DAL_scatterReceive( Data *data, long size, int root )
@@ -266,7 +266,7 @@ void DAL_gatherSend( Data *data, int root )
 {
 	switch( data->medium ) {
 		case File: {
-			UNSUPPORTED_DATA( data );
+			DAL_UNIMPLEMENTED( data );
 			break;
 		}
 		case Array: {
@@ -274,7 +274,7 @@ void DAL_gatherSend( Data *data, int root )
 			break;
 		}
 		default:
-			UNSUPPORTED_DATA( data );
+			DAL_UNSUPPORTED( data );
 	}
 }
 void DAL_gatherReceive( Data *data, long size )
@@ -311,7 +311,7 @@ void DAL_scattervSend( Data *data, long *sizes, long *displs )
 {
 	switch( data->medium ) {
 		case File: {
-			UNSUPPORTED_DATA( data );
+			DAL_UNIMPLEMENTED( data );
 			break;
 		}
 		case Array: {
@@ -328,7 +328,7 @@ void DAL_scattervSend( Data *data, long *sizes, long *displs )
 			break;
 		}
 		default:
-			UNSUPPORTED_DATA( data );
+			DAL_UNSUPPORTED( data );
 	}
 }
 void DAL_scattervReceive( Data *data, long size, int root )
@@ -362,7 +362,7 @@ void DAL_gathervSend( Data *data, int root )
 {
 	switch( data->medium ) {
 		case File: {
-			UNSUPPORTED_DATA( data );
+			DAL_UNIMPLEMENTED( data );
 			break;
 		}
 		case Array: {
@@ -370,7 +370,7 @@ void DAL_gathervSend( Data *data, int root )
 			break;
 		}
 		default:
-			UNSUPPORTED_DATA( data );
+			DAL_UNSUPPORTED( data );
 	}
 }
 void DAL_gathervReceive( Data *data, long *sizes, long *displs )
@@ -423,7 +423,7 @@ void DAL_gatherv( Data *data, long *sizes, long *displs, int root )
 */
 void DAL_alltoall( Data *data, long size )
 {
-// 	UNSUPPORTED_DATA( data );
+// 	DAL_UNSUPPORTED( data );
 	int count = size;
 	int i;
 
@@ -459,7 +459,7 @@ void DAL_alltoall( Data *data, long size )
 */
 void DAL_alltoallv( Data *data, long *sendSizes, long *sdispls, long *recvSizes, long *rdispls )
 {
-// 	UNSUPPORTED_DATA( data );
+// 	DAL_UNSUPPORTED( data );
 
 	int scounts[GET_N()];
 	int sd[GET_N()];
@@ -496,7 +496,7 @@ void DAL_bcastSend( Data *data )
 {
 	switch( data->medium ) {
 		case File: {
-			UNSUPPORTED_DATA( data );
+			DAL_UNIMPLEMENTED( data );
 			break;
 		}
 		case Array: {
@@ -504,7 +504,7 @@ void DAL_bcastSend( Data *data )
 			break;
 		}
 		default:
-			UNSUPPORTED_DATA( data );
+			DAL_UNSUPPORTED( data );
 	}
 }
 void DAL_bcastReceive( Data *data, long size, int root )
