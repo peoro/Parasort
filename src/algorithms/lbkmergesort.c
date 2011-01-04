@@ -133,7 +133,7 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 		k += sendCounts[i];
 	}
 	/* Scattering data */
-	DAL_scatterv( ti, data, sendCounts, sdispls, root );
+	DAL_scatterv( data, sendCounts, sdispls, root );
 
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -210,14 +210,14 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 
 		/* Exchanging data with the paired group avoiding deadlocks */
 		for ( h=1, j=partner; h<=groupSize; h++ ) {
-			k = DAL_sendrecv( ti, data, sendCounts[j], sdispls[j], &recvData, buffSize, dataLength, j );
+			k = DAL_sendrecv( data, sendCounts[j], sdispls[j], &recvData, buffSize, dataLength, j );
 			dataLength += k;
 			recvCounts[z++] = k;
 
 			j = ((id + h*flag) % groupSize + groupRoot) ^ groupSize;		//Selects the next partner to avoid deadlocks
 		}
 	}
-	k = DAL_sendrecv( ti, data, sendCounts[id], sdispls[id], &recvData, sendCounts[id], dataLength, id );
+	k = DAL_sendrecv( data, sendCounts[id], sdispls[id], &recvData, sendCounts[id], dataLength, id );
 	dataLength += k;
 	recvCounts[z] = k;
 
@@ -251,7 +251,7 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 		free( allSplitters );
 	}
 	/* Gathering sorted data */
-	DAL_gatherv( ti, data, recvCounts, rdispls, root );
+	DAL_gatherv( data, recvCounts, rdispls, root );
 
 	stopPhase( ti, gatherP );
 /*--------------------------------------------------------------------------------------------------------------*/

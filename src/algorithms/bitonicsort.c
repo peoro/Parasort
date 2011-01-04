@@ -95,7 +95,7 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	scatterP = startPhase( ti, "scattering" );
 
 	/* Scattering data */
-	DAL_scatter( ti, data, local_M, root );
+	DAL_scatter( data, local_M, root );
 
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -130,7 +130,7 @@ void bitonicSort( const TestInfo *ti, Data *data )
 			partner = id ^ mask2;				//Selects as partner the process with rank that differs from id only at the j-th bit
 
 			/* Exchanging data with partner */
-			DAL_sendrecv( ti, data, local_M, 0, &recvData, recvCount, 0, partner );
+			DAL_sendrecv( data, local_M, 0, &recvData, recvCount, 0, partner );
 
 			/* Each process must call the dual function of its partner */
 			if ( (id-partner) * flag > 0 )
@@ -150,7 +150,7 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	gatherP = startPhase( ti, "gathering" );
 
 	/* Gathering sorted data */
-	DAL_gather( ti, data, M, root );
+	DAL_gather( data, M, root );
 
 	stopPhase( ti, gatherP );
 /*--------------------------------------------------------------------------------------------------------------*/

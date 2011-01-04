@@ -69,7 +69,7 @@ void sampleSort( const TestInfo *ti, Data *data )
 		k += sendCounts[i];
 	}
 	/* Scattering data */
-	DAL_scatterv( ti, data, sendCounts, sdispls, root );
+	DAL_scatterv( data, sendCounts, sdispls, root );
 
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -142,7 +142,7 @@ void sampleSort( const TestInfo *ti, Data *data )
 		j += recvCounts[i];
 	}
 	/* Sending data to the appropriate processes */
-	DAL_alltoallv( ti, data, sendCounts, sdispls, recvCounts, rdispls );
+	DAL_alltoallv( data, sendCounts, sdispls, recvCounts, rdispls );
 
 	/* Sorting local bucket */
 	sequentialSort( ti, data );
@@ -169,7 +169,7 @@ void sampleSort( const TestInfo *ti, Data *data )
 		free( allSplitters );
 	}
 	/* Gathering sorted data */
-	DAL_gatherv( ti, data, recvCounts, rdispls, root );
+	DAL_gatherv( data, recvCounts, rdispls, root );
 
 	stopPhase( ti, gatherP );
 /*--------------------------------------------------------------------------------------------------------------*/
