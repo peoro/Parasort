@@ -1,3 +1,4 @@
+\label{fram-intr}
 As we have already said, we had to design a framework in such a way that our algorithms can share and exploit specific functionalities. In this context, it becomes useful to give a general view of the whole system by identifying and defining its abstraction layers, as shown in Figure~\ref{levels}. Let's briefly comment each of this levels and then focus on their specific features.
 \begin{figure}[h]
   \begin{center}
@@ -15,5 +16,5 @@ As we have already said, we had to design a framework in such a way that our alg
 \end{enumerate}
 In some sense, we can say that starting from a tool for parallel programming like MPI, we designed a new tool, namely the run-time support of the Sorting Algorithm level, that addresses our needs for implementing parallel sorting algorithm for large data sets. 
 
-In the following we are going to describe each of these levels starting from the top-most one, namely Sorting Algorithms. The emphasis will be obvioulsy put on the firsts layers (Sorting Algorithms, DAL, Sorting Framework) which mainly represent the work we made in this project.
+In the following we are going to describe each of these levels starting from the top-most one, namely Sorting Algorithms. The emphasis will be obvioulsy put on the firsts layers (Sorting Algorithms, Sorting Framework, DAL) which mainly represent the work we made in this project.
 

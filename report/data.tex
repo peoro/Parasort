@@ -9,44 +9,75 @@ We needed to write some kind of run-time support for the Sorting levels, which i
 Functions at the DAL level will one (or more) \texttt{Data} object, will see whether it's allocated on primary or secondary memory, and according to this they'll run some data-dependent codes, optimized for the medium where the \texttt{Data} object is allocated.
 
 \subsection*{Data Abstraction Layer - API}
-\texttt{Data} is the key datatype of the DAL. Designing a Sorting Algorithm does not require to know the internal structure of \texttt{Data}, but just what it represent: a sequence of elements. Indeed, all the processes of a Sorting Algorithm declare their own \texttt{Data} (eventually more than one, depending on the specific algorithm) which will be passed as parameter to the functions of the DAL's API. For instance, if a process wanted to sort the elements inside \texttt{Data}, than it would perform a call to
+\texttt{Data} is the key datatype of the DAL. Designing a Sorting Algorithm does not require to know the internal structure of \texttt{Data}, but just what it represent: a sequence of elements. Indeed, all the processes of a Sorting Algorithm declare their own \texttt{Data} (eventually more than one, depending on the specific algorithm) which will be passed as parameter to the functions of the DAL's API. To initialize and destroy a \texttt{Data} we provide two specific functions:
 \begin{lstlisting}
-void sequentialSort( Data *data )
+void DAL_init( Data *data )
+void DAL_destroy( Data *data )
 \end{lstlisting}
-Obviously, processes of a Sorting Algorithm have to collaborate somehow: DAL provides them with a set of communication functions. The most important ones are:
+Obviously, processes of a Sorting Algorithm have to collaborate somehow: DAL provides them with a set of communication primitives. The most important ones are:
 \begin{lstlisting}
-void send( Data *data, int dest )
-void receive( Data *data, long size, int source )
-void scatter( Data *data, long size, int root )
-void gather( Data *data, long size, int root )
-void alltoallv( Data *sendData, long *sendSizes, long *sdispls, long *recvSizes, long *rdispls )
+void DAL_send( Data *data, int dest )
+void DAL_receive( Data *data, long size, int source )
+void DAL_scatter( Data *data, long size, int root )
+void DAL_gather( Data *data, long size, int root )
+void DAL_alltoallv( Data *sendData, long *sendSizes, long *sdispls, long *recvSizes, long *rdispls )
 \end{lstlisting}
 The semantic of these functions is the same of the ones provided by MPI having analogous name. Notice that all the processes of the Sorting Algorithm, except the one of Rank $0$, starts with an empty \texttt{Data}, as consequence of the choice of starting with a centralized data set (see~\ref{assumptions}). Anyway, a very simple way to initialize \texttt{Data} to all processes is to perform an initial scatter of the data set.
 
-\subsection*{Data Abstraction Layer - Implementation}
-The declaration of \texttt{Data} is the following:
-\begin{lstlisting}
-typedef struct {
-	enum { NoMedium, File, Array } medium;
+There are other functions that need to access \texttt{Data}; these functions, with respect to the ones described above, are not related to the DAL itself, but rather to the Sorting Algorithms. Just as example, think to the function $merge$, needed to merge two input \texttt{Data} into another \texttt{Data}. It is true that $merge$ is a function related to specific algorithms, but, on the other hand, it needs to break the abstraction of \texttt{Data} in order to be implmented. TODO
 
-	int *array;
-	long size;
+\subsection*{Data Abstraction Layer - Implementation}
+The type \texttt{Data} is implemented as follows:
+\begin{lstlisting}
+typedef struct
+{
+	enum Medium {
+		NoMedium = 0,
+		File = 1,
+		Array = 2
+	} medium;
+	
+	union
+	{
+		struct
+		{
+			int *data;
+			long size;
+		} array;
+		struct
+		{
+			char name[128];
+		} file;
+	};
+	
 } Data;
 \end{lstlisting}
-Depending on the value of $medium$, a \texttt{Data} represents a sequence of elements that are currently being stored in main memory ($Array$), on disk ($File$) or not initialized yet ($NoMedium$). A \texttt{Data} is normally accessed and manipulated by the functions of the API (send, receive, ...). We provide also some additional functions for generic purposes: 
+Depending on the value of $medium$, a \texttt{Data} represents a sequence of elements that are currently being stored in main memory ($Array$), on disk ($File$) or not initialized yet ($NoMedium$). At this purpose, an $union$ is used to reflect the fact that \texttt{Data} is a generic type.  As we have already said, a \texttt{Data} is normally accessed and manipulated by the functions of the API illustrated in the previous section. Anyway, looking at the code, it is likely to encounter other functions (that substantially act like macros) which address specific purposes: 
 \begin{lstlisting}
-void initData( Data *data )
-void destroyData( Data *data )
-bool allocDataArray( Data *data, int size )
-bool reallocDataArray ( Data *data, int size )
+bool DAL_allocArray( Data *data, int size )
+bool DAL_reallocArray ( Data *data, int size )
 \end{lstlisting}
-The semantic of these functions follow directly from their signature: that is, a \texttt{Data} must be always first initialized and finally destroyed ($initData$ and $destroyData$), while once allocated it will represent a sequence of elements allocated either in memory ($allocDataArray$ returns $true$) or on disk. The $reallocDataArray$ simply resize a \texttt{Data} preserving its contents; notice that a call to this function may cause the change of the medium. All these functions, except the $destroyData$, are not visible to the user.
+The semantic of these functions follow directly from their signature. The $DAL\_allocArray$ tries to allocate a block of $size$ integers in main memory. The $DAL\_reallocArray$ simply resize a \texttt{Data} preserving its contents; notice that a call to this function may cause the change of the medium. 
 
 To give an idea of how we implemented the DAL's API functions (and so, how a \texttt{Data} is manipulated), we focus on the specific case of the primitive $send$. For implementing all other primitives we adopted a very similar approach; anyway, notice that other functions, like the $AllToAll$, are really trickier than the $send$. 
 \begin{lstlisting}
-void send( const TestInfo *ti, Data *data, int dest )
+void DAL_send( ..., Data *data, int dest )
+{
+	switch( data->medium ) {
+		case File: {
+			UNSUPPORTED_DATA( data );
+			break;
+		}
+		case Array: {
+			MPI_Send( data->array.data, data->array.size, MPI_INT, dest, 0, MPI_COMM_WORLD );
+			break;
+		}
+		default:
+			UNSUPPORTED_DATA( data );
+	}
+}
 \end{lstlisting}
-TODO
+Depending on the medium where the block of data is stored, different actions are performed. In the medium is the main memory, than a simple call to a primitive of the lower level is enaugh (ie MPI$\_$Send). On the other hand, ... TODO. Notice that in both cases, a first ... TODO (suppongo si debba preliminarmente dire con una MPISend se mi appresto a invià dati ''secchi'' o se la roba era su file..in modo tale che la DALreceive si comporti di conseguenza).
 %\subsubsection*{TODO}
 %Di che altro c'e' da parlare?
 %\begin{itemize}
