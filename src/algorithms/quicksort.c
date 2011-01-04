@@ -101,6 +101,7 @@ int nth_token_owner( const TestInfo *ti, int n )
 
 #define SWAP( a, i, j ) { int tmp; tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
 
+/*
 // partitions the array:
 // a is the array, of size size. p is the pivot
 long _partition( int *a, long size, int p )
@@ -110,7 +111,7 @@ long _partition( int *a, long size, int p )
 	while( true ) {
 		while( i < size && a[i] <= p ) { ++ i; }
 		while( j > 0 && a[j] > p ) { -- j; }
-		if( i >= j || ( i >= size && j <= 0 ) ) {
+		if( i >= j || ( i >= size && j < 0 ) ) {
 			break;
 		}
 		SWAP( a, i, j );
@@ -118,8 +119,35 @@ long _partition( int *a, long size, int p )
 	
 	return j;
 }
-// \data parameter will contain the first partition
-// while the returned data will contain the second one
+*/
+
+// pi is pivot index
+// final pivot index (ie: border line) is also returned
+long _partition( int *a, long size, int p, int pi )
+{
+    int lo = 0, hi = size-1;
+    
+    // putting pivot at the end
+    SWAP( a, size-1, pi );
+    pi = size-1;
+
+    while( true ) {
+        while( lo < size && a[lo] <  a[pi] ) { ++lo; }
+        while( hi >= 0   && a[hi] >= a[pi] ) { --hi; }
+
+        if( lo > hi ) {
+        	break;
+        }
+		SWAP( a, lo, hi );
+    }
+    
+    // putting pivot back in the middle ...
+	SWAP( a, lo, pi );
+	
+    return lo;
+}
+// \data parameter will contain the first partition (the one with smaller numbers)
+// while the returned data will contain the second one (with bigger numbers)
 Data partition( Data *data )
 {
 	switch( data->medium ) {
@@ -128,8 +156,12 @@ Data partition( Data *data )
 			break;
 		}
 		case Array: {
-			long lim = _partition( data->array.data, data->array.size, data->array.data[ rand() % data->array.size ] );
-
+			int pivotIndex = rand() % data->array.size;
+			int pivot = data->array.data[ pivotIndex ];
+			long lim = _partition( data->array.data, data->array.size, pivot, pivotIndex );
+			
+				char buf[128];
+				//SPD_DEBUG( "partitioned(%d):%s, lim:%ld", pivot, DAL_dataItemsToString(data, buf, sizeof(buf)), lim );
 			/*
 			// FIXME			
 			// NOTE: THIS IS NOT SAFE IN GENERAL, SINCE SECOND PARTITION'S DATA WILL GET
@@ -150,9 +182,9 @@ Data partition( Data *data )
 			Data r;
 			DAL_init( &r );
 			SPD_ASSERT( DAL_allocArray( &r, data->array.size - lim ), "not enough memory..." );
-			memcpy( r.array.data, data->array.data + lim, data->array.size - lim );
+			memcpy( r.array.data, data->array.data + lim, (data->array.size-lim)*sizeof(int) );
 			
-			DAL_reallocArray( data, lim );
+			SPD_ASSERT( DAL_reallocArray( data, lim ), "wtf, I'm not even growing it here..." );
 			
 			return r;
 		}
@@ -169,16 +201,14 @@ void scatter( const TestInfo *ti, Data *data )
 	
 		if( do_i_send(ti,step) ) {
 			//SPD_DEBUG( "partitioning..." );
-			Data data2 = partition( data );
+			Data data2 = partition( data ); // data: "smaller" partition, data2: "bigger" partition
 			
-			// printf( "%d->%d:Partition(%ld): %ld\n", GET_ID(ti), to_who(ti,step), *size, lim );
+			char buf1[128], buf2[128];
+				//SPD_DEBUG( "partition1:%s, partition2:%s", DAL_dataItemsToString(data, buf1, sizeof(buf1)), DAL_dataItemsToString(&data2, buf2, sizeof(buf2)) );
 			
 			//SPD_DEBUG( "need to send data to %d", to_who(ti, step) );
 			DAL_sendU( &data2, to_who(ti, step) ); // ok, now second partition is no longer required
 			//SPD_DEBUG( "data sent" );
-			/*
-			// but do not destroy it: read note in partition()!
-			*/
 			DAL_destroy( &data2 );
 		}
 		if( do_i_receive(ti,step) ) {
@@ -259,6 +289,9 @@ void sort( const TestInfo *ti )
 
 void mainSort( const TestInfo *ti, Data *data )
 {
+	char buf[128];
+	//SPD_DEBUG( "data to sort:%s", DAL_dataItemsToString(data, buf, sizeof(buf)) );
+	
 	actualSort( ti, data );
 	
 	DAL_ASSERT( DAL_dataSize(data) == GET_M(ti), data, "data isn't as big as it was originally..." );

@@ -66,6 +66,37 @@ char * DAL_dataToString( Data *d, char *s, int size )
 	}
 	return s;
 }
+char * DAL_dataItemsToString( Data *d, char *s, int size )
+{
+	char buf[64];
+	int i;
+	
+	s[0] = '\0';
+	
+	if( ! size ) {
+		return s;
+	}
+	if( ! d->array.size ) {
+		strncat( s, "{}", size );
+		return s;
+	}
+	
+	strncat( s, "{", size );
+	for( i = 0; i < d->array.size-1; ++ i ) {
+		snprintf( buf, sizeof(buf), "%d,", d->array.data[i] );
+		strncat( s, buf, size );
+	}
+	
+	snprintf( buf, sizeof(buf), "%d}", d->array.data[i] );
+	strncat( s, buf, size );
+	
+	if( strlen(s) == (unsigned) size-1 ) {
+		s[size-4] = s[size-3] = s[size-2] = '.';
+		s[size-1] = '}';
+	}
+	
+	return s;
+}
 
 
 
@@ -186,7 +217,8 @@ void DAL_send( Data *data, int dest )
 			break;
 		}
 		case Array: {
-			SPD_DEBUG( "sending %ld items to %d", data->array.size, dest );
+			char buf[64];
+				//SPD_DEBUG( "sending %ld items to %d: %s", data->array.size, dest, DAL_dataItemsToString(data,buf,sizeof(buf)) );
 			MPI_Send( data->array.data, data->array.size, MPI_INT, dest, 0, MPI_COMM_WORLD );
 			break;
 		}
@@ -205,10 +237,12 @@ void DAL_send( Data *data, int dest )
 */
 void DAL_receive( Data *data, long size, int source )
 {
+	char buf[64];
 	MPI_Status 	stat;
 	SPD_ASSERT( DAL_allocArray( data, size ), "not enough memory to allocate data" );
-	SPD_DEBUG( "receiving %ld items from %d", size, source );
+		//SPD_DEBUG( "receiving %ld items from %d", size, source );
 	MPI_Recv( data->array.data, size, MPI_INT, source, 0, MPI_COMM_WORLD, &stat );
+		//SPD_DEBUG( "received items: %s", DAL_dataItemsToString(data,buf,sizeof(buf)) );
 }
 
 void DAL_sendU( Data *data, int dest )
@@ -229,9 +263,10 @@ void DAL_receiveA( Data *data, long size, int source )
 {
 	MPI_Status 	stat;
 	long int oldDataSize = data->array.size;
+		//SPD_DEBUG( "appending %ld items to the %ld I've already got: %s", size, oldDataSize, DAL_dataItemsToString(data,buf,sizeof(buf)) );
 	SPD_ASSERT( DAL_reallocArray( data, data->array.size + size ), "not enough memory to allocate data" );
-	//SPD_DEBUG( "appending %ld items to the %ld I've already got", size, oldDataSize );
 	MPI_Recv( data->array.data + oldDataSize, size, MPI_INT, source, 0, MPI_COMM_WORLD, &stat );
+		//SPD_DEBUG( "post-appending items: %s", DAL_dataItemsToString(data,buf,sizeof(buf)) );
 }
 void DAL_receiveAU( Data *data, int source )
 {

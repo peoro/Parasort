@@ -52,6 +52,7 @@ typedef struct Data
 
 const char *DAL_mediumName( DataMedium m );
 char *DAL_dataToString( Data *d, char *s, int size );
+char *DAL_dataItemsToString( Data *d, char *s, int size );
 
 #define DAL_UNSUPPORTED(d) \
 	{ \
