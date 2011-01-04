@@ -1,5 +1,4 @@
 
-#include<assert.h>
 #include <mpi.h>
 #include "dal.h"
 
@@ -70,16 +69,23 @@ char * DAL_dataToString( Data *d, char *s, int size )
 
 
 
+/***************************************************************************************************************/
+/******************************************** DAL Data management **********************************************/
+/***************************************************************************************************************/
 
 bool DAL_isInitialized( Data *data )
 {
 	return data->medium == NoMedium;
 }
+bool DAL_isDestroyed( Data *data )
+{
+	return data->medium == NoMedium;
+}
+
 void DAL_init( Data *data )
 {
 	data->medium = NoMedium;
 }
-
 void DAL_destroy( Data *data )
 {
 	switch( data->medium ) {
@@ -97,12 +103,19 @@ void DAL_destroy( Data *data )
 		default:
 			DAL_UNSUPPORTED( data );
 	}
-	DAL_init( data );
+	data->medium = NoMedium;
 }
 
-bool DAL_allocArray( Data *data, int size )
+bool DAL_allocArray( Data *data, long size )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
+	
+	if( size == 0 ) {
+		data->medium = Array;
+		data->array.data = 0;
+		data->array.size = 0;
+		return 1;
+	}
 
 	data->array.data = (int*) malloc( size * sizeof(int) );
 	if( ! data->array.data ) {
@@ -114,10 +127,17 @@ bool DAL_allocArray( Data *data, int size )
 
 	return 1;
 }
-
-bool DAL_reallocArray ( Data *data, int size )
+bool DAL_reallocArray ( Data *data, long size )
 {
 	DAL_ASSERT( data->medium == Array, data, "only Array data can be reallocated" );
+	
+	if( size == 0 ) {
+		data->medium = Array;
+		free( data->array.data );
+		data->array.data = 0;
+		data->array.size = 0;
+		return 1;
+	}
 
 	data->array.data = (int*) realloc( data->array.data, size * sizeof(int) );
 	if( ! data->array.data ) {
@@ -128,6 +148,22 @@ bool DAL_reallocArray ( Data *data, int size )
 	data->medium = Array;
 
 	return 1;
+}
+
+long DAL_dataSize( Data *data )
+{
+	switch( data->medium ) {
+		case File: {
+			return GET_FILE_SIZE( data->file.name );
+			break;
+		}
+		case Array: {
+			return data->array.size;
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( data );
+	}
 }
 
 
@@ -150,6 +186,7 @@ void DAL_send( Data *data, int dest )
 			break;
 		}
 		case Array: {
+			SPD_DEBUG( "sending %ld items to %d", data->array.size, dest );
 			MPI_Send( data->array.data, data->array.size, MPI_INT, dest, 0, MPI_COMM_WORLD );
 			break;
 		}
@@ -169,8 +206,40 @@ void DAL_send( Data *data, int dest )
 void DAL_receive( Data *data, long size, int source )
 {
 	MPI_Status 	stat;
-	assert( DAL_allocArray( data, size ) );
+	SPD_ASSERT( DAL_allocArray( data, size ), "not enough memory to allocate data" );
+	SPD_DEBUG( "receiving %ld items from %d", size, source );
 	MPI_Recv( data->array.data, size, MPI_INT, source, 0, MPI_COMM_WORLD, &stat );
+}
+
+void DAL_sendU( Data *data, int dest )
+{
+	//SPD_DEBUG( "telling I'll be sending %ld items", data->array.size );
+	MPI_Send( & data->array.size, 1, MPI_LONG, dest, 0, MPI_COMM_WORLD ); // sending size
+	DAL_send( data, dest ); // sending data
+}
+void DAL_receiveU( Data *data, int source )
+{
+	MPI_Status 	stat;
+	long size;
+	MPI_Recv( &size, 1, MPI_LONG, source, 0, MPI_COMM_WORLD, &stat ); // receiving size
+	//SPD_DEBUG( "heard I'll be receiving %ld items", size );
+	DAL_receive( data, size, source ); // receiving data
+}
+void DAL_receiveA( Data *data, long size, int source )
+{
+	MPI_Status 	stat;
+	long int oldDataSize = data->array.size;
+	SPD_ASSERT( DAL_reallocArray( data, data->array.size + size ), "not enough memory to allocate data" );
+	//SPD_DEBUG( "appending %ld items to the %ld I've already got", size, oldDataSize );
+	MPI_Recv( data->array.data + oldDataSize, size, MPI_INT, source, 0, MPI_COMM_WORLD, &stat );
+}
+void DAL_receiveAU( Data *data, int source )
+{
+	MPI_Status 	stat;
+	long size;
+	MPI_Recv( &size, 1, MPI_LONG, source, 0, MPI_COMM_WORLD, &stat ); // receiving size
+	//SPD_DEBUG( "heard I'll be appending %ld items to the %ld I've already got", size, data->array.size );
+	DAL_receiveA( data, size, source ); // receiving data
 }
 
 
@@ -195,19 +264,23 @@ long DAL_sendrecv( Data *sdata, long scount, long sdispl, Data* rdata, long rcou
 	int recvDispl = rdispl;
 	int sendDispl = sdispl;
 
-	if ( rdata->medium == NoMedium )
-		assert( DAL_allocArray( rdata, recvDispl+recvCount ) );
-	else
-		assert( DAL_reallocArray( rdata, recvDispl+recvCount ) );
+	if( rdata->medium == NoMedium ) {
+		SPD_ASSERT( DAL_allocArray( rdata, recvDispl+recvCount ), "not enough memory to allocate data" );
+	}
+	else {
+		SPD_ASSERT( DAL_reallocArray( rdata, recvDispl+recvCount ), "not enough memory to allocate data" );
+	}
 
 	MPI_Status 	status;
 	MPI_Sendrecv( sdata->array.data+sendDispl, sendCount, MPI_INT, partner, 100, rdata->array.data+recvDispl, recvCount, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
 
 	MPI_Get_count( &status, MPI_INT, &recvCount );
-	if ( recvCount || recvDispl )
-		assert( DAL_reallocArray( rdata, recvDispl+recvCount ) );
-	else
+	if( recvCount || recvDispl ) {
+		SPD_ASSERT( DAL_reallocArray( rdata, recvDispl+recvCount ), "not enough memory to allocate data" );
+	}
+	else {
 		DAL_destroy( rdata );
+	}
 
 	rcount = recvCount;
 	return rcount;
@@ -226,9 +299,9 @@ void DAL_scatterSend( Data *data )
 			break;
 		}
 		case Array: {
-			assert( data->array.size % GET_N() == 0 );
+			DAL_ASSERT( data->array.size % GET_N() == 0, data, "data should be a multiple of %d (but it's %ld)", GET_N(), data->array.size );
 			MPI_Scatter( data->array.data, data->array.size/GET_N(), MPI_INT, MPI_IN_PLACE, data->array.size/GET_N(), MPI_INT, GET_ID(), MPI_COMM_WORLD );
-			assert( DAL_reallocArray( data, data->array.size/GET_N() ) );
+			SPD_ASSERT( DAL_reallocArray( data, data->array.size/GET_N() ), "not enough memory to allocate data" );
 			break;
 		}
 		default:
@@ -237,7 +310,7 @@ void DAL_scatterSend( Data *data )
 }
 void DAL_scatterReceive( Data *data, long size, int root )
 {
-	assert( DAL_allocArray( data, size ) );
+	SPD_ASSERT( DAL_allocArray( data, size ), "not enough memory to allocate data" );
 	MPI_Scatter( NULL, 0, MPI_INT, data->array.data, size, MPI_INT, root, MPI_COMM_WORLD );
 }
 /**
@@ -279,8 +352,8 @@ void DAL_gatherSend( Data *data, int root )
 }
 void DAL_gatherReceive( Data *data, long size )
 {
-	assert( size % GET_N() == 0 );
-	assert( DAL_reallocArray( data, size ) );
+	SPD_ASSERT( size % GET_N() == 0, "size should be a multiple of %d (but it's %ld)", GET_N(), size );
+	SPD_ASSERT( DAL_reallocArray( data, size ), "not enough memory to allocate data" );
 	MPI_Gather( MPI_IN_PLACE, size/GET_N(), MPI_INT, data->array.data, size/GET_N(), MPI_INT, GET_ID(), MPI_COMM_WORLD );
 }
 /**
@@ -324,7 +397,7 @@ void DAL_scattervSend( Data *data, long *sizes, long *displs )
 				sdispls[i] = displs[i];
 			}
 		 	MPI_Scatterv( data->array.data, scounts, sdispls, MPI_INT, MPI_IN_PLACE, sizes[0], MPI_INT, GET_ID(), MPI_COMM_WORLD );
-			assert( DAL_reallocArray( data, data->array.size/GET_N() ) );
+			SPD_ASSERT( DAL_reallocArray( data, data->array.size/GET_N() ), "not enough memory to allocate data" );
 			break;
 		}
 		default:
@@ -333,7 +406,7 @@ void DAL_scattervSend( Data *data, long *sizes, long *displs )
 }
 void DAL_scattervReceive( Data *data, long size, int root )
 {
-	assert( DAL_allocArray( data, size ) );
+	SPD_ASSERT( DAL_allocArray( data, size ), "not enough memory to allocate data" );
  	MPI_Scatterv( NULL, NULL, NULL, MPI_INT, data->array.data, size, MPI_INT, root, MPI_COMM_WORLD );
 }
 /**
@@ -386,7 +459,7 @@ void DAL_gathervReceive( Data *data, long *sizes, long *displs )
 
 		rcount += sizes[i];
 	}
-	assert( DAL_reallocArray( data, rcount ) );
+	SPD_ASSERT( DAL_reallocArray( data, rcount ), "not enough memory to allocate data" );
 	MPI_Gatherv( MPI_IN_PLACE, rcounts[GET_ID()], MPI_INT, data->array.data, rcounts, rdispls, MPI_INT, GET_ID(), MPI_COMM_WORLD );
 }
 /**
@@ -424,19 +497,17 @@ void DAL_gatherv( Data *data, long *sizes, long *displs, int root )
 void DAL_alltoall( Data *data, long size )
 {
 // 	DAL_UNSUPPORTED( data );
-
 	int count = size;
 	int i;
 
 	Data recvData;
 	DAL_init( &recvData );
-	assert( DAL_allocArray( &recvData, count ) );
+	SPD_ASSERT( DAL_allocArray(&recvData, count), "not enough memory to allocate data" );
 
 	MPI_Alltoall( data->array.data, count, MPI_INT, recvData.array.data, count, MPI_INT, MPI_COMM_WORLD );
 
 	DAL_destroy( data );
-	data->medium = Array;
-	data->array = recvData.array;
+	*data = recvData;
 }
 
 
@@ -480,13 +551,12 @@ void DAL_alltoallv( Data *data, long *sendSizes, long *sdispls, long *recvSizes,
 	}
 	Data recvData;
 	DAL_init( &recvData );
-	assert( DAL_allocArray( &recvData, rcount ) );
+	SPD_ASSERT( DAL_allocArray(&recvData, rcount), "not enough memory to allocate data" );
 
 	MPI_Alltoallv( data->array.data, scounts, sd, MPI_INT, recvData.array.data, rcounts, rd, MPI_INT, MPI_COMM_WORLD );
 
 	DAL_destroy( data );
-	data->medium = Array;
-	data->array = recvData.array;
+	*data = recvData;
 }
 
 
@@ -510,7 +580,7 @@ void DAL_bcastSend( Data *data )
 }
 void DAL_bcastReceive( Data *data, long size, int root )
 {
-	assert( DAL_allocArray( data, size ) );
+	SPD_ASSERT( DAL_allocArray( data, size ), "not enough memory to allocate data" );
 	MPI_Bcast( data->array.data, size, MPI_INT, root, MPI_COMM_WORLD );
 }
 /**

@@ -108,9 +108,9 @@ long _partition( int *a, long size, int p )
 	long i = 0, j = size-1;
 	
 	while( true ) {
-		while( a[i] < p ) { ++ i; }
-		while( a[j] > p ) { -- j; }
-		if( i >= j ) {
+		while( i < size && a[i] <= p ) { ++ i; }
+		while( j > 0 && a[j] > p ) { -- j; }
+		if( i >= j || ( i >= size && j <= 0 ) ) {
 			break;
 		}
 		SWAP( a, i, j );
@@ -118,36 +118,85 @@ long _partition( int *a, long size, int p )
 	
 	return j;
 }
-long partition( int *a, long size )
+// \data parameter will contain the first partition
+// while the returned data will contain the second one
+Data partition( Data *data )
 {
-	return _partition( a, size, a[ rand()%size ] );
+	switch( data->medium ) {
+		case File: {
+			DAL_UNIMPLEMENTED( data );
+			break;
+		}
+		case Array: {
+			long lim = _partition( data->array.data, data->array.size, data->array.data[ rand() % data->array.size ] );
+
+			/*
+			// FIXME			
+			// NOTE: THIS IS NOT SAFE IN GENERAL, SINCE SECOND PARTITION'S DATA WILL GET
+			//       DESTROIED WHEN FIRST PARTITION IS DESTROYED!!!
+			//       BESIDES DATA2 CANNOT BE DESTROYED!!!
+			
+			// putting second partition in a Data
+			Data r;
+			DAL_init( &r );
+			r.medium = Array;
+			r.array.data = data->array.data + lim;
+			r.array.size = data->array.size - lim;
+			
+			// shrinking first partition
+			data->array.size = lim;
+			*/
+			
+			Data r;
+			DAL_init( &r );
+			SPD_ASSERT( DAL_allocArray( &r, data->array.size - lim ), "not enough memory..." );
+			memcpy( r.array.data, data->array.data + lim, data->array.size - lim );
+			
+			DAL_reallocArray( data, lim );
+			
+			return r;
+		}
+		default:
+			DAL_UNSUPPORTED( data );
+	}
 }
 
-void scatter( const TestInfo *ti, int *a, long *size )
+void scatter( const TestInfo *ti, Data *data )
 {
 	int step = 0;
 	
 	for( step = 0; step < GET_STEP_COUNT(ti); ++ step ) {
+	
 		if( do_i_send(ti,step) ) {
-			long lim = partition( a, *size );
+			//SPD_DEBUG( "partitioning..." );
+			Data data2 = partition( data );
+			
 			// printf( "%d->%d:Partition(%ld): %ld\n", GET_ID(ti), to_who(ti,step), *size, lim );
-			_MPI_Send ( & a[lim], *size-lim, MPI_INT, to_who( ti, step ), 0, MPI_COMM_WORLD );
-			*size = lim;
+			
+			//SPD_DEBUG( "need to send data to %d", to_who(ti, step) );
+			DAL_sendU( &data2, to_who(ti, step) ); // ok, now second partition is no longer required
+			//SPD_DEBUG( "data sent" );
+			/*
+			// but do not destroy it: read note in partition()!
+			*/
+			DAL_destroy( &data2 );
 		}
 		if( do_i_receive(ti,step) ) {
-			MPI_Status stat;
-			_MPI_Recv( a, GET_M(ti), MPI_INT, from_who( ti, step ), 0, MPI_COMM_WORLD, &stat );
-			_MPI_Get_count( &stat, MPI_INT, size );
+			//SPD_DEBUG( "need to receive data from %d", from_who(ti, step) );
+			DAL_receiveU( data, from_who(ti, step) );
+			//SPD_DEBUG( "data received" );
 		}
 	}
+	//SPD_DEBUG( "finished scattered!" );
 	
 	// printf( "Node %d has got %ld data\n", GET_ID(ti), *size );
 }
 
-void gather( const TestInfo *ti, int *a, long *size )
+void gather( const TestInfo *ti, Data *data )
 {
 	// node 0
 	if( ! GET_ID(ti) ) {
+		/*
 		int actualSize = *size;
 		int i;
 		// receiving sequentially from ohter nodes
@@ -158,11 +207,20 @@ void gather( const TestInfo *ti, int *a, long *size )
 			actualSize += *size;
 		}
 		*size = actualSize;
+		*/
+		
+		int i;
+		// receiving sequentially from ohter nodes
+		for( i = 1; i < GET_N(ti); ++ i ) {
+			DAL_receiveAU( data, nth_token_owner(ti,i) );
+		}
 	}
 	// other nodes
 	else {
-		_MPI_Send ( a, *size, MPI_INT, 0, 0, MPI_COMM_WORLD );
-		*size = 0;
+		// _MPI_Send ( a, *size, MPI_INT, 0, 0, MPI_COMM_WORLD );
+		// *size = 0;
+		DAL_sendU( data, 0 );
+		DAL_destroy( data );
 	}
 }
 
@@ -171,38 +229,38 @@ void gather( const TestInfo *ti, int *a, long *size )
 /*              SORTING               */
 /**************************************/
 
-void actualSort( const TestInfo *ti, int *a, long *size )
+void actualSort( const TestInfo *ti, Data *data )
 {
 	PhaseHandle scatterP, localP, gatherP;
 	srand( time(0) );
 	
 	scatterP = startPhase( ti, "scattering" );
-	scatter( ti, a, size );
+	scatter( ti, data );
 	stopPhase( ti, scatterP );
 	
 	localP = startPhase( ti, "local sorting" );
-	qsort ( a, *size, sizeof(int), compare );
+	sequentialSort( ti, data );
 	stopPhase( ti, localP );
 	
 	gatherP = startPhase( ti, "gathering" );
-	gather( ti, a, size );
+	gather( ti, data );
 	stopPhase( ti, gatherP );
 }
 
 void sort( const TestInfo *ti )
 {
-	long size = GET_M(ti);
-	int *a = (int*) malloc( sizeof(int)*size );
+	Data data;
+	DAL_init( &data );
 	
-	actualSort( ti, a, &size );
-	assert( ! size );
+	actualSort( ti, &data );
 	
-	free( a );
+	DAL_ASSERT( DAL_isDestroyed(&data), &data, "data should have been destroied :F" );
 }
 
-void mainSort( const TestInfo *ti, int *a, long size )
-{	
-	actualSort( ti, a, &size );
-	assert( size == GET_M(ti) );
+void mainSort( const TestInfo *ti, Data *data )
+{
+	actualSort( ti, data );
+	
+	DAL_ASSERT( DAL_dataSize(data) == GET_M(ti), data, "data isn't as big as it was originally..." );
 }
 

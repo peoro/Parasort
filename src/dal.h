@@ -68,7 +68,13 @@ char *DAL_dataToString( Data *d, char *s, int size );
 #define DAL_ASSERT(cond, d, fmt, ... ) \
 	if( ! (cond) ) { \
 		char buf[1024]; \
-		SPD_ERROR( "error with data (%s) " fmt, DAL_dataToString((d), buf, sizeof(buf)), ##__VA_ARGS__ ); \
+		SPD_ASSERT( (cond), "error with data (%s) " fmt, DAL_dataToString((d), buf, sizeof(buf)), ##__VA_ARGS__ ); \
+	}
+
+#define DAL_DEBUG(d, fmt, ... ) \
+	{ \
+		char buf[1024]; \
+		SPD_DEBUG( "data (%s) " fmt, DAL_dataToString((d), buf, sizeof(buf)), ##__VA_ARGS__ ); \
 	}
 
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -88,10 +94,15 @@ long GET_FILE_SIZE( const char *path );
 /***************************************************************************************************************/
 
 bool DAL_isInitialized( Data *data );
+bool DAL_isDestroyed( Data *data );
+
 void DAL_init( Data *data );
 void DAL_destroy( Data *data );
-bool DAL_allocArray( Data *data, int size );
-bool DAL_reallocArray ( Data *data, int size ); // TODO: who needs this?
+
+bool DAL_allocArray( Data *data, long size );
+bool DAL_reallocArray ( Data *data, long size );
+
+long DAL_dataSize( Data *data ); // returns data size, both of array or file...
 
 /*--------------------------------------------------------------------------------------------------------------*/
 
@@ -102,6 +113,16 @@ bool DAL_reallocArray ( Data *data, int size ); // TODO: who needs this?
 
 void DAL_send( Data *data, int dest );
 void DAL_receive( Data *data, long size, int source );
+
+// A stands for Append: \data is already initialized, and received data is appended to it
+// U stands for Unknown: \data size is unknown by receiver: sender will send it.
+void DAL_sendU( Data *data, int dest );
+void DAL_receiveU( Data *data, int source );
+
+void DAL_receiveA( Data *data, long size, int source );
+void DAL_receiveAU( Data *data, int source );
+
+
 
 long DAL_sendrecv( Data *sdata, long scount, long sdispl, Data *rdata, long rcount, long rdispl, int partner );
 
