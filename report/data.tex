@@ -65,7 +65,9 @@ void DAL_send( ..., Data *data, int dest )
 {
 	switch( data->medium ) {
 		case File: {
-			UNSUPPORTED_DATA( data );
+			Data *buf;
+			while ( buf = DAL_readNextBlock( data ):
+				DAL_send( buf )
 			break;
 		}
 		case Array: {
@@ -77,14 +79,12 @@ void DAL_send( ..., Data *data, int dest )
 	}
 }
 \end{lstlisting}
-Depending on the medium where the block of data is stored, different actions are performed. In the medium is the main memory, than a simple call to a primitive of the lower level is enaugh (ie MPI$\_$Send). On the other hand, ... TODO. Notice that in both cases, a first ... TODO (suppongo si debba preliminarmente dire con una MPISend se mi appresto a invià dati ''secchi'' o se la roba era su file..in modo tale che la DALreceive si comporti di conseguenza).
-%\subsubsection*{TODO}
-%Di che altro c'e' da parlare?
-%\begin{itemize}
-%	\item{Come funziona piu' nel dettaglio il framework e/o gli algoritmi tenendo conto del data?}
-%	\item{Come sono implementati (in via generale/con quale logica -- e/o anche nello specifico) gli algoritmi al livello data?}
-%	\item{Il fatto che abbiamo dovuto astrarre MPI?}
-%	\item{DOBBIAMO far capire che sta cosa non e' banale, che c'e' costata sangue! non sono riuscito ad essere meno mite di quant'ho scritto...}
-%\end{itemize}
+Depending on the medium where the block of data is stored, different actions are performed. If the medium is the main memory (''Array''), than a simple call to a primitive of the lower level is enaugh (ie MPI$\_$Send). On the other hand, the case ''File'', that is elements are allocated on disk, is a little bit trickier and subject of potential optimizations that we will discuss in~\ref{conclusion}. Here we present a simple possible implementation. The DAL is provided with two new functions: 
+\begin{lstlisting}
+Data* DAL_readNextBlock(  Data* )
+Data* DAL_allocateBuffer( int size )
+\end{lstlisting}
+$DAL\_readNextBlock( Data* )$ takes a \texttt{Data} whose medium is of type ''File'' and returns a new \texttt{Data} which contains a sequence of elements buffered in main memory. The cursor of the file from which elements have been taken is obviously shifted, so a subsequent call to the function with the same argument will return the following block of data that fits the memory. $DAL\_allocateBuffer( int\ size )$ is called internally by $DAL\_readNextBlock( Data* )$. It aims at allocating in main memory a block of $size$ elements: if $size$ elements are too many to be allocated in memory, than some strategies can be adopted to find a new $size$ which is as close as possible to the one passed as argument. Anyway, the invariant of the function is that the returned \texttt{Data} will contain a set of elements stored in main memory. 
+By looping on $DAL\_readNextBlock( Data* )$ we can split the initial \texttt{Data}, that could not fit the main memory, into two or more blocks that instead fits it: at this point, it is enaugh to send one by one each of this block.
 
 

@@ -16,14 +16,12 @@ We used the latter technique to measure the performance of MPI on our test envir
 \subsubsection{''Physics cluster''}
 
 \subsection{MPI cost model}
-In a simplified view, the cost of sending a message between two tasks located on different processors can be represented by two parameters: the message startup time $T_{setup}$, which is the time required to initiate the communication, and the transmission time $T_{trasm}$ per word, which is determined by the physical bandwidth of the communication channel linking the source and destination processors. The time required to send a message of size L words is then
+We are interested in evaluating the cost of communications in the test environments because it can help us in understanding the performance behaviour of the Sorting Algorithms. Indeed, depending on both the specific architecture and the algorithm, communications may significatively impact the completion time (and so even the scalability) of the algorithm itself. In a simplified view, the cost of sending a message between two tasks located on different processors can be represented by two parameters: the message startup time $T_{setup}$, which is the time required to initiate the communication, and the transmission time $T_{trasm}$ per word, which is determined by the physical bandwidth of the communication channel linking the source and destination processors~\cite{VANN}. In this model, the time required to send a message of size L words is then
 \[
 T_{send} = T_{setup} + L * T_{trasm}
 \]
-While accurate for many algorithms and on many architectures, this model can break down if a computer's interconnection network has particular properties, especially if an application generates many messages.
-\\ \\
-/* \dots \textit{TODO} \dots */
-\\ \\
+While accurate for some algorithms and on very simple architectures, this model can break down due to a lot of reasons: for instance, the communication pattern of the application, the bandwith of the interconnection network, and so on. The following analysis will try to estimate the cost of communications on our test architectures by varying the size of the messages and by changing the communication pattern (we will perform the so called ''bisection test'', whichin there are two sets of processes, with same cardinality, that exchange messages each other). 
+
 In order to benchmark the performance of the two environments, we decided to use the \textit{Perftest} benchmark suite.
 
 The perftest-package is provided along with the MPI-implementation MPICH, although it can be used in combination with any MPI-implementation. The package contains a few tools to measure the performance of a message passing environment. The two major programs are \textit{mpptest} for measuring point-to-point communication and \textit{goptest} for measuring collective communication. In addition to the classic ping-pong test, mpptest can measure performance with many participating processes (exposing contention and scalability problems) and can adaptively choose the message sizes in order to isolate sudden changes in performance. 
@@ -40,28 +38,6 @@ In the bisection test the complete system is logically divided into two subsyste
 \subsubsection*{Pianosa}
 \label{test-env-pianosa}
 Figures~\ref{pianosa-mpi-1},~\ref{pianosa-mpi-2},~\ref{pianosa-mpi-3} show the results obtained on Pianosa:
-%\begin{figure}[h!]
-%	\centering
-%  	\subfloat[Messages of length from 0 to 32 bytes (stride 4 bytes).]{\label{tsend_32}\includegraphics[width=0.5\textwidth]{../tests/mpi_comm_perf/pianosa/tsend_4}}  
-%	\hspace*{20pt}
-%  	\subfloat[Messages of length from 0 to 1024 bytes (stride 32 bytes).]{\label{tsend_32}\includegraphics[width=0.5\textwidth]{../tests/mpi_comm_perf/pianosa/tsend_32}}  
-%	\caption{Performance of blocking send between two processes.}
-%\end{figure}
-%
-%
-%\begin{figure}[h!]
-%	\centering
-%  	\subfloat[Messages of length from 0 to 32768 bytes (stride $2^i$ bytes).]{\label{tsend_logscale}\includegraphics[width=0.5\textwidth]{../tests/mpi_comm_perf/pianosa/tsend_logscale}}  
-%	\hspace*{20pt}
-%  	\subfloat[Bisection test with 4, 8 and 16 processors.]{\label{bisect_logscale}\includegraphics[width=0.5\textwidth]{../tests/mpi_comm_perf/pianosa/bisect_logscale}}  
-%	\caption{Performance of blocking send and bisection test.}
-%\end{figure}
-%
-%\begin{figure}[h!]
-%	\centering {\label{bcast}\includegraphics[width=0.5\textwidth]{../tests/mpi_comm_perf/pianosa/bcast}}  
-%	\caption{Performance of broadcast with 4, 8 and 16 processors.}
-%\end{figure}
-
 
 \begin{figure}[p]
 	\centering
