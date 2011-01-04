@@ -7,15 +7,15 @@
 #ifndef _COMMUNICATION_H_
 #define _COMMUNICATION_H_
 
-/* Keep C++ compilers from getting confused */
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
+/* Keep C++ compilers from getting confused */
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 // TODO: this should stay in sorting.h, which is at a higher level than communication
 // but communication functions are using TestInfo... hm...
@@ -53,13 +53,14 @@ typedef enum {
 	DAL_UNSIGNED_LONG_LONG
 } DAL_Type;
 
+typedef enum DataMedium {
+	NoMedium = 0,
+	File = 1,
+	Array = 2
+} DataMedium;
 typedef struct Data
 {
-	enum Medium {
-		NoMedium = 0,
-		File = 1,
-		Array = 2
-	} medium;
+	DataMedium medium;
 
 	union
 	{
@@ -90,7 +91,7 @@ void print_trace( void ); // TODO: pure debugging, move in debug.c ...
 
 long GET_FILE_SIZE( const char *path );
 
-const char *DAL_mediumName( enum Medium m );
+const char *DAL_mediumName( DataMedium m );
 char *DAL_dataToString( Data *d, char *s, int size );
 
 #define BASE_ERROR_STR COLOR_YELLOW "%s:%d" COLOR_DEFAULT ": " COLOR_RED "%s()" COLOR_DEFAULT ": "

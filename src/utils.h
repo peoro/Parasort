@@ -4,6 +4,11 @@
 #include "sorting.h"
 #include "communication.h"
 
+/* Keep C++ compilers from getting confused */
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 //efficiently computes the logarithm base 2 of a positive integer
 inline int _log2 ( unsigned int n )
 {
@@ -125,5 +130,10 @@ void chooseSplittersFromData( Data *data, const int n, int *newSplitters )
 
 	chooseSplitters( data->array.data, data->array.size, n, newSplitters );
 }
+
+/* Keep C++ compilers from getting confused */
+#if defined(__cplusplus)
+}
+#endif
 
 #endif

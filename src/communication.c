@@ -72,7 +72,7 @@ long GET_FILE_SIZE( const char *path )
 
 	return len;
 }
-const char *DAL_mediumName( enum Medium m )
+const char *DAL_mediumName( DataMedium m )
 {
 	switch( m ) {
 		case NoMedium:
