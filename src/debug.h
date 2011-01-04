@@ -20,7 +20,7 @@ void print_trace( void ); // TODO: pure debugging, move in debug.c ...
 
 #define SPD_ASSERT(cond, fmt, ... ) \
 	if( ! (cond) ) { \
-		SPD_ERROR( fmt "\n  (" ##cond "failed)", ##__VA_ARGS__ ); \
+		SPD_ERROR( fmt "\n  (`" SPD_COLOR_GREEN #cond SPD_COLOR_DEFAULT "` failed)", ##__VA_ARGS__ ); \
 	}
 
 #define SPD_BASE_ERROR_STR SPD_COLOR_YELLOW "%s:%d" SPD_COLOR_DEFAULT ": " SPD_COLOR_RED "%s()" SPD_COLOR_DEFAULT ": "
