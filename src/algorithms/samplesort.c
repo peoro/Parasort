@@ -98,8 +98,10 @@ void sampleSort( const TestInfo *ti, Data *data )
 	chooseSplittersFromData( data, n, localSplitters );
 
 	/* Gathering all splitters to the root process */
-	if ( id == root )
+	if ( id == root ) {
 		allSplitters = (int*) malloc ( ((n-1)*n) * sizeof(int) );
+		SPD_ASSERT( allSplitters != NULL, "not enough memory..." );
+	}
 	MPI_Gather( localSplitters, n-1, MPI_INT, allSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
 
 	/* Choosing global splitters (n-1 equidistant elements of the allSplitters array) */

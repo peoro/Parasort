@@ -8,7 +8,6 @@
 * @version 0.0.01
 */
 
-#include <assert.h>
 #include <string.h>
 #include <queue>
 #include <mpi.h>
@@ -41,11 +40,12 @@ void kmerge( Data *runs, int k, long* lengths, long* displs, long mergedLength, 
 {
     /* TODO: Implement it the right way!! */
 
+    int i;
     std::priority_queue<Min_val> heap;
     int *runs_indexes = (int*) calloc( sizeof(int), k );
-    int i;
+    SPD_ASSERT( runs_indexes != NULL, "not enough memory..." );
 
-    assert( DAL_reallocArray( mergedData, mergedLength ) );
+    SPD_ASSERT( DAL_reallocArray( mergedData, mergedLength ), "not enough memory..." );
 
     /* Initializing the heap */
     for ( i=0; i<k; i++ ) {
@@ -118,6 +118,8 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 	PhaseHandle scatterP, localP, samplingP, multiwayMergeP, gatherP;
 	int 		groupSize, idInGroup, partner, pairedGroupRoot, groupRoot;
 
+	SPD_ASSERT( isPowerOfTwo( n ), "n should be a power of two (but it's %d)", n );
+
 	/* Initializing data objects */
 	DAL_init( &recvData );
 
@@ -161,8 +163,10 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 	chooseSplittersFromData( data, n, localSplitters );
 
 	/* Gathering all splitters to the root process */
-	if ( id == root )
+	if ( id == root ) {
 		allSplitters = (int*) malloc ( ((n-1)*n) * sizeof(int) );
+		SPD_ASSERT( allSplitters != NULL, "not enough memory..." );
+	}
 	MPI_Gather( localSplitters, n-1, MPI_INT, allSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
 
 	/* Choosing global splitters (n-1 equidistant elements of the allSplitters array) */

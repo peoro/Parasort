@@ -8,7 +8,6 @@
 * @version 0.0.01
 */
 
-#include <assert.h>
 #include <string.h>
 #include <mpi.h>
 #include "../sorting.h"
@@ -35,7 +34,7 @@ void merge( long firstLength, long fdispl, Data *d1, long secondLength, long sdi
 
     Data merged;
     DAL_init( &merged );
-    assert( DAL_allocArray( &merged, firstLength+secondLength ) );
+    SPD_ASSERT( DAL_allocArray( &merged, firstLength+secondLength ), "not enough memory..." );
 
     firstLength += fdispl;
     secondLength += sdispl;
@@ -114,6 +113,8 @@ void lbmergesort( const TestInfo *ti, Data *data )
 	int			i, j, k, h, flag;
 	PhaseHandle scatterP, localP, samplingP, mergeP, gatherP;
 
+	SPD_ASSERT( isPowerOfTwo( n ), "n should be a power of two (but it's %d)", n );
+
 	/* Initializing data objects */
 	DAL_init( &recvData );
 
@@ -157,8 +158,10 @@ void lbmergesort( const TestInfo *ti, Data *data )
 	chooseSplittersFromData( data, n, localSplitters );
 
 	/* Gathering all splitters to the root process */
-	if ( id == root )
+	if ( id == root ) {
 		allSplitters = (int*) malloc ( ((n-1)*n) * sizeof(int) );
+		SPD_ASSERT( allSplitters != NULL, "not enough memory..." );
+	}
 	MPI_Gather( localSplitters, n-1, MPI_INT, allSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
 
 	/* Choosing global splitters (n-1 equidistant elements of the allSplitters array) */

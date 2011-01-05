@@ -57,6 +57,11 @@ void sequentialSort( const TestInfo *ti, Data *data )
 	}
 }
 
+//returns 1 if x is a power of two, 0 otherwise
+inline int isPowerOfTwo( int x )
+{
+    return x > 0 && (x & (x - 1)) == 0;
+}
 
 /**
 * @brief Gets the index of the bucket in which to insert ele

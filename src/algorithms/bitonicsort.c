@@ -8,7 +8,6 @@
 * @version 0.0.01
 */
 
-#include <assert.h>
 #include <string.h>
 #include "../sorting.h"
 #include "../utils.h"
@@ -26,7 +25,7 @@ void compareLow( Data *d1, Data *d2 )
 	int i, j, k;
 	Data d3;
 	DAL_init( &d3 );
-	assert( DAL_allocArray( &d3, d2->array.size ) );
+	SPD_ASSERT( DAL_allocArray( &d3, d2->array.size ), "not enough memory..." );
 
 	for ( i=j=k=0; i<d2->array.size; i++ )
 		if ( d2->array.data[j] <= d1->array.data[k] )
@@ -52,7 +51,7 @@ void compareHigh( Data *d1, Data *d2 )
 	int i, j, k;
 	Data d3;
 	DAL_init( &d3 );
-	assert( DAL_allocArray( &d3, d2->array.size ) );
+	SPD_ASSERT( DAL_allocArray( &d3, d2->array.size ), "not enough memory..." );
 
 	for ( i=j=k=d2->array.size-1; i>=0; i-- )
 		if ( d2->array.data[j] >= d1->array.data[k] )
@@ -85,6 +84,8 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	long			i, j, k, z, flag;
 
 	PhaseHandle 	scatterP, localP, mergeP, gatherP;
+
+	SPD_ASSERT( isPowerOfTwo( n ), "n should be a power of two (but it's %d)", n );
 
 	/* Initializing data objects */
 	DAL_init( &recvData );
