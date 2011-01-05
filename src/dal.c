@@ -70,9 +70,9 @@ char * DAL_dataItemsToString( Data *d, char *s, int size )
 {
 	char buf[64];
 	int i;
-	
+
 	s[0] = '\0';
-	
+
 	if( ! size ) {
 		return s;
 	}
@@ -80,21 +80,21 @@ char * DAL_dataItemsToString( Data *d, char *s, int size )
 		strncat( s, "{}", size );
 		return s;
 	}
-	
+
 	strncat( s, "{", size );
 	for( i = 0; i < d->array.size-1; ++ i ) {
 		snprintf( buf, sizeof(buf), "%d,", d->array.data[i] );
 		strncat( s, buf, size );
 	}
-	
+
 	snprintf( buf, sizeof(buf), "%d}", d->array.data[i] );
 	strncat( s, buf, size );
-	
+
 	if( strlen(s) == (unsigned) size-1 ) {
 		s[size-4] = s[size-3] = s[size-2] = '.';
 		s[size-1] = '}';
 	}
-	
+
 	return s;
 }
 
@@ -140,7 +140,7 @@ void DAL_destroy( Data *data )
 bool DAL_allocArray( Data *data, long size )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
-	
+
 	if( size == 0 ) {
 		data->medium = Array;
 		data->array.data = 0;
@@ -161,7 +161,7 @@ bool DAL_allocArray( Data *data, long size )
 bool DAL_reallocArray ( Data *data, long size )
 {
 	DAL_ASSERT( data->medium == Array, data, "only Array data can be reallocated" );
-	
+
 	if( size == 0 ) {
 		data->medium = Array;
 		free( data->array.data );
@@ -310,12 +310,7 @@ long DAL_sendrecv( Data *sdata, long scount, long sdispl, Data* rdata, long rcou
 	MPI_Sendrecv( sdata->array.data+sendDispl, sendCount, MPI_INT, partner, 100, rdata->array.data+recvDispl, recvCount, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
 
 	MPI_Get_count( &status, MPI_INT, &recvCount );
-	if( recvCount || recvDispl ) {
-		SPD_ASSERT( DAL_reallocArray( rdata, recvDispl+recvCount ), "not enough memory to allocate data" );
-	}
-	else {
-		DAL_destroy( rdata );
-	}
+	SPD_ASSERT( DAL_reallocArray( rdata, recvDispl+recvCount ), "not enough memory to allocate data" );
 
 	rcount = recvCount;
 	return rcount;
@@ -431,8 +426,8 @@ void DAL_scattervSend( Data *data, long *sizes, long *displs )
 				scounts[i] = sizes[i];
 				sdispls[i] = displs[i];
 			}
-		 	MPI_Scatterv( data->array.data, scounts, sdispls, MPI_INT, MPI_IN_PLACE, sizes[0], MPI_INT, GET_ID(), MPI_COMM_WORLD );
-			SPD_ASSERT( DAL_reallocArray( data, data->array.size/GET_N() ), "not enough memory to allocate data" );
+		 	MPI_Scatterv( data->array.data, scounts, sdispls, MPI_INT, MPI_IN_PLACE, scounts[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
+			SPD_ASSERT( DAL_reallocArray( data, scounts[GET_ID()] ), "not enough memory to allocate data" );
 			break;
 		}
 		default:
@@ -459,7 +454,7 @@ void DAL_scatterv( Data *data, long *sizes, long *displs, int root )
 		return DAL_scattervSend( data, sizes, displs );
 	}
 	else {
-		return DAL_scattervReceive( data, sizes[0], root );
+		return DAL_scattervReceive( data, sizes[GET_ID()], root );
 	}
 }
 

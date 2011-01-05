@@ -33,8 +33,8 @@ void compareLow( Data *d1, Data *d2 )
 		else
 			d3.array.data[i] = d1->array.data[k++];
 
-	free( d2->array.data );
-	d2->array = d3.array;
+	DAL_destroy( d2 );
+	*d2 = d3;
 }
 
 
@@ -59,8 +59,8 @@ void compareHigh( Data *d1, Data *d2 )
 		else
 			d3.array.data[i] = d1->array.data[k--];
 
-	free( d2->array.data );
-	d2->array = d3.array;
+	DAL_destroy( d2 );
+	*d2 = d3;
 }
 
 /**

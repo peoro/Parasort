@@ -51,8 +51,8 @@ void merge( long firstLength, long fdispl, Data *d1, long secondLength, long sdi
     while ( k < secondLength )
         merged.array.data[i++] = d2->array.data[k++];
 
-    free( d2->array.data );
-    d2->array = merged.array;
+	DAL_destroy( d2 );
+	*d2 = merged;
 }
 
 
