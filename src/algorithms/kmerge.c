@@ -59,6 +59,7 @@ int do_i_send ( int rank, int k, int active_proc )
 /*            ALGORITHMIC             */
 /**************************************/
 
+
 struct Min_val {
 	Min_val ( int val, int run_index ) {
 		this->val = val;
@@ -71,35 +72,66 @@ struct Min_val {
 	}
 };
 
-//invariant: all buckets have equal size
-void fusion ( Data *data_owned, int runs )
+//merges #runs data on a File
+void fileFusion ( Data *data_owned, Data *merging, int runs ) 
+{
+	DAL_UNIMPLEMENTED ( data_owned );
+}
+
+//invariant: all buckets have equal size 
+void memoryFusion ( Data *data_owned, Data *merging, int runs )
 {
 	priority_queue<Min_val> heap;
-	int 	*runs_indexes 	= (int*) calloc ( sizeof(int), runs );
-	int 	*merging 		= (int*) malloc ( sizeof(int) * data_owned->array.size * runs ); /*TODO: needs to be limited somehow to the memory size*/;
-	int 	i;
+	int *runs_indexes 	= (int*) calloc ( sizeof(int), runs );
 
 	//initializing the heap
-	for ( i = 0; i < runs; i++ )
+	for ( int i = 0; i < runs; i++ )
 		heap.push ( Min_val ( data_owned[i].array.data[0], i ) );
 
 	//merging
-	for ( i = 0; i < data_owned->array.size * runs; i++ ) {
+	for ( int i = 0; i < merging->array.size; i++ ) {
 		Min_val min = heap.top();
 		heap.pop();
-		merging[i] = min.val;
+		merging->array.data[i] = min.val;
 
 		if ( ++(runs_indexes[min.run_index]) != data_owned[min.run_index].array.size )
 			heap.push ( Min_val ( data_owned[min.run_index].array.data[runs_indexes[min.run_index]], min.run_index ) );
 	}
 
-	//realloc + final copy
-	DAL_reallocArray ( data_owned, data_owned->array.size * runs );
-	for ( i = 0; i < data_owned->array.size; i++ )
-		data_owned->array.data[i] = merging[i];
-
 	free ( runs_indexes );
-	free ( merging );
+}
+
+//invariant: all buckets have equal size
+//postcondition: data_owned will be invalid after the merging 
+Data fusion ( Data *data_owned, int runs ) 
+{
+	Data merging;
+	int merging_size = DAL_dataSize ( data_owned ) * runs;
+	
+	DAL_init ( &merging );
+	
+	//if the local data is already on File, than the merged will be performed on File too for sure
+	switch ( data_owned->medium ) {
+		case File: {
+			fileFusion ( data_owned, &merging, runs );
+			break;
+		}
+		case Array: {
+			if ( DAL_allocArray ( &merging, merging_size )) 
+				memoryFusion ( data_owned, &merging, runs );
+			else 
+				fileFusion ( data_owned, &merging, runs );
+			break;
+		}
+		default: 
+			DAL_UNSUPPORTED( data_owned );
+	}
+	
+	//free old Data
+	for ( int i = 0; i < runs; i++ )
+		DAL_destroy ( data_owned + i );
+	
+	return merging;
 }
 
 //invariant: given n = #processors, k = #ways, q an integer, it must be n == k * q
@@ -115,7 +147,7 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 
 	//initializing datas
 	data_owned[0] = *data_local;
-	for ( int i = 0; i < k; i ++ )
+	for ( int i = 1; i < k; i ++ )
 		DAL_init ( data_owned + i );
 
 	//scattering data partitions
@@ -141,9 +173,9 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 
 			//fusion phase
 			if ( active_proc >= k )
-				fusion ( data_owned, k );
+				*data_owned = fusion ( data_owned, k );
 			else
-				fusion ( data_owned, active_proc ); //case of unbalanced tree, latest step
+				*data_owned = fusion ( data_owned, active_proc ); //case of unbalanced tree, latest step
 
 		}
 		else if ( do_i_send ( rank, k, active_proc ) )
@@ -154,15 +186,16 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 	}
 
 	stopPhase( ti, localP );
-	//TODO: swap need to be handled by framework
-	data_local->array = data_owned->array;
-	//data_local->size = data_owned->size;
-
+	
+	//swap
+	*data_local = *data_owned;
+	
 	//frees memory
-	int i;
-	for ( i = 1; i < k; i++ )
-		DAL_destroy ( data_owned + i );
+	for ( int i = 1; i < k; i++ ) 
+		if ( ! DAL_isDestroyed ( data_owned + i ))
+			DAL_destroy ( data_owned + i );
 	free ( dests );
+	free ( data_owned );
 }
 
 extern "C"

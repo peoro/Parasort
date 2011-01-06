@@ -1,11 +1,18 @@
-Fabio: 	k-way mergesort
-Paolo: 	Quicksort
-Nicola:	Bitonic Sort
+Fabio: 	k-way mergesort (mapping + n!=k^q)
 
 Assieme: 	Load Balancing mergesort
 			Mapping dei processi
 			funzioni per prendere i tempi	
 			
+Media e varianza del bilanciamento del carico:
+		Prendendo i tempi con MPI_Wtime (e sfruttando quindi il fatto di poter sincronizzare o meno i processi MPI) riusciamo a derivare:
+			1 - Per ciascun processo, i tempi di ogni singola fase
+			2 - Globalmente, al termine dell'elaborazione, il tempo di completamento dell'algoritmo (MPI_Wtime(synchro))
+		Inoltre, con i tempi presi al punto 1, possiamo, per ciascuna fase:
+			1 - calcolare la media del tempo impiegato ad elaborarla
+			2 - calcolare la varianza
+		in questo modo, a seconda se la varianza è piccola o grande, si ha una idea approssimata del bilanciamento del carico tra i processi
+		oss: occhio che in alcuni algoritmi il numeri di processi diminuisce con il numero delle fasi eseguite, per cui la varianza è "meno significativa"
 			
 Roba da testare: 	scatter ( n, M )
 					gather ( n, M )
@@ -17,11 +24,12 @@ Roba da testare: 	scatter ( n, M )
 
 Relazione {
 	Cosa c'era da fare
-	Cosa s'è fatto
+	Cosa s'è fatto 
 	struttura del "framework" {
 		generazione dati
 		API in generale..
 		centralizzato vs distribuito..
+		prendere i tempi
 	}
 	ambiente di test
 	C = cost model di MPI nel nostro ambiente di test
