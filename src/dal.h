@@ -103,6 +103,8 @@ void DAL_destroy( Data *data );
 bool DAL_allocArray( Data *data, long size );
 bool DAL_reallocArray ( Data *data, long size );
 
+bool DAL_allocBuffer( Data *data, long size ); // allocs a buffer of size equal OR LESSER than size
+
 long DAL_dataSize( Data *data ); // returns data size, both of array or file...
 
 /*--------------------------------------------------------------------------------------------------------------*/

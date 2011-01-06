@@ -147,6 +147,9 @@ bool DAL_allocArray( Data *data, long size )
 		data->array.size = 0;
 		return 1;
 	}
+	
+	// TODO: maybe add a threshold on max size
+	// if( size > threshold ) { return 0; }
 
 	data->array.data = (int*) malloc( size * sizeof(int) );
 	if( ! data->array.data ) {
@@ -179,6 +182,26 @@ bool DAL_reallocArray ( Data *data, long size )
 	data->medium = Array;
 
 	return 1;
+}
+bool DAL_allocBuffer( Data *data, long size )
+{
+	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
+	
+	if( size == 0 ) {
+		return 0;
+	}
+	
+	// TODO: implement a better logic:
+	//       start from DAL_allocArray's threshold
+	//       (or a well-chosen value) and shrinks according to some heuristic...
+	
+	bool r =  DAL_allocArray( data, size );
+	while( size > 0 && ! r ) {
+		size /= 2;
+		r =  DAL_allocArray( data, size );
+	}
+	
+	return r;
 }
 
 long DAL_dataSize( Data *data )
