@@ -41,6 +41,12 @@ void print_trace( void ); // TODO: pure debugging, move in debug.c ...
 		printf( SPD_BASE_ERROR_STR fmt "\n", SPD_BASE_ERROR_ARGS, ##__VA_ARGS__ ); \
 	}
 
+#define SPD_WARNING( fmt, ... ) \
+	{ \
+		char buf[1024]; \
+		printf( SPD_BASE_ERROR_STR "Warning! " fmt "\n", SPD_BASE_ERROR_ARGS, ##__VA_ARGS__ ); \
+	}
+
 #define SPD_ASSERT(cond, fmt, ... ) \
 	if( ! (cond) ) { \
 		SPD_ERROR( fmt "\n  (`" SPD_COLOR_GREEN "%s" SPD_COLOR_DEFAULT "` failed)", ##__VA_ARGS__, #cond ); \

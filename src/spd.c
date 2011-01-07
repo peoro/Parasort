@@ -282,51 +282,20 @@ int generate( const TestInfo *ti )
 */
 int loadData( const TestInfo *ti, Data *data )
 {
-	FILE *f;
+	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
+	
 	char path[1024];
 
-#ifndef DEBUG
-#else
-	long i;
-#endif
-
 	GET_UNSORTED_DATA_PATH( ti, path, sizeof(path) );
-	f = fopen( path, "rb" );
-	if( ! f ) {
-		printf( "Couldn't open %s for reading\n", path );
-		return 0;
-	}
+	DAL_readFile( data, path );
 
 #ifndef DEBUG
-	data->array.size = GET_FILE_SIZE( path ) / sizeof(int);
-	if( data->array.size != GET_M(ti) ) {
+	if( DAL_dataSize(data) != GET_M(ti) ) {
 		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
-				path, GET_M(ti), GET_M(ti), data->array.size*sizeof(int) );
-		fclose( f );
+				path, GET_M(ti), GET_M(ti), DAL_dataSize(data) );
 		return 0;
-	}
-	data->array.data = (int*) malloc( data->array.size*sizeof(int) );
-
-	if( ! fread( data->array.data, data->array.size*sizeof(int), 1, f ) ) {
-		printf( "Couldn't read %ld bytes from %s\n", data->array.size*sizeof(int), path );
-		fclose( f );
-		return 0;
-	}
-#else
-	data->array.size = GET_M(ti);
-	data->array.data = (int*) malloc( data->array.size*sizeof(int) );
-	for( i = 0; i < GET_M(ti); ++ i ) {
-		if( fscanf( f, "%d ", & data->array.data[i] ) == EOF ) {
-			printf( "Couldn't read %ld-th element (of value %d) from %s\n", i, data->array.data[i], path );
-			fclose( f );
-			return 0;
-		}
 	}
 #endif
-
-	data->medium = Array;
-
-	fclose( f );
 
 	return 1;
 }
@@ -336,52 +305,23 @@ int loadData( const TestInfo *ti, Data *data )
 */
 int storeData( const TestInfo *ti, Data *data )
 {
-	FILE *f;
+	DAL_ASSERT( ! DAL_isInitialized(data), data, "data shouldn't have been destroyed" );
+	
 	char path[1024];
-#ifndef DEBUG
-#else
 	long i;
-	int tmp;
+	
+#ifndef DEBUG
+	if( DAL_dataSize(data) != GET_M(ti) ) {
+		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
+				path, GET_M(ti), GET_M(ti), DAL_dataSize(data) );
+		return 0;
+	}
 #endif
 
 	GET_SORTED_DATA_PATH( ti, path, sizeof(path) );
-	f = fopen( path, "wb" );
-	if( ! f ) {
-		printf( "Couldn't open %s for writing\n", path );
-		return 0;
-	}
-
-#ifndef DEBUG
-	if( ! fwrite( data->array.data, data->array.size, 1, f ) ) {
-		printf( "Couldn't write %ld bytes to %s\n", data->array.size, path );
-		fclose( f );
-		return 0;
-	}
-#else
-	if( fprintf( f, "%d\n", data->array.data[0] ) < 0 ) {
-		printf( "Couldn't write %d-th element (of value %d) to %s\n", 0, data->array.data[0], path );
-		fclose( f );
-		return 0;
-	}
-	tmp = data->array.data[0];
-
-	for( i = 1; i < GET_M(ti); ++ i ) {
-		if( tmp > data->array.data[i] ) {
-			printf( "Sorting Failed: %ld-th element (of value %d) is bigger than %ld-th element (of value %d)\n", i, tmp, i+1, data->array.data[i] );
-			fclose( f );
-			return 0;
-		}
-		tmp = data->array.data[i];
-
-		if( fprintf( f, "%d\n", data->array.data[i] ) < 0 ) {
-			printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, data->array.data[i], path );
-			fclose( f );
-			return 0;
-		}
-	}
-#endif
-
-	fclose( f );
+	DAL_writeFile( data, path );
+	
+	// TODO: check for correctness!
 
 	return 1;
 }
@@ -471,6 +411,7 @@ int main( int argc, char **argv )
 		// sorting data
 		{
 			Data data;
+			DAL_init( &data );
 
 			r = loadData( &ti, &data );
 			if( ! r ) {

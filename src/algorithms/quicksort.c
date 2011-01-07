@@ -284,7 +284,7 @@ void sort( const TestInfo *ti )
 	
 	actualSort( ti, &data );
 	
-	DAL_ASSERT( DAL_isDestroyed(&data), &data, "data should have been destroied :F" );
+	DAL_ASSERT( DAL_isInitialized(&data), &data, "data should have been destroied :F" );
 }
 
 void mainSort( const TestInfo *ti, Data *data )

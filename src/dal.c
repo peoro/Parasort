@@ -36,6 +36,8 @@ long GET_FILE_SIZE( const char *path )
 
 	return len;
 }
+
+
 const char *DAL_mediumName( DataMedium m )
 {
 	switch( m ) {
@@ -56,10 +58,10 @@ char * DAL_dataToString( Data *d, char *s, int size )
 			strncpy( s, DAL_mediumName(d->medium), size );
 			break;
 		case File:
-			snprintf( s, size, "\"%s\" [file on disk] of %ld bytes", d->file.name, GET_FILE_SIZE(d->file.name) );
+			snprintf( s, size, "\"%s\" [file on disk] of %ld bytes", d->file.name, DAL_dataSize(d) );
 			break;
 		case Array:
-			snprintf( s, size, "array [on principal memory @ %p] of %ld bytes", d->array.data, d->array.size );
+			snprintf( s, size, "array [on principal memory @ %p] of %ld bytes", d->array.data, DAL_dataSize(d) );
 			break;
 		default:
 			snprintf( s, size, "Unknow medium code %d [%s]", d->medium, DAL_mediumName(d->medium) );
@@ -108,10 +110,6 @@ bool DAL_isInitialized( Data *data )
 {
 	return data->medium == NoMedium;
 }
-bool DAL_isDestroyed( Data *data )
-{
-	return data->medium == NoMedium;
-}
 
 void DAL_init( Data *data )
 {
@@ -124,7 +122,10 @@ void DAL_destroy( Data *data )
 			break;
 		}
 		case File: {
-			DAL_UNIMPLEMENTED( data );
+			fclose( data->file.handle );
+			if( ! remove(data->file.name) ) {
+				SPD_DEBUG( "Error removing data file \"%s\"", data->file.name );
+			}
 			break;
 		}
 		case Array: {
@@ -134,9 +135,132 @@ void DAL_destroy( Data *data )
 		default:
 			DAL_UNSUPPORTED( data );
 	}
-	data->medium = NoMedium;
+	
+	DAL_init( data );
+}
+long DAL_dataSize( Data *data )
+{
+	switch( data->medium ) {
+		case File: {
+			long len;
+			long cursor;
+			cursor = ftell( data->file.handle );          // getting current position
+			fseek( data->file.handle, 0, SEEK_END );      // going to end
+			len = ftell( data->file.handle );             // getting current position
+			fseek( data->file.handle, cursor, SEEK_SET ); // getting back to where I was
+			return len;
+			break;
+		}
+		case Array: {
+			return data->array.size;
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( data );
+	}
+}
+bool DAL_allocData( Data *data, long size )
+{
+	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
+	
+	if( DAL_allocArray(data, size) ) {
+		return 1;
+	}
+	
+	if( DAL_allocFile(data, size) ) {
+		return 1;
+	}
+	
+	return 0;
+}
+bool DAL_readFile( Data *data, const char *path )
+{
+	long size = GET_FILE_SIZE(path) / sizeof(int);
+	DAL_allocData( data, size );
+	
+	// temporary, just to use DAL_readNextDeviceBlock
+	// won't destroy it, or it would remove path!
+	Data dataStub;
+	dataStub.medium = File;
+	strncpy( dataStub.file.name, path, sizeof(dataStub.file.name) );
+	dataStub.file.handle = fopen( path, "r" );
+	if( ! dataStub.file.handle ) {
+		SPD_DEBUG( "Cannot open \"%s\" for reading.", path );
+		return 0;
+	}
+	
+	DAL_readNextDeviceBlock( &dataStub, data );
+	
+	fclose( dataStub.file.handle );
+	return 1;
+}
+bool DAL_writeFile( Data *data, const char *path )
+{
+	long size = GET_FILE_SIZE(path) / sizeof(int);
+	
+	// temporary, just to use DAL_writeNextDeviceBlock
+	// won't destroy it, or it would remove path!
+	Data dataStub;
+	dataStub.medium = File;
+	strncpy( dataStub.file.name, path, sizeof(dataStub.file.name) );
+	dataStub.file.handle = fopen( path, "w" );
+	if( ! dataStub.file.handle ) {
+		SPD_DEBUG( "Cannot open \"%s\" for writing.", path );
+		return 0;
+	}
+	
+	DAL_writeNextDeviceBlock( &dataStub, data );
+	
+	fclose( dataStub.file.handle );
+	return 1;
 }
 
+// functions to work with any find of block device (ie: Files)
+bool DAL_isDevice( Data *data )
+{
+	return data->medium == File;
+}
+void DAL_resetDeviceCursor( Data *device )
+{
+	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
+	
+	if( device->medium == File ) {
+		rewind( device->file.handle );
+	}
+	else {
+		DAL_UNIMPLEMENTED( device );
+	}
+}
+void DAL_readNextDeviceBlock( Data *device, Data *dst )
+{
+	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
+	
+	//DAL_DEBUG( device, "reading from this device" );
+	//DAL_DEBUG( dst, "into this data" );
+	
+	if( dst->medium == Array ) {
+		fread( dst->array.data, dst->array.size, 1, device->file.handle );
+	}
+	else {
+		DAL_UNIMPLEMENTED( dst );
+	}
+}
+void DAL_writeNextDeviceBlock( Data *device, Data *src )
+{
+	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
+	
+	//DAL_DEBUG( device, "writing into this device" );
+	//DAL_DEBUG( src, "from this data" );
+	
+	if( src->medium == Array ) {
+		fwrite( src->array.data, src->array.size, 1, device->file.handle );
+	}
+	else {
+		DAL_UNIMPLEMENTED( src );
+	}
+}
+
+// allocating an Array in memory
 bool DAL_allocArray( Data *data, long size )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
@@ -183,6 +307,39 @@ bool DAL_reallocArray ( Data *data, long size )
 
 	return 1;
 }
+bool DAL_reallocAsArray( Data *data )
+{
+	DAL_ASSERT( DAL_isInitialized(data), data, "data shouldn't have been initialized" );
+	
+	if( data->medium == Array ) {
+		SPD_WARNING( "tring to reallocate an Array as an Array..." );
+		return 1;
+	}
+	
+	Data arrayData;
+	DAL_init( &arrayData );
+	if( ! DAL_allocArray( &arrayData, data->array.size ) ) {
+		return 0;
+	}
+	
+	// OK, array created, moving actual data into it
+	if( data->medium == File ) {
+		DAL_resetDeviceCursor( data );
+		DAL_readNextDeviceBlock( data, &arrayData );
+		return 0;
+	}
+	else {
+		DAL_UNIMPLEMENTED( data );
+	}
+	
+	// destroying old data, and replacing it with new one...
+	DAL_destroy( data );
+	*data = arrayData;
+	
+	return 1;
+}
+
+// allocating a temporary buffer in memory (an Array)
 bool DAL_allocBuffer( Data *data, long size )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
@@ -203,22 +360,46 @@ bool DAL_allocBuffer( Data *data, long size )
 	
 	return r;
 }
-
-long DAL_dataSize( Data *data )
+// allocating a File
+static inline char toFileChar( int n )
 {
-	switch( data->medium ) {
-		case File: {
-			return GET_FILE_SIZE( data->file.name );
-			break;
-		}
-		case Array: {
-			return data->array.size;
-			break;
-		}
-		default:
-			DAL_UNSUPPORTED( data );
+	const int chars = 'Z'-'A'+1, nums = '9'-'0'+1;
+	// check this function validity...
+	n %= ( chars + nums );
+	if( n < nums ) {
+		return n+'0';
+	}
+	else {
+		return n+'A';
 	}
 }
+bool DAL_allocFile( Data *data, long size )
+{
+	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
+	
+	FILE *handle;
+	char name[128];
+	do {
+		#define X ( toFileChar(rand()) )
+		#define X4 X,X,X,X
+		snprintf( name, sizeof(name), "tmep%d_%c%c%c%c-%c%c%c%c-%c%c%c%c-%c%c%c%c", GET_N(), X4, X4, X4, X4 );
+		#undef X4
+		#undef X
+		handle = fopen( name, "r" );
+	} while( handle ); // if file exists, try again!
+	
+	handle = fopen( name, "rw+" );
+	if( ! handle ) {
+		SPD_DEBUG( "File \"%s\" couldn't be opened...", name );
+	}
+	
+	data->medium = File;
+	strncpy( data->file.name, name, sizeof(data->file.name) );
+	data->file.handle = handle;
+	
+	return 1;
+}
+
 
 
 

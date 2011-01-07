@@ -38,6 +38,7 @@ typedef struct Data
 		} array;
 		struct
 		{
+			FILE *handle;
 			char name[128];
 		} file;
 	};
@@ -95,17 +96,31 @@ long GET_FILE_SIZE( const char *path );
 /***************************************************************************************************************/
 
 bool DAL_isInitialized( Data *data );
-bool DAL_isDestroyed( Data *data );
 
-void DAL_init( Data *data );
-void DAL_destroy( Data *data );
-
-bool DAL_allocArray( Data *data, long size );
-bool DAL_reallocArray ( Data *data, long size );
-
-bool DAL_allocBuffer( Data *data, long size ); // allocs a buffer of size equal OR LESSER than size
+void DAL_init( Data *data ); // gets Data redy to be worked on - without allocating resources
+void DAL_destroy( Data *data ); // destroys and re-initialize data
 
 long DAL_dataSize( Data *data ); // returns data size, both of array or file...
+bool DAL_allocData( Data *data, long size ); // allocates a Data in an Array, or, if it fails, in a File
+
+bool DAL_readFile( Data *data, const char *path ); // reads an already existing file (will copy it, if data is a File)
+bool DAL_writeFile( Data *data, const char *path ); // writes data content in a file (will copy it, if data is a File)
+
+// functions to work with any find of block device (ie: Files)
+void DAL_resetDeviceCursor( Data *device ); // moves cursor back to beginning
+void DAL_readNextDeviceBlock( Data *device, Data *dst ); // reads a block of size of dst's moving cursor
+void DAL_writeNextDeviceBlock( Data *device, Data *src ); // writes a block of size of src's at current cursor (moving it and overwriting current data)
+
+// allocating an Array in memory
+bool DAL_allocArray( Data *data, long size );
+bool DAL_reallocArray ( Data *data, long size );
+bool DAL_reallocAsArray( Data *data ); // tries to realloc data as an array
+
+// allocating a temporary buffer in memory (an Array)
+bool DAL_allocBuffer( Data *data, long size ); // allocs a buffer of size equal OR LESSER than size
+
+// allocating a File
+bool DAL_allocFile( Data *data, long size );
 
 /*--------------------------------------------------------------------------------------------------------------*/
 
