@@ -27,10 +27,21 @@ void getSmallBucketLengths( Data *data, const int *splitters, const int n, long 
 
 	int i, j;
 
-		/* Computing the number of integers to be sent to each process */
-	for ( i=0; i<data->array.size; i++ ) {
-		j = getBucketIndex( &data->array.data[i], splitters, n-1 );
-		lengths[j]++;
+	/* Computing the number of integers to be sent to each process */
+	switch( data->medium ) {
+		case File: {
+			DAL_UNIMPLEMENTED( data );
+			break;
+		}
+		case Array: {
+			for ( i=0; i<data->array.size; i++ ) {
+				j = getBucketIndex( &data->array.data[i], splitters, n-1 );
+				lengths[j]++;
+			}
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( data );
 	}
 }
 

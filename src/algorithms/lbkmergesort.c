@@ -29,6 +29,41 @@ struct Min_val {
 /**
 * @brief Merges k sorted sequences
 *
+* @param[in]    runs			Sequences to be merged
+* @param[in]    k               Number of sequences
+* @param[in]    lengths         Array containing the length of each run
+* @param[in]    displs          Displacements of each run
+* @param[in]    mergedLength    Length of the final merged sequence
+* @param[out]   mergedSeq       The merged sequence
+*/
+void kmerge( int *runs, int k, int* lengths, int* displs, int mergedLength, int *mergedSeq )
+{
+    int i;
+    std::priority_queue<Min_val> heap;
+    int *runs_indexes = (int*) calloc( sizeof(int), k );
+    SPD_ASSERT( runs_indexes != NULL, "not enough memory..." );
+
+    /* Initializing the heap */
+    for ( i=0; i<k; i++ ) {
+        if ( lengths[i] )
+            heap.push( Min_val( runs[displs[i]], i ) );
+    }
+    /* Merging the runs */
+    for ( i=0; i<mergedLength; i++ ) {
+        Min_val min = heap.top();
+        heap.pop();
+        mergedSeq[i] = min.val;
+
+        if ( ++(runs_indexes[min.run_index]) != lengths[min.run_index] )
+            heap.push( Min_val( runs[displs[min.run_index] + runs_indexes[min.run_index]], min.run_index ) );
+    }
+    free( runs_indexes );
+}
+
+
+/**
+* @brief Merges k sorted sequences of ingers stored into a data object
+*
 * @param[in] 	runs			Sequences to be merged
 * @param[in] 	k				Number of sequences
 * @param[in] 	lengths			Array containing the length of each run
@@ -36,32 +71,29 @@ struct Min_val {
 * @param[in] 	mergedLength    Length of the final merged sequence
 * @param[out] 	mergedData		The merged sequence
 */
-void kmerge( Data *runs, int k, long* lengths, long* displs, long mergedLength, Data *mergedData )
+void kmergeData( Data *runs, int k, long* lengths, long* displs, long mergedLength, Data *mergedData )
 {
     /* TODO: Implement it the right way!! */
+	int mlengths[k];
+	int mdispls[k];
 
-    int i;
-    std::priority_queue<Min_val> heap;
-    int *runs_indexes = (int*) calloc( sizeof(int), k );
-    SPD_ASSERT( runs_indexes != NULL, "not enough memory..." );
-
-    SPD_ASSERT( DAL_reallocArray( mergedData, mergedLength ), "not enough memory..." );
-
-    /* Initializing the heap */
-    for ( i=0; i<k; i++ ) {
-        if ( lengths[i] )
-            heap.push( Min_val( runs->array.data[displs[i]], i ) );
-    }
-    /* Merging the runs */
-    for ( i=0; i<mergedLength; i++ ) {
-        Min_val min = heap.top();
-        heap.pop();
-        mergedData->array.data[i] = min.val;
-
-        if ( ++(runs_indexes[min.run_index]) != lengths[min.run_index] )
-            heap.push( Min_val( runs->array.data[displs[min.run_index] + runs_indexes[min.run_index]], min.run_index ) );
-    }
-    free( runs_indexes );
+	switch( runs->medium ) {
+		case File: {
+			DAL_UNIMPLEMENTED( runs );
+			break;
+		}
+		case Array: {
+			SPD_ASSERT( DAL_reallocArray( mergedData, mergedLength ), "not enough memory..." );
+			for( int i=0; i<k; i++ ) {
+				mlengths[i] = lengths[i];
+				mdispls[i] = displs[i];
+			}
+			kmerge( runs->array.data, k, mlengths, mdispls, mergedLength, mergedData->array.data );
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( runs );
+	}
 }
 
 
@@ -75,17 +107,27 @@ void kmerge( Data *runs, int k, long* lengths, long* displs, long mergedLength, 
 */
 void getSendCounts( Data *data, const int *splitters, const int n, long *lengths )
 {
-    /* TODO: Implement it the right way!! */
+	/* TODO: Implement it the right way!! */
 
-    int i, j;
+	int i, j;
 
-    /* Computing the number of integers to be sent to each process */
-    for ( i=0; i<data->array.size; i++ ) {
-        j = getBucketIndex( &data->array.data[i], splitters, n-1 );
-        lengths[j]++;
-    }
+	/* Computing the number of integers to be sent to each process */
+	switch( data->medium ) {
+		case File: {
+			DAL_UNIMPLEMENTED( data );
+			break;
+		}
+		case Array: {
+			for ( i=0; i<data->array.size; i++ ) {
+				j = getBucketIndex( &data->array.data[i], splitters, n-1 );
+				lengths[j]++;
+			}
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( data );
+	}
 }
-
 
 /**
 * @brief Sorts input data by using a parallel version of Mergesort with load balancing
@@ -231,7 +273,7 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 		k += recvCounts[i];
 	}
 	/* Merging received data */
-	kmerge ( &recvData, n, recvCounts, rdispls, dataLength, data );
+	kmergeData( &recvData, n, recvCounts, rdispls, dataLength, data );
 
 	stopPhase( ti, multiwayMergeP );
 /*--------------------------------------------------------------------------------------------------------------*/

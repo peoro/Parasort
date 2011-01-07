@@ -21,20 +21,30 @@
 void compareLow( Data *d1, Data *d2 )
 {
 	/* TODO: Implement it the right way!! */
-
 	int i, j, k;
-	Data d3;
-	DAL_init( &d3 );
-	SPD_ASSERT( DAL_allocArray( &d3, d2->array.size ), "not enough memory..." );
+	Data buffer;
+	DAL_init( &buffer );
 
-	for ( i=j=k=0; i<d2->array.size; i++ )
-		if ( d2->array.data[j] <= d1->array.data[k] )
-			d3.array.data[i] = d2->array.data[j++];
-		else
-			d3.array.data[i] = d1->array.data[k++];
+	switch( d1->medium ) {
+		case File: {
+			DAL_UNIMPLEMENTED( d1 );
+			break;
+		}
+		case Array: {
+			SPD_ASSERT( DAL_allocArray( &buffer, d2->array.size ), "not enough memory..." );
 
+			for ( i=j=k=0; i<d2->array.size; i++ )
+				if ( d2->array.data[j] <= d1->array.data[k] )
+					buffer.array.data[i] = d2->array.data[j++];
+				else
+					buffer.array.data[i] = d1->array.data[k++];
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( d1 );
+	}
 	DAL_destroy( d2 );
-	*d2 = d3;
+	*d2 = buffer;
 }
 
 
@@ -49,18 +59,29 @@ void compareHigh( Data *d1, Data *d2 )
 	/* TODO: Implement it the right way!! */
 
 	int i, j, k;
-	Data d3;
-	DAL_init( &d3 );
-	SPD_ASSERT( DAL_allocArray( &d3, d2->array.size ), "not enough memory..." );
+	Data buffer;
+	DAL_init( &buffer );
 
-	for ( i=j=k=d2->array.size-1; i>=0; i-- )
-		if ( d2->array.data[j] >= d1->array.data[k] )
-			d3.array.data[i] = d2->array.data[j--];
-		else
-			d3.array.data[i] = d1->array.data[k--];
+	switch( d1->medium ) {
+		case File: {
+			DAL_UNIMPLEMENTED( d1 );
+			break;
+		}
+		case Array: {
+			SPD_ASSERT( DAL_allocArray( &buffer, d2->array.size ), "not enough memory..." );
 
+			for ( i=j=k=d2->array.size-1; i>=0; i-- )
+				if ( d2->array.data[j] >= d1->array.data[k] )
+					buffer.array.data[i] = d2->array.data[j--];
+				else
+					buffer.array.data[i] = d1->array.data[k--];
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( d1 );
+	}
 	DAL_destroy( d2 );
-	*d2 = d3;
+	*d2 = buffer;
 }
 
 /**

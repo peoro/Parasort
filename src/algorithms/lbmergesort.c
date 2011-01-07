@@ -14,43 +14,62 @@
 #include "../utils.h"
 
 /**
+* @brief Merges two sorted sequences
+*
+* @param[in]    flength         The length of the first sequence
+* @param[in]    firstSeq        The first sequence
+* @param[in]    slength         The length of the second sequence
+* @param[in]    secondSeq       The second sequence
+* @param[out]   mergedSeq       The merged sequence
+*/
+void merge( const int flength, int *firstSeq, const int slength, int *secondSeq, int* mergedSeq )
+{
+    int i, j, k;
+    i = j = k = 0;
+
+    while ( j < flength && k < slength ) {
+        if ( firstSeq[j] < secondSeq[k] )
+            mergedSeq[i++] = firstSeq[j++];
+        else
+            mergedSeq[i++] = secondSeq[k++];
+    }
+    while ( j<flength )
+        mergedSeq[i++] = firstSeq[j++];
+
+    while ( k<slength )
+        mergedSeq[i++] = secondSeq[k++];
+}
+
+
+/**
 * @brief Merges sorted integers stored into two data objects
 *
-* @param[in] 		firstLength		The number of elements to be merged from the first data object
+* @param[in] 		flength			The number of elements to be merged from the first data object
 * @param[in] 		fdispl			The displacement for the first data object
 * @param[in] 		d1				The first data object
-* @param[in] 		secondLength	The number of elements to be merged from the second data object
+* @param[in] 		slength			The number of elements to be merged from the second data object
 * @param[in] 		sdispl			The displacement for the second data object
 * @param[in,out] 	d2				The second data object that will also contain the merging result
 */
-void merge( long firstLength, long fdispl, Data *d1, long secondLength, long sdispl, Data *d2 )
+void mergeData( long flength, long fdispl, Data *d1, long slength, long sdispl, Data *d2 )
 {
     /* TODO: Implement it the right way!! */
 
-    int i, j, k;
-    i = 0;
-    j = fdispl;
-    k = sdispl;
-
     Data merged;
     DAL_init( &merged );
-    SPD_ASSERT( DAL_allocArray( &merged, firstLength+secondLength ), "not enough memory..." );
 
-    firstLength += fdispl;
-    secondLength += sdispl;
-
-    while ( j < firstLength && k < secondLength )
-        if ( d1->array.data[j] < d2->array.data[k] )
-            merged.array.data[i++] = d1->array.data[j++];
-        else
-            merged.array.data[i++] = d2->array.data[k++];
-
-    while ( j < firstLength )
-        merged.array.data[i++] = d1->array.data[j++];
-
-    while ( k < secondLength )
-        merged.array.data[i++] = d2->array.data[k++];
-
+	if ( d1->medium == Array && d2->medium == Array ) {
+		SPD_ASSERT( DAL_allocArray( &merged, flength+slength ), "not enough memory..." );
+		merge( flength, d1->array.data+fdispl, slength, d2->array.data+sdispl, merged.array.data );
+	}
+	else if ( d1->medium == (Array || File) && d2->medium == (Array || File) ) {
+		Data *tmp = d1->medium == File ? d1 : d2;
+		DAL_UNIMPLEMENTED( tmp );
+	}
+	else {
+		Data *tmp = d1->medium == File ? d1 : d2;
+		DAL_UNSUPPORTED( tmp );
+	}
 	DAL_destroy( d2 );
 	*d2 = merged;
 }
@@ -73,10 +92,21 @@ void getSendCounts( Data *data, const int *splitters, const int n, const int sta
 
 	int i, j;
 
-		/* Computing the number of integers to be sent to each process */
-	for ( i=0; i<data->array.size; i++ ) {
-		j = getBucketIndex( &data->array.data[i], splitters, n-1 );
-		lengths[start+j]++;
+	/* Computing the number of integers to be sent to each process */
+	switch( data->medium ) {
+		case File: {
+			DAL_UNIMPLEMENTED( data );
+			break;
+		}
+		case Array: {
+			for ( i=0; i<data->array.size; i++ ) {
+				j = getBucketIndex( &data->array.data[i], splitters, n-1 );
+				lengths[start+j]++;
+			}
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( data );
 	}
 }
 
@@ -221,7 +251,7 @@ void lbmergesort( const TestInfo *ti, Data *data )
 
 			j = ((id + h*flag) % groupSize + groupRoot) ^ groupSize;		//Selects the next partner to avoid deadlocks
 		}
- 		merge( recvDataLength, 0, &recvData, dataLength-sentDataLength, sdispls[groupRoot], data );
+ 		mergeData( recvDataLength, 0, &recvData, dataLength-sentDataLength, sdispls[groupRoot], data );
 		dataLength = dataLength - sentDataLength + recvDataLength;
 		DAL_destroy( &recvData );
 	}

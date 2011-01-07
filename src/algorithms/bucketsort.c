@@ -26,12 +26,23 @@ void getSendCounts( Data *data, const int n, long *lengths )
 	/* TODO: Implement it the right way!! */
 
 	int i, j;
-	const double 	range = INT_MAX / n;				//Range of elements in each bucket
+	const double 	range = INT_MAX / n;	//Range of elements in each bucket
 
-		/* Computing the number of integers to be sent to each process */
-	for ( i=0; i<data->array.size; i++ ) {
-		j = ((double) data->array.data[i]) / range;
-		lengths[j]++;
+	/* Computing the number of integers to be sent to each process */
+	switch( data->medium ) {
+		case File: {
+			DAL_UNIMPLEMENTED( data );
+			break;
+		}
+		case Array: {
+			for ( i=0; i<data->array.size; i++ ) {
+				j = ((double) data->array.data[i]) / range;
+				lengths[j]++;
+			}
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( data );
 	}
 }
 
