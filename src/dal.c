@@ -1,4 +1,5 @@
 
+#include <errno.h>
 #include <mpi.h>
 #include "dal.h"
 
@@ -14,7 +15,6 @@ static inline int GET_N ( ) {
     MPI_Comm_size ( MPI_COMM_WORLD, &x );
     return x;
 }
-
 
 
 
@@ -36,7 +36,8 @@ long GET_FILE_SIZE( const char *path )
 
 	return len;
 }
-
+#define FILE_READ( dst, size, file )	fread( dst, sizeof(int), size, file ) // reads size items (integers!)
+#define FILE_WRITE( src, size, file )	fwrite( src, sizeof(int), size, file ) // writes size items (integers!)
 
 const char *DAL_mediumName( DataMedium m )
 {
@@ -148,7 +149,7 @@ long DAL_dataSize( Data *data )
 			fseek( data->file.handle, 0, SEEK_END );      // going to end
 			len = ftell( data->file.handle );             // getting current position
 			fseek( data->file.handle, cursor, SEEK_SET ); // getting back to where I was
-			return len;
+			return len / sizeof(int);
 			break;
 		}
 		case Array: {
@@ -163,7 +164,7 @@ bool DAL_allocData( Data *data, long size )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
 	
-	if( DAL_allocArray(data, size) ) {
+	if( 0 && DAL_allocArray(data, size) ) {
 		return 1;
 	}
 	
@@ -235,14 +236,31 @@ void DAL_readNextDeviceBlock( Data *device, Data *dst )
 {
 	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
 	
-	//DAL_DEBUG( device, "reading from this device" );
-	//DAL_DEBUG( dst, "into this data" );
+	// DAL_DEBUG( device, "reading from this device" );
+	// DAL_DEBUG( dst, "into this data" );
 	
-	if( dst->medium == Array ) {
-		fread( dst->array.data, dst->array.size, 1, device->file.handle );
-	}
-	else {
-		DAL_UNIMPLEMENTED( dst );
+	switch( dst->medium ) {
+		case File: {
+			Data buffer;
+			DAL_init( &buffer );
+			SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_dataSize(device) ), "memory completely over..." );
+			const long bufSize = DAL_dataSize(&buffer);
+			long r = 0;
+			long read = 0;
+			long total = 0;
+			while( total != DAL_dataSize(device) ) {
+				r = FILE_READ( buffer.array.data, bufSize, device->file.handle );
+				FILE_WRITE( buffer.array.data, r, dst->file.handle );
+				total += r;
+			}
+			break;
+		}
+		case Array: {
+			FILE_READ( dst->array.data, dst->array.size, device->file.handle );
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( dst );
 	}
 }
 void DAL_writeNextDeviceBlock( Data *device, Data *src )
@@ -253,7 +271,7 @@ void DAL_writeNextDeviceBlock( Data *device, Data *src )
 	//DAL_DEBUG( src, "from this data" );
 	
 	if( src->medium == Array ) {
-		fwrite( src->array.data, src->array.size, 1, device->file.handle );
+		FILE_WRITE( src->array.data, src->array.size, device->file.handle );
 	}
 	else {
 		DAL_UNIMPLEMENTED( src );
@@ -370,6 +388,7 @@ static inline char toFileChar( int n )
 		return n+'0';
 	}
 	else {
+		n -= nums;
 		return n+'A';
 	}
 }
@@ -382,15 +401,15 @@ bool DAL_allocFile( Data *data, long size )
 	do {
 		#define X ( toFileChar(rand()) )
 		#define X4 X,X,X,X
-		snprintf( name, sizeof(name), "tmep%d_%c%c%c%c-%c%c%c%c-%c%c%c%c-%c%c%c%c", GET_N(), X4, X4, X4, X4 );
+		snprintf( name, sizeof(name), "tmp%d_%c%c%c%c-%c%c%c%c-%c%c%c%c-%c%c%c%c", GET_N(), X4, X4, X4, X4 );
 		#undef X4
 		#undef X
 		handle = fopen( name, "r" );
 	} while( handle ); // if file exists, try again!
 	
-	handle = fopen( name, "rw+" );
+	handle = fopen( name, "w+" );
 	if( ! handle ) {
-		SPD_DEBUG( "File \"%s\" couldn't be opened...", name );
+		SPD_DEBUG( "File \"%s\" couldn't be opened: %s", name, strerror(errno) );
 	}
 	
 	data->medium = File;
