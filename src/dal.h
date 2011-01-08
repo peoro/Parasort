@@ -140,9 +140,7 @@ void DAL_receive( Data *data, long size, int source );
 
 // A stands for Append: \data is already initialized, and received data is appended to it
 // U stands for Unknown: \data size is unknown by receiver: sender will send it.
-void DAL_sendU( Data *data, int dest );
 void DAL_receiveU( Data *data, int source );
-
 void DAL_receiveA( Data *data, long size, int source );
 void DAL_receiveAU( Data *data, int source );
 

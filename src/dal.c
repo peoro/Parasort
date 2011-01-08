@@ -434,6 +434,13 @@ static inline void DAL_MPI_RECEIVE( void *array, long size, MPI_Datatype dataTyp
 	MPI_Status 	stat;
 	MPI_Recv( array, size, dataType, source, 0, MPI_COMM_WORLD, &stat );
 }
+static inline int DAL_MPI_INCOMING_DATA( MPI_Datatype dataType, int source ) {
+	int size;
+	MPI_Status status;
+	MPI_Probe( source, MPI_ANY_TAG, MPI_COMM_WORLD, &status );
+	MPI_Get_count( &status, dataType, &size );
+	return size;
+}
 
 /**
 * @brief Sends data to dest
