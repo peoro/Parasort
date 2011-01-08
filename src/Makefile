@@ -42,5 +42,11 @@ spdlog: spd.c
 	@echo "Compiling spdlog (profiling mode)..."
 	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -mpe=mpilog -o spdlog
 
+tests: force_look
+	make -C tests -f Makefile clean tests # wtf, why are we using GNU Make? CMake/SCons FTW!
+
 clean:
 	rm -f *~ *.o *.clog2 spd spddbg spdlog
+	
+force_look:
+	true
