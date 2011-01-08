@@ -113,6 +113,8 @@ bool DAL_readFile( Data *data, const char *path ); // reads an already existing 
 bool DAL_writeFile( Data *data, const char *path ); // writes data content in a file (will copy it, if data is a File)
 
 // functions to work with any find of block device (ie: Files)
+long DAL_deviceCursor( Data *device ); // gets current cursor position
+void DAL_setDeviceCursor( Data *device, long pos ); // moves cursor position
 void DAL_resetDeviceCursor( Data *device ); // moves cursor back to beginning
 void DAL_readNextDeviceBlock( Data *device, Data *dst ); // reads a block of size of dst's moving cursor
 void DAL_writeNextDeviceBlock( Data *device, Data *src ); // writes a block of size of src's at current cursor (moving it and overwriting current data)

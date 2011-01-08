@@ -69,7 +69,7 @@ char * DAL_dataToString( Data *d, char *s, int size )
 	}
 	return s;
 }
-char * DAL_dataItemsToString( Data *d, char *s, int size )
+char * DAL_dataItemsToString( Data *data, char *s, int size )
 {
 	char buf[64];
 	int i;
@@ -79,19 +79,54 @@ char * DAL_dataItemsToString( Data *d, char *s, int size )
 	if( ! size ) {
 		return s;
 	}
-	if( ! d->array.size ) {
+	if( ! DAL_dataSize(data) ) {
 		strncat( s, "{}", size );
 		return s;
 	}
-
+	
 	strncat( s, "{", size );
-	for( i = 0; i < d->array.size-1; ++ i ) {
-		snprintf( buf, sizeof(buf), "%d,", d->array.data[i] );
-		strncat( s, buf, size );
-	}
+	
+	
+	switch( data->medium ) {
+		case NoMedium: {
+			break;
+		}
+		case File: {
+			long cursor = DAL_deviceCursor( data );
+			DAL_resetDeviceCursor( data );
+			
+			Data item;
+			DAL_init( &item );
+			DAL_allocBuffer( &item, 1 );
+			for( i = 0; i < DAL_dataSize(data)-1; ++ i ) {
+				DAL_readNextDeviceBlock( data, &item );
+				snprintf( buf, sizeof(buf), "%d,", item.array.data[0] );
+				strncat( s, buf, size );
+			}
+			DAL_readNextDeviceBlock( data, &item );
+			snprintf( buf, sizeof(buf), "%d", item.array.data[0] );
+			strncat( s, buf, size );
+			
+			// restoring cursor
+			DAL_setDeviceCursor( data, cursor );
+			break;
+		}
+		case Array: {
+			for( i = 0; i < DAL_dataSize(data)-1; ++ i ) {
+				snprintf( buf, sizeof(buf), "%d,", data->array.data[i] );
+				strncat( s, buf, size );
+			}
 
-	snprintf( buf, sizeof(buf), "%d}", d->array.data[i] );
-	strncat( s, buf, size );
+			snprintf( buf, sizeof(buf), "%d", data->array.data[i] );
+			strncat( s, buf, size );
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( data );
+	}
+	
+	
+	strncat( s, "}", size );
 
 	if( strlen(s) == (unsigned) size-1 ) {
 		s[size-4] = s[size-3] = s[size-2] = '.';
@@ -220,6 +255,28 @@ bool DAL_writeFile( Data *data, const char *path )
 bool DAL_isDevice( Data *data )
 {
 	return data->medium == File;
+}
+long DAL_deviceCursor( Data *device )
+{
+	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
+	
+	if( device->medium == File ) {
+		return ftell( device->file.handle );
+	}
+	else {
+		DAL_UNIMPLEMENTED( device );
+	}
+}
+void DAL_setDeviceCursor( Data *device, long pos )
+{
+	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
+	
+	if( device->medium == File ) {
+		fseek( device->file.handle, pos, SEEK_SET );
+	}
+	else {
+		DAL_UNIMPLEMENTED( device );
+	}
 }
 void DAL_resetDeviceCursor( Data *device )
 {
