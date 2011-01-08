@@ -151,7 +151,7 @@ void mergesort ( const TestInfo *ti, Data *data_local )
 		active_proc /= 2;
 	}
 
-	if ( ! DAL_isDestroyed( &data_received ))
+	if ( ! DAL_isInitialized( &data_received ))
 		DAL_destroy ( &data_received );
 		
 	stopPhase( ti, localP );

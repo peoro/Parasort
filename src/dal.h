@@ -78,6 +78,12 @@ char *DAL_dataItemsToString( Data *d, char *s, int size );
 		char buf[1024]; \
 		SPD_DEBUG( "data (%s) " fmt, DAL_dataToString((d), buf, sizeof(buf)), ##__VA_ARGS__ ); \
 	}
+	
+#define DAL_PRINT_DATA(d, fmt, ... ) \
+	{ \
+        char buf[1024]; \
+        DAL_DEBUG( data, "%s", DAL_dataItemsToString(data, buf, sizeof(buf)) ); \
+	}
 
 /*--------------------------------------------------------------------------------------------------------------*/
 
