@@ -11,7 +11,7 @@
 #include <string.h>
 #include <mpi.h>
 #include "../sorting.h"
-#include "../utils.h"
+#include "../common.h"
 
 /**
 * @brief Merges two sorted sequences
@@ -22,7 +22,7 @@
 * @param[in]    secondSeq       The second sequence
 * @param[out]   mergedSeq       The merged sequence
 */
-void merge( const int flength, int *firstSeq, const int slength, int *secondSeq, int* mergedSeq )
+void merge( const long flength, int *firstSeq, const long slength, int *secondSeq, int* mergedSeq )
 {
     int i, j, k;
     i = j = k = 0;

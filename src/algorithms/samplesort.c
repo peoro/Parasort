@@ -11,7 +11,7 @@
 #include <string.h>
 #include <mpi.h>
 #include "../sorting.h"
-#include "../utils.h"
+#include "../common.h"
 
 /**
 * @brief Gets the number of element to be inserted in each small bucket

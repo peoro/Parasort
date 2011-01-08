@@ -9,7 +9,7 @@
  */
 
 #include "sorting.h"
-#include "utils.h"
+#include "common.h"
 #include "math.h"
 
 //#define KMERGE
@@ -22,12 +22,12 @@
 
 #define ACTIVE_PROCS(ti,step) _pow2(step)
 
-int from_who( const TestInfo *ti, int step ) 
+int from_who( const TestInfo *ti, int step )
 {
 	return GET_ID(ti) - ( GET_N(ti) / ACTIVE_PROCS(ti,step+1) );
 }
 
-int to_who( const TestInfo *ti, int step ) 
+int to_who( const TestInfo *ti, int step )
 {
 	return GET_ID(ti) + ( GET_N(ti) / ACTIVE_PROCS(ti,step+1) );
 }
@@ -54,12 +54,12 @@ int K_WAY_SENDS ( int n, int k ) {
 	return (k-1)*sends;
 }
 
-int from_who( const TestInfo *ti, int step ) 
+int from_who( const TestInfo *ti, int step )
 {
 	return 0;
 }
 
-int to_who( const TestInfo *ti, int step ) 
+int to_who( const TestInfo *ti, int step )
 {
 	return GET_ID(ti) - ( _powK( GET_K(ti), step) * (rank % GET_K(ti));
 }
@@ -77,10 +77,10 @@ bool do_i_receive( const TestInfo *ti, int step )
 #elif defined(MERGE)
 
 //mapping 0: standard mapping
-//mapping 1: first steps communications made between adjacent processors 
+//mapping 1: first steps communications made between adjacent processors
 #define ACTIVE_PROCS(ti,step) ( GET_N(ti) / _pow2( step ) )
 
-int from_who ( const TestInfo *ti, int step ) 
+int from_who ( const TestInfo *ti, int step )
 {
 	switch (ti->algoVar[0]) {
 		case 0: return GET_ID(ti) + ACTIVE_PROCS(ti, step) / 2;
@@ -89,7 +89,7 @@ int from_who ( const TestInfo *ti, int step )
 	}
 }
 
-int to_who ( const TestInfo *ti, int step ) 
+int to_who ( const TestInfo *ti, int step )
 {
 	switch (ti->algoVar[0]) {
 		case 0: return GET_ID(ti) - ACTIVE_PROCS(ti, step) / 2;
@@ -123,10 +123,10 @@ void mainSort( const TestInfo *ti, int *array, long size )
 {
 	(void) array;
 	(void) size;
-	
+
 	// printf( "Should sort an array of %ld elements...\n", size );
-	
-#if defined (MERGE)	
+
+#if defined (MERGE)
 	// process with rank algoVar[0] will print its stencil...
 	int step = 0;
 	int mapping = ti->algoVar[1];
@@ -145,10 +145,10 @@ void mainSort( const TestInfo *ti, int *array, long size )
 	}
 
 #elif defined (KMERGE)
-	if ( GET_ID(ti) == 0 )	
+	if ( GET_ID(ti) == 0 )
 		printf("this %i-way mergesort through %i processors will make %i sends\n", ti->algoVar[1], GET_N(ti), K_WAY_SENDS ( GET_N(ti), ti->algoVar[1] ));
 
-	
+
 #elif defined (QSORT)
 	// process with rank algoVar[0] will print its stencil...
 	int step = 0;
@@ -165,7 +165,7 @@ void mainSort( const TestInfo *ti, int *array, long size )
 			}
 		}
 	}
-	
+
 #endif
 
 }

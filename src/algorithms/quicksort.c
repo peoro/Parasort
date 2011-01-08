@@ -2,7 +2,7 @@
 /**
  * @file quicksort.c
  *
- * @brief This file contains a parallel version of quicksort, a standard algorithm to sort atomic elements (integers) 
+ * @brief This file contains a parallel version of quicksort, a standard algorithm to sort atomic elements (integers)
  *
  * To scatter data:
  *   each node will call \scatter, which takes an array \array of \size=M elements.
@@ -19,7 +19,7 @@
  */
 
 #include "sorting.h"
-#include "utils.h"
+#include "common.h"
 #include "string.h"
 
 #include <time.h> // srand( time(0) )
@@ -33,7 +33,7 @@
 #define GET_STEP_COUNT(ti) _log2( GET_N(ti) )
 
 //from_who	: return the rank of the process (node) from which i RECEIVE data in the current step
-int from_who( const TestInfo *ti, int step ) 
+int from_who( const TestInfo *ti, int step )
 {
 	switch( ti->algoVar[0] ) {
 		case 1: return GET_ID(ti) - ACTIVE_PROCS(ti,step);
@@ -42,7 +42,7 @@ int from_who( const TestInfo *ti, int step )
 }
 
 //to_who	: return the rank of the process (node) from which i SEND data in the current step
-int to_who( const TestInfo *ti, int step ) 
+int to_who( const TestInfo *ti, int step )
 {
 	switch( ti->algoVar[0] ) {
 		case 1: return GET_ID(ti) + ACTIVE_PROCS(ti,step);
@@ -78,7 +78,7 @@ int nth_token_owner( const TestInfo *ti, int n )
 			int nodes = GET_N(ti);
 			int steps = GET_STEP_COUNT(ti);
 			int i;
-			
+
 			for( i = 0; i < steps; ++ i ) {
 				if( n >= nodes/2 ) {
 					res += ACTIVE_PROCS(ti,i);
@@ -86,7 +86,7 @@ int nth_token_owner( const TestInfo *ti, int n )
 				}
 				nodes /= 2;
 			}
-			
+
 			return res;
 		}
 	}
@@ -107,7 +107,7 @@ int nth_token_owner( const TestInfo *ti, int n )
 long _partition( int *a, long size, int p )
 {
 	long i = 0, j = size-1;
-	
+
 	while( true ) {
 		while( i < size && a[i] <= p ) { ++ i; }
 		while( j > 0 && a[j] > p ) { -- j; }
@@ -116,7 +116,7 @@ long _partition( int *a, long size, int p )
 		}
 		SWAP( a, i, j );
 	}
-	
+
 	return j;
 }
 */
@@ -126,7 +126,7 @@ long _partition( int *a, long size, int p )
 long _partition( int *a, long size, int p, int pi )
 {
     int lo = 0, hi = size-1;
-    
+
     // putting pivot at the end
     SWAP( a, size-1, pi );
     pi = size-1;
@@ -140,10 +140,10 @@ long _partition( int *a, long size, int p, int pi )
         }
 		SWAP( a, lo, hi );
     }
-    
+
     // putting pivot back in the middle ...
 	SWAP( a, lo, pi );
-	
+
     return lo;
 }
 // \data parameter will contain the first partition (the one with smaller numbers)
@@ -159,33 +159,33 @@ Data partition( Data *data )
 			int pivotIndex = rand() % data->array.size;
 			int pivot = data->array.data[ pivotIndex ];
 			long lim = _partition( data->array.data, data->array.size, pivot, pivotIndex );
-			
+
 				char buf[128];
 				//SPD_DEBUG( "partitioned(%d):%s, lim:%ld", pivot, DAL_dataItemsToString(data, buf, sizeof(buf)), lim );
 			/*
-			// FIXME			
+			// FIXME
 			// NOTE: THIS IS NOT SAFE IN GENERAL, SINCE SECOND PARTITION'S DATA WILL GET
 			//       DESTROIED WHEN FIRST PARTITION IS DESTROYED!!!
 			//       BESIDES DATA2 CANNOT BE DESTROYED!!!
-			
+
 			// putting second partition in a Data
 			Data r;
 			DAL_init( &r );
 			r.medium = Array;
 			r.array.data = data->array.data + lim;
 			r.array.size = data->array.size - lim;
-			
+
 			// shrinking first partition
 			data->array.size = lim;
 			*/
-			
+
 			Data r;
 			DAL_init( &r );
 			SPD_ASSERT( DAL_allocArray( &r, data->array.size - lim ), "not enough memory..." );
 			memcpy( r.array.data, data->array.data + lim, (data->array.size-lim)*sizeof(int) );
-			
+
 			SPD_ASSERT( DAL_reallocArray( data, lim ), "wtf, I'm not even growing it here..." );
-			
+
 			return r;
 		}
 		default:
@@ -196,16 +196,16 @@ Data partition( Data *data )
 void scatter( const TestInfo *ti, Data *data )
 {
 	int step = 0;
-	
+
 	for( step = 0; step < GET_STEP_COUNT(ti); ++ step ) {
-	
+
 		if( do_i_send(ti,step) ) {
 			//SPD_DEBUG( "partitioning..." );
 			Data data2 = partition( data ); // data: "smaller" partition, data2: "bigger" partition
-			
+
 			char buf1[128], buf2[128];
 				//SPD_DEBUG( "partition1:%s, partition2:%s", DAL_dataItemsToString(data, buf1, sizeof(buf1)), DAL_dataItemsToString(&data2, buf2, sizeof(buf2)) );
-			
+
 			//SPD_DEBUG( "need to send data to %d", to_who(ti, step) );
 			DAL_sendU( &data2, to_who(ti, step) ); // ok, now second partition is no longer required
 			//SPD_DEBUG( "data sent" );
@@ -218,7 +218,7 @@ void scatter( const TestInfo *ti, Data *data )
 		}
 	}
 	//SPD_DEBUG( "finished scattered!" );
-	
+
 	// printf( "Node %d has got %ld data\n", GET_ID(ti), *size );
 }
 
@@ -238,7 +238,7 @@ void gather( const TestInfo *ti, Data *data )
 		}
 		*size = actualSize;
 		*/
-		
+
 		int i;
 		// receiving sequentially from ohter nodes
 		for( i = 1; i < GET_N(ti); ++ i ) {
@@ -263,15 +263,15 @@ void actualSort( const TestInfo *ti, Data *data )
 {
 	PhaseHandle scatterP, localP, gatherP;
 	srand( time(0) );
-	
+
 	scatterP = startPhase( ti, "scattering" );
 	scatter( ti, data );
 	stopPhase( ti, scatterP );
-	
+
 	localP = startPhase( ti, "local sorting" );
 	sequentialSort( ti, data );
 	stopPhase( ti, localP );
-	
+
 	gatherP = startPhase( ti, "gathering" );
 	gather( ti, data );
 	stopPhase( ti, gatherP );
@@ -281,9 +281,9 @@ void sort( const TestInfo *ti )
 {
 	Data data;
 	DAL_init( &data );
-	
+
 	actualSort( ti, &data );
-	
+
 	DAL_ASSERT( DAL_isInitialized(&data), &data, "data should have been destroied :F" );
 }
 
@@ -291,9 +291,9 @@ void mainSort( const TestInfo *ti, Data *data )
 {
 	char buf[128];
 	//SPD_DEBUG( "data to sort:%s", DAL_dataItemsToString(data, buf, sizeof(buf)) );
-	
+
 	actualSort( ti, data );
-	
+
 	DAL_ASSERT( DAL_dataSize(data) == GET_M(ti), data, "data isn't as big as it was originally..." );
 }
 

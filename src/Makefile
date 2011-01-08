@@ -7,9 +7,9 @@ INSTALLDIR = $(HOME)/.spd
 DATADIR = $(INSTALLDIR)/data
 LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
-ALGOS = mergesort samplesort bucketsort bitonicsort lbmergesort sequential sequential1 quicksort # nosort
-ALGOSPP = kmerge lbkmergesort
-OBJECTS = dal.o debug.o sorting.o
+ALGOS = mergesort samplesort bucketsort bitonicsort lbmergesort sequential sequential1 # nosort quicksort
+ALGOSPP = lbkmergesort # kmerge
+OBJECTS = dal.o debug.o sorting.o common.o
 
 all: $(ALGOS) $(ALGOSPP) main
 
@@ -47,6 +47,6 @@ tests: force_look
 
 clean:
 	rm -f *~ *.o *.clog2 spd spddbg spdlog
-	
+
 force_look:
 	true

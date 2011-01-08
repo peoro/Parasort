@@ -12,7 +12,7 @@
 #include <queue>
 #include <mpi.h>
 #include "../sorting.h"
-#include "../utils.h"
+#include "../common.h"
 
 struct Min_val {
 	Min_val( int val, int run_index ) {
@@ -36,7 +36,7 @@ struct Min_val {
 * @param[in]    mergedLength    Length of the final merged sequence
 * @param[out]   mergedSeq       The merged sequence
 */
-void kmerge( int *runs, int k, int* lengths, int* displs, int mergedLength, int *mergedSeq )
+void kmerge( int *runs, int k, long* lengths, long* displs, int mergedLength, int *mergedSeq )
 {
     int i;
     std::priority_queue<Min_val> heap;
@@ -74,8 +74,6 @@ void kmerge( int *runs, int k, int* lengths, int* displs, int mergedLength, int 
 void kmergeData( Data *runs, int k, long* lengths, long* displs, long mergedLength, Data *mergedData )
 {
     /* TODO: Implement it the right way!! */
-	int mlengths[k];
-	int mdispls[k];
 
 	switch( runs->medium ) {
 		case File: {
@@ -84,11 +82,7 @@ void kmergeData( Data *runs, int k, long* lengths, long* displs, long mergedLeng
 		}
 		case Array: {
 			SPD_ASSERT( DAL_reallocArray( mergedData, mergedLength ), "not enough memory..." );
-			for( int i=0; i<k; i++ ) {
-				mlengths[i] = lengths[i];
-				mdispls[i] = displs[i];
-			}
-			kmerge( runs->array.data, k, mlengths, mdispls, mergedLength, mergedData->array.data );
+			kmerge( runs->array.data, k, lengths, displs, mergedLength, mergedData->array.data );
 			break;
 		}
 		default:

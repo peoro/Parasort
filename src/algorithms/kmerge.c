@@ -12,7 +12,7 @@
 #include <queue>
 
 #include "sorting.h"
-#include "utils.h"
+#include "common.h"
 
 using namespace std;
 
@@ -73,12 +73,12 @@ struct Min_val {
 };
 
 //merges #runs data on a File
-void fileFusion ( Data *data_owned, Data *merging, int runs ) 
+void fileFusion ( Data *data_owned, Data *merging, int runs )
 {
 	DAL_UNIMPLEMENTED ( data_owned );
 }
 
-//invariant: all buckets have equal size 
+//invariant: all buckets have equal size
 void memoryFusion ( Data *data_owned, Data *merging, int runs )
 {
 	priority_queue<Min_val> heap;
@@ -102,14 +102,14 @@ void memoryFusion ( Data *data_owned, Data *merging, int runs )
 }
 
 //invariant: all buckets have equal size
-//postcondition: data_owned will be invalid after the merging 
-Data fusion ( Data *data_owned, int runs ) 
+//postcondition: data_owned will be invalid after the merging
+Data fusion ( Data *data_owned, int runs )
 {
 	Data merging;
 	int merging_size = DAL_dataSize ( data_owned ) * runs;
-	
+
 	DAL_init ( &merging );
-	
+
 	//if the local data is already on File, than the merged will be performed on File too for sure
 	switch ( data_owned->medium ) {
 		case File: {
@@ -117,20 +117,20 @@ Data fusion ( Data *data_owned, int runs )
 			break;
 		}
 		case Array: {
-			if ( DAL_allocArray ( &merging, merging_size )) 
+			if ( DAL_allocArray ( &merging, merging_size ))
 				memoryFusion ( data_owned, &merging, runs );
-			else 
+			else
 				fileFusion ( data_owned, &merging, runs );
 			break;
 		}
-		default: 
+		default:
 			DAL_UNSUPPORTED( data_owned );
 	}
-	
+
 	//free old Data
 	for ( int i = 0; i < runs; i++ )
 		DAL_destroy ( data_owned + i );
-	
+
 	return merging;
 }
 
@@ -186,12 +186,12 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 	}
 
 	stopPhase( ti, localP );
-	
+
 	//swap
 	*data_local = *data_owned;
-	
+
 	//frees memory
-	for ( int i = 1; i < k; i++ ) 
+	for ( int i = 1; i < k; i++ )
 		if ( ! DAL_isDestroyed ( data_owned + i ))
 			DAL_destroy ( data_owned + i );
 	free ( dests );

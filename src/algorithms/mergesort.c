@@ -9,7 +9,7 @@
  */
 
 #include "sorting.h"
-#include "utils.h"
+#include "common.h"
 #include "string.h"
 
 /**************************************/
@@ -61,14 +61,14 @@ int do_i_send ( const TestInfo *ti, int step )
 /**************************************/
 
 //merges two data on a File
-void fileFusion ( Data *data_local, Data *data_received, Data *data_merged ) 
+void fileFusion ( Data *data_local, Data *data_received, Data *data_merged )
 {
 	//data_merged has to be initialized within this function (medium -> File, file name..)
 	DAL_UNIMPLEMENTED ( data_local );
 }
 
-//merges two data in memory. data_merged is preallocated 
-void memoryFusion ( Data *data_local, Data *data_received, Data *data_merged ) 
+//merges two data in memory. data_merged is preallocated
+void memoryFusion ( Data *data_local, Data *data_received, Data *data_merged )
 {
 	int left_a = 0, left_b = 0, k = 0;
 	while ( left_a < data_local->array.size && left_b < data_received->array.size ) {
@@ -89,29 +89,29 @@ Data fusion ( Data *data_local, Data *data_received )
 {
 	Data merging;
 	int merging_size = DAL_dataSize ( data_local ) + DAL_dataSize ( data_received );
-	
+
 	DAL_init ( &merging );
-	
+
 	switch ( data_local->medium ) {
 		case File: {
 			fileFusion ( data_local, data_received, &merging );
 			break;
 		}
 		case Array: {
-			if ( DAL_allocArray ( &merging, merging_size )) 
+			if ( DAL_allocArray ( &merging, merging_size ))
 				//memory merge
 				memoryFusion ( data_local, data_received, &merging );
-			else 
+			else
 				fileFusion ( data_local, data_received, &merging );
 			break;
 		}
-		default: 
+		default:
 			DAL_UNSUPPORTED( data_local );
 	}
-	
-	DAL_destroy ( data_local );	
+
+	DAL_destroy ( data_local );
 	DAL_destroy ( data_received );
-	
+
 	return merging;
 }
 
@@ -140,7 +140,7 @@ void mergesort ( const TestInfo *ti, Data *data_local )
 	for ( step = 0; step < _log2(GET_N(ti)); step++ ) {
 		if ( do_i_receive( ti, step ) ) {
 			DAL_receive ( &data_received, total_size / active_proc, from_who( ti, step ) );
-			
+
 			//merge phase
 			*data_local = fusion ( data_local, &data_received );
 		}
@@ -153,7 +153,7 @@ void mergesort ( const TestInfo *ti, Data *data_local )
 
 	if ( ! DAL_isInitialized( &data_received ))
 		DAL_destroy ( &data_received );
-		
+
 	stopPhase( ti, localP );
 }
 
@@ -161,15 +161,15 @@ void sort ( const TestInfo *ti )
 {
 	Data data_local;
 	DAL_init ( &data_local );
-	
+
 	mergesort ( ti, &data_local );
-	
+
 	DAL_destroy ( &data_local );
 }
 
 void mainSort( const TestInfo *ti, Data *data )
 {
 	mergesort ( ti, data );
-	
+
 	DAL_ASSERT( DAL_dataSize(data) == GET_M(ti), data, "data isn't as big as it was originally..." );
 }

@@ -10,7 +10,47 @@
 
 #include <string.h>
 #include "../sorting.h"
-#include "../utils.h"
+#include "../common.h"
+
+/**
+* @brief Compare and Exchange operation on the low part of two sequences sorted in ascending order
+*
+* @param[in]    length                  The length of the sequences
+* @param[in]    firstSeq                The first sequence
+* @param[in]    secondSeq       The second sequence
+* @param[out]   mergedSeq               The merged sequence
+*/
+void compareLow( const long length, int *firstSeq, int *secondSeq, int* mergedSeq )
+{
+    int i, j, k;
+
+    for ( i=j=k=0; i<length; i++ )
+        if ( secondSeq[j] <= firstSeq[k] )
+            mergedSeq[i] = secondSeq[j++];
+        else
+            mergedSeq[i] = firstSeq[k++];
+}
+
+
+/**
+* @brief Compare and Exchange operation on the high part of two sequences sorted in ascending order
+*
+* @param[in]    length                  The length of the sequences
+* @param[in]    firstSeq                The first sequence
+* @param[in]    secondSeq       The second sequence
+* @param[out]   mergedSeq               The merged sequence
+*/
+void compareHigh( const long length, int *firstSeq, int *secondSeq, int* mergedSeq )
+{
+    int i, j, k;
+
+    for ( i=j=k=length-1; i>=0; i-- )
+        if ( secondSeq[j] >= firstSeq[k] )
+            mergedSeq[i] = secondSeq[j--];
+        else
+            mergedSeq[i] = firstSeq[k--];
+}
+
 
 /**
 * @brief Compare and Exchange operation on the low part of two data objects with integers sorted in ascending order
@@ -18,10 +58,9 @@
 * @param[in] 	d1			The first data object
 * @param[out] 	d2			The second data object that will also contain the merging result
 */
-void compareLow( Data *d1, Data *d2 )
+void compareLowData( Data *d1, Data *d2 )
 {
 	/* TODO: Implement it the right way!! */
-	int i, j, k;
 	Data buffer;
 	DAL_init( &buffer );
 
@@ -31,13 +70,8 @@ void compareLow( Data *d1, Data *d2 )
 			break;
 		}
 		case Array: {
-			SPD_ASSERT( DAL_allocArray( &buffer, d2->array.size ), "not enough memory..." );
-
-			for ( i=j=k=0; i<d2->array.size; i++ )
-				if ( d2->array.data[j] <= d1->array.data[k] )
-					buffer.array.data[i] = d2->array.data[j++];
-				else
-					buffer.array.data[i] = d1->array.data[k++];
+			SPD_ASSERT( DAL_allocArray( &buffer, d1->array.size ), "not enough memory..." );
+			compareLow( d1->array.size, d1->array.data, d2->array.data, buffer.array.data );
 			break;
 		}
 		default:
@@ -54,7 +88,7 @@ void compareLow( Data *d1, Data *d2 )
 * @param[in] 	d1			The first data object
 * @param[out] 	d2			The second data object that will also contain the merging result
 */
-void compareHigh( Data *d1, Data *d2 )
+void compareHighData( Data *d1, Data *d2 )
 {
 	/* TODO: Implement it the right way!! */
 
@@ -68,13 +102,8 @@ void compareHigh( Data *d1, Data *d2 )
 			break;
 		}
 		case Array: {
-			SPD_ASSERT( DAL_allocArray( &buffer, d2->array.size ), "not enough memory..." );
-
-			for ( i=j=k=d2->array.size-1; i>=0; i-- )
-				if ( d2->array.data[j] >= d1->array.data[k] )
-					buffer.array.data[i] = d2->array.data[j--];
-				else
-					buffer.array.data[i] = d1->array.data[k--];
+			SPD_ASSERT( DAL_allocArray( &buffer, d1->array.size ), "not enough memory..." );
+			compareHigh( d1->array.size, d1->array.data, d2->array.data, buffer.array.data );
 			break;
 		}
 		default:
@@ -156,9 +185,9 @@ void bitonicSort( const TestInfo *ti, Data *data )
 
 			/* Each process must call the dual function of its partner */
 			if ( (id-partner) * flag > 0 )
-				compareLow( &recvData, data );
+				compareLowData( &recvData, data );
 			else
-				compareHigh( &recvData, data );
+				compareHighData( &recvData, data );
 		}
 	}
 
