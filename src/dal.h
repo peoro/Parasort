@@ -81,8 +81,8 @@ char *DAL_dataItemsToString( Data *d, char *s, int size );
 	
 #define DAL_PRINT_DATA(d, fmt, ... ) \
 	{ \
-        char buf[1024]; \
-        DAL_DEBUG( data, "%s", DAL_dataItemsToString(data, buf, sizeof(buf)) ); \
+        char bufx[1024]; \
+        DAL_DEBUG( data, "WTF %s " fmt, DAL_dataItemsToString(data, bufx, sizeof(bufx)), ##__VA_ARGS__ ); \
 	}
 
 /*--------------------------------------------------------------------------------------------------------------*/
