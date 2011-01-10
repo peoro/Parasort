@@ -51,7 +51,7 @@ int main( int argc, char **argv )
 		Time start, end;
 		TimeDiff res;
 		if( GET_ID() == 0 ) {
-			SPD_DEBUG( "Sending %ld blocks of %ld bytes", count, blockSize );
+			//SPD_DEBUG( "Sending %ld blocks of %ld bytes", count, blockSize );
 			start = now( );
 			for( i = 0; i < count; ++ i ) {
 				TESTS_MPI_SEND( mem + current, blockSize, MPI_CHAR, 1 );
@@ -59,10 +59,11 @@ int main( int argc, char **argv )
 			}
 			end = now( );
 			res = timeDiff( start, end );
-			SPD_DEBUG( "%ld.%.3ld secs (%7ld usecs) to send", res.time, res.mtime, res.utime );
+			//SPD_DEBUG( "%ld.%.3ld secs (%7ld usecs) to send", res.time, res.mtime, res.utime );
+			SPD_DEBUG( "%ld.%.3ld", res.time, res.mtime );
 		}
 		else if( GET_ID() == 1 ) {
-			SPD_DEBUG( "Receiving %ld blocks of %ld bytes", count, blockSize );
+			//SPD_DEBUG( "Receiving %ld blocks of %ld bytes", count, blockSize );
 			start = now( );
 			for( i = 0; i < count; ++ i ) {
 				TESTS_MPI_RECEIVE( mem + current, blockSize, MPI_CHAR, 0 );
@@ -70,7 +71,7 @@ int main( int argc, char **argv )
 			}
 			end = now( );
 			res = timeDiff( start, end );
-			SPD_DEBUG( "%ld.%.3ld secs (%7ld usecs) to receive", res.time, res.mtime, res.utime );
+			//SPD_DEBUG( "%ld.%.3ld secs (%7ld usecs) to receive", res.time, res.mtime, res.utime );
 		}
 	}
 	
