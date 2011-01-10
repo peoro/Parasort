@@ -10,6 +10,7 @@ for MB in ${DATA_SIZE_MB[*]}; do
     M=$(( 2 ** $DATA_SIZE_MB ))
 
     filename=$path/"M"$MB"MB"
+    rm -f $filename
     touch $filename
 
     #for each number of sends (s)
@@ -17,7 +18,7 @@ for MB in ${DATA_SIZE_MB[*]}; do
     do
 
         echo "Starting test for M="$M "MB, #sends="$((2**$s))
-        echo $((2**$s))" " >> $filename
+        echo -n $((2**$s))" " >> $filename
 
         mpiexec -machinefile ../machinefile_pianosa -n 2 ../tsetup $M $((2**$s)) >> $filename
 

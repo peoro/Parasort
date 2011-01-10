@@ -60,7 +60,8 @@ int main( int argc, char **argv )
 			end = now( );
 			res = timeDiff( start, end );
 			//SPD_DEBUG( "%ld.%.3ld secs (%7ld usecs) to send", res.time, res.mtime, res.utime );
-			SPD_DEBUG( "%ld.%.3ld", res.time, res.mtime );
+			//SPD_DEBUG( "%ld.%.3ld", res.time, res.mtime );
+			printf ( "%ld.%.3ld", res.time, res.mtime );
 		}
 		else if( GET_ID() == 1 ) {
 			//SPD_DEBUG( "Receiving %ld blocks of %ld bytes", count, blockSize );
