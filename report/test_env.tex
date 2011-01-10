@@ -16,11 +16,13 @@ We used the latter technique to measure the performance of MPI on our test envir
 \subsubsection{''Physics cluster''}
 
 \subsection{MPI cost model}
-We are interested in evaluating the cost of communications in the test environments because it can help us in understanding the performance behaviour of the Sorting Algorithms. Indeed, depending on both the specific architecture and the algorithm, communications may significatively impact the completion time (and so even the scalability) of the algorithm itself. In a simplified view, the cost of sending a message between two tasks located on different processors can be represented by two parameters: the message startup time $T_{setup}$, which is the time required to initiate the communication, and the transmission time $T_{trasm}$ per word, which is determined by the physical bandwidth of the communication channel linking the source and destination processors~\cite{VANN}. In this model, the time required to send a message of size L words is then
+\label{MPI-cost-model}
+We are interested in evaluating the cost of communications in the test environments because it can help us in understanding the performance behaviour of the Sorting Algorithms. Indeed, depending on both the specific architecture and the algorithm, communications may significatively impact the completion time (and so even the scalability) of the algorithm itself. In a simplified view, the cost of sending a message between two tasks located on different processors can be represented by two parameters: the message startup time $T_{setup}$, which is the time required to initiate the communication, and the transmission time $T_{trasm}$ per word, which is mainly determined by the physical bandwidth of the communication channel linking the source and destination processors~\cite{VANN}. In this model, the time required to send a message of size $L$ words is then
 \[
-T_{send} = T_{setup} + L * T_{trasm}
+T_{send}(L) = T_{setup} + L \times T_{trasm}
 \]
-While accurate for some algorithms and on very simple architectures, this model can break down due to a lot of reasons: for instance, the communication pattern of the application, the bandwith of the interconnection network, and so on. The following analysis will try to estimate the cost of communications on our test architectures by varying the size of the messages and by changing the communication pattern (we will perform the so called ''bisection test'', whichin there are two sets of processes, with same cardinality, that exchange messages each other). 
+While accurate for some algorithms and on very simple architectures, this model generally breaks down due to a lot of factors: for instance, the communication pattern of the application, the bandwith of the interconnection network, and so on. Despite its weakness, for practical reasons we will refer to the $T\_send$-model to explain the results we achieved .  
+The following experimental analysis will try to estimate $T\_send$ on our test architectures by varying the size of the messages and by changing the communication pattern (we will perform the so called ''bisection test'', whichin there are two sets of processes, with same cardinality, that exchange messages each other). 
 
 In order to benchmark the performance of the two environments, we decided to use the \textit{Perftest} benchmark suite.
 
@@ -34,6 +36,7 @@ The following test were performed:
 \end{itemize}
 In the bisection test the complete system is logically divided into two subsystems and the aggregated bandwidth and latency between the two subsystems is measured. An example of this is splitting the system in two vertically and letting each node in the left half communicate with a node in the right part on a one-to-one basis.
 
+Furthermore, as we said in~\ref{DAL-impl}, we are interested in estimating the relevance of $T\_setup$ on $T\_send$. In particular, let's assume that we want to send $L$ bytes. We may send these $L$ bytes either by performing a single $MPI\_Send$ or, more in general, by performing $X$ $MPI\_Send$. The latter situation is not unusual in our framework due to the structure of the DAL layer~\ref{DAL-impl}, thus we have to quantify its overhead. With adequate approximation, it is like we had to pay $X \times T\_setup$ instead of a single $T\_setup$ for the same $T\_send$. Hence, the question we are trying to experimentally answer is: is this $X \times T\_setup$ significative with respect to $T\_send (L)$? If so, for which value of $L$? Answeres will be given, for each target architectures, in the next paragraphs. We achieved these results by implementing a simple test program (called \textit{Tsetup}).
 
 \subsubsection*{Pianosa}
 \label{test-env-pianosa}
@@ -58,6 +61,71 @@ Figures~\ref{pianosa-mpi-1},~\ref{pianosa-mpi-2},~\ref{pianosa-mpi-3} show the r
 	\caption{Performance of broadcast with 4, 8 and 16 processors.}
 	\label{pianosa-mpi-3}
 \end{figure}
+
+Table~\ref{tsetup-impact} shows the $T\_send$ for sending a message of size 512MB. Each row of the table shows the $T\_send$ that comes from splitting the original message into $X$ $MPI\_Send$, with $X \in \lbrace 2^i : i = 0...19 \rbrace$ (so, in the worst case leads to perform rougly 500000 $MPI\_Send$ of size 1KB). We can evince the impact of $T\_setup$ on $T\_send$ by analyzing the growing of $T\_send$ (that is, the elapsed time for sending a message). Analagously, table~\ref{tsetup-impact-16} refers to messages of size 16MB. TODO:comment
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|}\hline
+\hline
+$\sharp$Sends          & $MPI\_Send$ size ($\frac{L}{\sharp Sends}$ bytes)          & $T\_send$ (Elapsed time, sec)      \\\hline\hline
+1 & 536870912 & 46.45626 \\\hline
+2 & 268435456 & 46.45627 \\\hline
+4 & 134217728 & 46.45626 \\\hline
+8 & 67108864 & 46.45633 \\\hline
+16 & 33554432 & 46.45642 \\\hline
+32 & 16777216 & 46.45661 \\\hline
+64 & 8388608 & 46.45693 \\\hline
+128 & 4194304 & 46.45716 \\\hline
+256 & 2097152 & 46.45910 \\\hline
+512 & 1048576 & 46.45994 \\\hline
+1024 & 524288 & 47.46822 \\\hline
+2048 & 262144 & 48.48218 \\\hline
+4096 & 131072 & 46.45640 \\\hline
+8192 & 65536 & 46.45656 \\\hline
+16384 & 32768 & 46.45672 \\\hline
+32768 & 16384 & 46.45721 \\\hline
+65536 & 8192 & 46.45806 \\\hline
+131072 & 4096 & 46.45985 \\\hline
+262144 & 2048 & 46.46339 \\\hline
+524288 & 1024 & 47.47053 \\\hline
+\hline
+\end{tabular}
+\caption{$T\_send$ for messages of size 512MB. }
+\label{tsetup-impact}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|}\hline
+\hline
+$\sharp$Sends          & $MPI\_Send$ size ($\frac{L}{\sharp Sends}$ bytes)          & $T\_send$ (Elapsed time, sec)      \\\hline\hline
+1 & 16777216 & 1.1421 \\\hline
+2 & 8388608 & 1.1421 \\\hline
+4 & 4194304 & 1.1424 \\\hline
+8 & 2097152 & 1.1427 \\\hline
+16 & 1048576 & 1.1430 \\\hline
+32 & 524288 & 1.1455 \\\hline
+64 & 262144 & 1.1500 \\\hline
+128 & 131072 & 1.1421 \\\hline
+256 & 65536 & 1.1420 \\\hline
+512 & 32768 & 1.1423 \\\hline
+1024 & 16384 & 1.1423 \\\hline
+2048 & 8192 & 1.1426 \\\hline
+4096 & 4096 & 1.1431 \\\hline
+8192 & 2048 & 1.1443 \\\hline
+16384 & 1024 & 1.1467 \\\hline
+32768 & 512 & 2.1512 \\\hline
+65536 & 256 & 2.1639 \\\hline
+131072 & 128 & 3.2541 \\\hline
+262144 & 64 & 3.2842 \\\hline
+524288 & 32 & 6.5541 \\\hline
+\hline
+\end{tabular}
+\caption{$T\_send$ for messages of size 16MB. }
+\label{tsetup-impact-16}
+\end{center}
+\end{table}
 
 \input{performance}
 
