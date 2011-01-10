@@ -11,14 +11,18 @@ mkdir -p $path
 for MB in ${DATA_SIZE_MB[*]}; do
     M=$(( $MB * $MEGABYTE ))
 
+    filename=$path/"M"$MB"MB"
+	touch $filename
+	
     #for each number of sends (s)
     for s in ${N_SENDS[*]}; do
 
     	echo "Starting test for M="$M "MB, #sends="$s
+    	echo "Starting test for M="$M "MB, #sends="$s >> $filename	
                 
-        filename=$path/"M"$MB"MB-SENDS"$N_SENDS
-        touch $filename".output"
-        mpiexec -machinefile machinefile_pianosa -n 2 ./tsetup $M $s &> $filename".output"
+        mpiexec -machinefile ../machinefile_pianosa -n 2 ../tsetup $M $s &>> $filename
+
+		echo " " >> $filename
 
         #clog2TOslog2 spdlog.clog2 -o $filename".slog2" &> /dev/null    
     done
