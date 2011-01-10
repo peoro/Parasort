@@ -129,8 +129,7 @@ void HeapPop( Heap *h ) {
 }
 
 
-void fileKMerge( Data *runs_device, const long dataSize, const long runSize, Data *merged_device ) {
-	long k = dataSize / runSize;					//Number of runs
+void fileKMerge( Data *run_devices, const int k, const long runSize, const long dataSize, Data *merged_device ) {
 	const long bufferedRunSize = runSize / (k + 1); //Size of a single buffered run (+1 because of the output buffer)
 
 	if ( k > runSize ) {
@@ -152,9 +151,6 @@ void fileKMerge( Data *runs_device, const long dataSize, const long runSize, Dat
 	/* Indexes for the k buffered runs */
 	long *runs_indexes = (long*) calloc( sizeof(long), k );
 
-	/* Displacements for the runs in the device */
-	long *runs_device_displs = (long*) malloc( k * sizeof(long) );
-
 	/* The auxiliary heap struct */
 	Heap heap;
 	HeapInit( &heap, k );
@@ -162,12 +158,8 @@ void fileKMerge( Data *runs_device, const long dataSize, const long runSize, Dat
 	long i;
 
 	/* Initializing the buffered runs */
-	for ( i=0; i < k; i++ ) {
-		readNextBlock( runs_device, &runs_buffer, bufferedRunSize, i*bufferedRunSize );
-		runs_device_displs[i] = i*runSize + bufferedRunSize;
-		fseek( runs_device->file.handle, (runSize-bufferedRunSize)*sizeof(int), SEEK_CUR );
-	}
-	DAL_resetDeviceCursor( runs_device );
+	for ( i=0; i < k; i++ )
+		readNextBlock( &run_devices[i], &runs_buffer, bufferedRunSize, i*bufferedRunSize );
 
 	/* Initializing the heap */
     for ( i=0; i<k; i++ )
@@ -184,12 +176,8 @@ void fileKMerge( Data *runs_device, const long dataSize, const long runSize, Dat
 
         if ( ++(runs_indexes[j]) < bufferedRunSize )							//If there are others elements in the buffered run
 			HeapPush( &heap, runs[j*bufferedRunSize+runs_indexes[j]], j );		//pushes a new element in the heap
-		else if ( runs_device_displs[j] < (j+1)*runSize ) {						//else, if the run has not been read completely
+		else if (readNextBlock( &run_devices[j], &runs_buffer, bufferedRunSize, j*bufferedRunSize ) ) {	//else, if the run has not been read completely
 			runs_indexes[j] = 0;
-			fseek( runs_device->file.handle, runs_device_displs[j]*sizeof(int), SEEK_SET );		//moves file cursor to the right pos
-			readNextBlock( runs_device, &runs_buffer, bufferedRunSize, j*bufferedRunSize );		//reads the next block of the run
-			runs_device_displs[j] += bufferedRunSize;
-
 			HeapPush( &heap, runs[j*bufferedRunSize], j );
 		}
 
@@ -210,17 +198,37 @@ void fileKMerge( Data *runs_device, const long dataSize, const long runSize, Dat
     DAL_destroy( &runs_buffer );
 	DAL_destroy( &output_buffer );
 	free( runs_indexes );
-	free( runs_device_displs );
+}
+
+void initRuns( Data *run_devices, int k, int size ) {
+	int i;
+	for ( i=0; i<k; i++ ) {
+		DAL_init( &run_devices[i] );
+		SPD_ASSERT( DAL_allocFile( &run_devices[i], size ), "couldn't create a temporary file for runs" );
+	}
+}
+
+void destroyRuns( Data *run_devices, int k ) {
+	int i;
+	for ( i=0; i<k; i++ )
+		DAL_destroy( &run_devices[i] );
 }
 
 void fileSort( Data *data )
 {
 	const long dataSize = DAL_dataSize( data );
 
+	/* Memory buffer */
+	Data buffer;
+	DAL_init( &buffer );
+ 	SPD_ASSERT( DAL_allocBuffer( &buffer, dataSize ), "not enough memory..." );
+
+	const long runSize = DAL_dataSize( &buffer );	//Single run size
+	const int k = dataSize / runSize;				//Number of runs_
+
 	/* Data that will contain temporary runs */
-	Data runs_device;
-	DAL_init( &runs_device );
-	SPD_ASSERT( DAL_allocFile( &runs_device, dataSize ), "couldn't create a temporary file for runs" );
+	Data run_devices[k];
+	initRuns( run_devices, k, runSize );
 
 	/* Stub for reading/writing the sorted data */
 	Data dataStub;
@@ -231,26 +239,22 @@ void fileSort( Data *data )
 		return;
 	}
 
-	/* Memory buffer */
-	Data buffer;
-	DAL_init( &buffer );
-	SPD_ASSERT( DAL_allocBuffer( &buffer, dataSize ), "not enough memory..." );
-	const long buffSize = buffer.array.size;
 	long readSize = 0;
-
+	int i;
 	/* Sorting single runs */
-	while ( (readSize = readNextBlock( &dataStub, &buffer, buffSize, 0 )) != 0 ) {
+	for( i=0; i<k; i++ ) {
+		readSize = readNextBlock( &dataStub, &buffer, runSize, 0 );
 		qsort( buffer.array.data, readSize, sizeof(int), compare );
-		writeNextBlock( &runs_device, &buffer, readSize, 0 );		//writes the sorted run (buffer) into "runs" device
+		writeNextBlock( &run_devices[i], &buffer, readSize, 0 );
+		DAL_resetDeviceCursor( &run_devices[i] );
 	}
 	DAL_destroy( &buffer );
 	DAL_resetDeviceCursor( &dataStub );
-	DAL_resetDeviceCursor( &runs_device );
 
-	fileKMerge( &runs_device, dataSize, buffSize, &dataStub );		//k-way merge
+ 	fileKMerge( run_devices, k, runSize, dataSize, &dataStub );		//k-way merge
 
 	fclose( dataStub.file.handle );
-	DAL_destroy( &runs_device );
+	destroyRuns( run_devices, k );
 
 // 	//DEBUG
 // 	DAL_PRINT_DATA( data, "sorted data" );
