@@ -1,5 +1,6 @@
 
 #include <mpi.h>
+#include <sys/time.h>
 #include "../debug.h"
 
 #define TESTS_ERROR( ret, fmt, ... ) \
@@ -28,5 +29,35 @@ static inline int GET_N ( ) {
     int x;
     MPI_Comm_size ( MPI_COMM_WORLD, &x );
     return x;
+}
+
+// time functions
+struct TimeDiff {
+	long utime, mtime, time;
+};
+
+typedef struct timeval Time;
+typedef struct TimeDiff TimeDiff;
+
+static TimeDiff timeDiff( struct timeval startTime, struct timeval endTime )
+{
+	long secs, usecs;
+	long utime, mtime, time;
+
+	secs  = endTime.tv_sec  - startTime.tv_sec;
+	usecs = endTime.tv_usec - startTime.tv_usec;
+
+	utime = secs*1000000 + usecs;
+	mtime = (secs*1000 + usecs/1000.0) + 0.5;
+	time = secs + usecs/1000000.0 + 0.5; // secs
+	
+	TimeDiff r = { utime, mtime, time };
+	return r;
+}
+static Time now( )
+{
+	struct timeval tv;
+	gettimeofday( &tv, NULL );
+	return tv;
 }
 

@@ -3,7 +3,7 @@ MPICPP = mpic++
 CFLAGS = -Wall -Wextra -Wno-unused -Werror -O2 -g
 
 OBJECTS = ../debug.o
-TESTS = sendrecv probe
+TESTS = sendrecv probe tsetup
 
 all: tests
 
