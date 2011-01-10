@@ -1,26 +1,24 @@
 #!/bin/bash
 
-MEGABYTE=1000000
-DATA_SIZE_MB=( 25 100 400 )
-N_SENDS=( 1 5 10 20 50 100 )
+DATA_SIZE_MB=( 29 )
 path=nsends_logs
 
 mkdir -p $path
 
 #for each data size (M)
 for MB in ${DATA_SIZE_MB[*]}; do
-    M=$(( $MB * $MEGABYTE ))
+    M=$(( 2 ** $DATA_SIZE_MB ))
 
     filename=$path/"M"$MB"MB"
 	touch $filename
 	
     #for each number of sends (s)
-    for s in ${N_SENDS[*]}; do
+    for s in {0..19}; do
 
     	echo "Starting test for M="$M "MB, #sends="$s
     	echo "Starting test for M="$M "MB, #sends="$s >> $filename	
                 
-        mpiexec -machinefile ../machinefile_pianosa -n 2 ../tsetup $M $s &>> $filename
+        mpiexec -machinefile ../machinefile_pianosa -n 2 ../tsetup $M $((2**$s)) >> $filename
 
 		echo " " >> $filename
 
