@@ -13,7 +13,7 @@ ALGOS = quicksort samplesort bucketsort bitonicsort lbmergesort nosort sequentia
 # ALGOSPP = kmerge lbkmergesort
 ALGOSPP =
 TESTS = sendrecv probe tsetup
-OBJECTS = dal.o debug.o sorting.o debug.o
+OBJECTS = dal.o debug.o sorting.o
 
 all: $(ALGOS) $(ALGOSPP) main tests
 

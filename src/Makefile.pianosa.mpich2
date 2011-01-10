@@ -10,6 +10,7 @@ LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
 ALGOS = mergesort samplesort bucketsort bitonicsort lbmergesort sequential quicksort # nosort
 ALGOSPP = kmerge lbkmergesort
+TESTS = sendrecv probe tsetup
 OBJECTS = dal.o debug.o sorting.o
 
 all: $(ALGOS) $(ALGOSPP) main
@@ -42,6 +43,12 @@ spddbg: spd.c $(OBJECTS)
 spdlog: spd.c
 	@echo "Compiling spdlog (profiling mode)..."
 	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -mpe=mpilog -o spdlog
+
+tests:  $(TESTS)
+
+$(TESTS): $(OBJECTS)
+	@echo "Compiling $@..."
+	$(MPICC) $(CFLAGS) tests/$@.c $(OBJECTS) -o $@
 
 clean:
 	rm -f *~ *.o *.clog2 spd spddbg spdlog
