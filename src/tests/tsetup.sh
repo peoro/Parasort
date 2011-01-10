@@ -22,7 +22,7 @@ for MB in ${DATA_SIZE_MB[*]}; do
 
         mpiexec -machinefile ../machinefile_pianosa -n 2 ../tsetup $M $n_sends >> $filename
 
-        echo " " >> $filename
+        echo " \\\hline" >> $filename
 
         #clog2TOslog2 spdlog.clog2 -o $filename".slog2" &> /dev/null
     done
