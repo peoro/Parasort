@@ -18,7 +18,7 @@ for MB in ${DATA_SIZE_MB[*]}; do
     do
 		n_sends=$((2**$s))
         echo "Starting test for M="$M "MB, #sends="$n_sends
-        echo -n $((2**$s))" & "$(($M / $n_sends)) >> $filename
+        echo -n $((2**$s))" & "$(($M / $n_sends))" & " >> $filename
 
         mpiexec -machinefile ../machinefile_pianosa -n 2 ../tsetup $M $n_sends >> $filename
 
