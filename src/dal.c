@@ -302,18 +302,25 @@ void DAL_readNextDeviceBlock( Data *device, Data *dst )
 			DAL_init( &buffer );
 			SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_dataSize(device) ), "memory completely over..." );
 			const long bufSize = DAL_dataSize(&buffer);
-			long r = 0;
+			long r;
 			long read = 0;
 			long total = 0;
 			while( total != DAL_dataSize(device) ) {
 				r = FILE_READ( buffer.array.data, bufSize, device->file.handle );
+				SPD_ASSERT( r != 0, "Error on read()!" );
 				FILE_WRITE( buffer.array.data, r, dst->file.handle );
 				total += r;
 			}
 			break;
 		}
 		case Array: {
-			FILE_READ( dst->array.data, dst->array.size, device->file.handle );
+			long r;
+			long total = 0;
+			while( total != DAL_dataSize(device) ) {
+				r = FILE_READ( dst->array.data+total, dst->array.size, device->file.handle );
+				SPD_ASSERT( r != 0, "Error on read()!" );
+				total += r;
+			}
 			break;
 		}
 		default:
