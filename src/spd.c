@@ -283,11 +283,12 @@ int generate( const TestInfo *ti )
 int loadData( const TestInfo *ti, Data *data )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
-	
+
 	char path[1024];
 
 	GET_UNSORTED_DATA_PATH( ti, path, sizeof(path) );
 	DAL_readFile( data, path );
+	DAL_resetDeviceCursor( data );
 
 #ifndef DEBUG
 	if( DAL_dataSize(data) != GET_M(ti) ) {
@@ -306,10 +307,10 @@ int loadData( const TestInfo *ti, Data *data )
 int storeData( const TestInfo *ti, Data *data )
 {
 	DAL_ASSERT( ! DAL_isInitialized(data), data, "data shouldn't have been destroyed" );
-	
+
 	char path[1024];
 	long i;
-	
+
 #ifndef DEBUG
 	if( DAL_dataSize(data) != GET_M(ti) ) {
 		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
@@ -320,7 +321,7 @@ int storeData( const TestInfo *ti, Data *data )
 
 	GET_SORTED_DATA_PATH( ti, path, sizeof(path) );
 	DAL_writeFile( data, path );
-	
+
 	// TODO: check for correctness!
 
 	return 1;

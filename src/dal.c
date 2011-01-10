@@ -83,10 +83,10 @@ char * DAL_dataItemsToString( Data *data, char *s, int size )
 		strncat( s, "{}", size );
 		return s;
 	}
-	
+
 	strncat( s, "{", size );
-	
-	
+
+
 	switch( data->medium ) {
 		case NoMedium: {
 			break;
@@ -94,7 +94,7 @@ char * DAL_dataItemsToString( Data *data, char *s, int size )
 		case File: {
 			long cursor = DAL_deviceCursor( data );
 			DAL_resetDeviceCursor( data );
-			
+
 			Data item;
 			DAL_init( &item );
 			DAL_allocBuffer( &item, 1 );
@@ -106,7 +106,7 @@ char * DAL_dataItemsToString( Data *data, char *s, int size )
 			DAL_readNextDeviceBlock( data, &item );
 			snprintf( buf, sizeof(buf), "%d", item.array.data[0] );
 			strncat( s, buf, size );
-			
+
 			// restoring cursor
 			DAL_setDeviceCursor( data, cursor );
 			break;
@@ -124,8 +124,8 @@ char * DAL_dataItemsToString( Data *data, char *s, int size )
 		default:
 			DAL_UNSUPPORTED( data );
 	}
-	
-	
+
+
 	strncat( s, "}", size );
 
 	if( strlen(s) == (unsigned) size-1 ) {
@@ -159,7 +159,7 @@ void DAL_destroy( Data *data )
 		}
 		case File: {
 			fclose( data->file.handle );
-			if( ! remove(data->file.name) ) {
+			if( remove(data->file.name) != 0 ) {
 				SPD_DEBUG( "Error removing data file \"%s\"", data->file.name );
 			}
 			break;
@@ -171,7 +171,7 @@ void DAL_destroy( Data *data )
 		default:
 			DAL_UNSUPPORTED( data );
 	}
-	
+
 	DAL_init( data );
 }
 long DAL_dataSize( Data *data )
@@ -198,22 +198,22 @@ long DAL_dataSize( Data *data )
 bool DAL_allocData( Data *data, long size )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
-	
+
 	if( 0 && DAL_allocArray(data, size) ) {
 		return 1;
 	}
-	
+
 	if( DAL_allocFile(data, size) ) {
 		return 1;
 	}
-	
+
 	return 0;
 }
 bool DAL_readFile( Data *data, const char *path )
 {
 	long size = GET_FILE_SIZE(path) / sizeof(int);
 	DAL_allocData( data, size );
-	
+
 	// temporary, just to use DAL_readNextDeviceBlock
 	// won't destroy it, or it would remove path!
 	Data dataStub;
@@ -224,16 +224,16 @@ bool DAL_readFile( Data *data, const char *path )
 		SPD_DEBUG( "Cannot open \"%s\" for reading.", path );
 		return 0;
 	}
-	
+
 	DAL_readNextDeviceBlock( &dataStub, data );
-	
+
 	fclose( dataStub.file.handle );
 	return 1;
 }
 bool DAL_writeFile( Data *data, const char *path )
 {
 	long size = GET_FILE_SIZE(path) / sizeof(int);
-	
+
 	// temporary, just to use DAL_writeNextDeviceBlock
 	// won't destroy it, or it would remove path!
 	Data dataStub;
@@ -244,9 +244,9 @@ bool DAL_writeFile( Data *data, const char *path )
 		SPD_DEBUG( "Cannot open \"%s\" for writing.", path );
 		return 0;
 	}
-	
+
 	DAL_writeNextDeviceBlock( &dataStub, data );
-	
+
 	fclose( dataStub.file.handle );
 	return 1;
 }
@@ -259,7 +259,7 @@ bool DAL_isDevice( Data *data )
 long DAL_deviceCursor( Data *device )
 {
 	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
-	
+
 	if( device->medium == File ) {
 		return ftell( device->file.handle );
 	}
@@ -270,7 +270,7 @@ long DAL_deviceCursor( Data *device )
 void DAL_setDeviceCursor( Data *device, long pos )
 {
 	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
-	
+
 	if( device->medium == File ) {
 		fseek( device->file.handle, pos, SEEK_SET );
 	}
@@ -281,7 +281,7 @@ void DAL_setDeviceCursor( Data *device, long pos )
 void DAL_resetDeviceCursor( Data *device )
 {
 	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
-	
+
 	if( device->medium == File ) {
 		rewind( device->file.handle );
 	}
@@ -292,10 +292,10 @@ void DAL_resetDeviceCursor( Data *device )
 void DAL_readNextDeviceBlock( Data *device, Data *dst )
 {
 	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
-	
+
 	// DAL_DEBUG( device, "reading from this device" );
 	// DAL_DEBUG( dst, "into this data" );
-	
+
 	switch( dst->medium ) {
 		case File: {
 			Data buffer;
@@ -330,15 +330,34 @@ void DAL_readNextDeviceBlock( Data *device, Data *dst )
 void DAL_writeNextDeviceBlock( Data *device, Data *src )
 {
 	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
-	
+
 	//DAL_DEBUG( device, "writing into this device" );
 	//DAL_DEBUG( src, "from this data" );
-	
-	if( src->medium == Array ) {
-		FILE_WRITE( src->array.data, src->array.size, device->file.handle );
-	}
-	else {
-		DAL_UNIMPLEMENTED( src );
+	switch( src->medium ) {
+		case File: {
+			Data buffer;
+			DAL_init( &buffer );
+			SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_dataSize(src) ), "memory completely over..." );
+			const long bufSize = DAL_dataSize(&buffer);
+			long r;
+			long w;
+			long total = 0;
+			while( total != DAL_dataSize(src) ) {
+				r = FILE_READ( buffer.array.data, bufSize, src->file.handle );
+				SPD_ASSERT( r != 0, "Error on read()!" );
+				w = FILE_WRITE( buffer.array.data, r, device->file.handle );
+				SPD_ASSERT( w == r, "Error on write()!" );
+				total += r;
+			}
+			break;
+		}
+		case Array: {
+			long r = FILE_WRITE( src->array.data, src->array.size, device->file.handle );
+			SPD_ASSERT( r != src->array.size, "Error on write()!" );
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( src );
 	}
 }
 
@@ -353,7 +372,7 @@ bool DAL_allocArray( Data *data, long size )
 		data->array.size = 0;
 		return 1;
 	}
-	
+
 	// TODO: maybe add a threshold on max size
 	// if( size > threshold ) { return 0; }
 
@@ -392,18 +411,18 @@ bool DAL_reallocArray ( Data *data, long size )
 bool DAL_reallocAsArray( Data *data )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data shouldn't have been initialized" );
-	
+
 	if( data->medium == Array ) {
 		SPD_WARNING( "tring to reallocate an Array as an Array..." );
 		return 1;
 	}
-	
+
 	Data arrayData;
 	DAL_init( &arrayData );
 	if( ! DAL_allocArray( &arrayData, data->array.size ) ) {
 		return 0;
 	}
-	
+
 	// OK, array created, moving actual data into it
 	if( data->medium == File ) {
 		DAL_resetDeviceCursor( data );
@@ -413,11 +432,11 @@ bool DAL_reallocAsArray( Data *data )
 	else {
 		DAL_UNIMPLEMENTED( data );
 	}
-	
+
 	// destroying old data, and replacing it with new one...
 	DAL_destroy( data );
 	*data = arrayData;
-	
+
 	return 1;
 }
 
@@ -425,21 +444,21 @@ bool DAL_reallocAsArray( Data *data )
 bool DAL_allocBuffer( Data *data, long size )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
-	
+
 	if( size == 0 ) {
 		return 0;
 	}
-	
+
 	// TODO: implement a better logic:
 	//       start from DAL_allocArray's threshold
 	//       (or a well-chosen value) and shrinks according to some heuristic...
-	
+
 	bool r =  DAL_allocArray( data, size );
 	while( size > 0 && ! r ) {
 		size /= 2;
 		r =  DAL_allocArray( data, size );
 	}
-	
+
 	return r;
 }
 // allocating a File
@@ -459,7 +478,7 @@ static inline char toFileChar( int n )
 bool DAL_allocFile( Data *data, long size )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
-	
+
 	FILE *handle;
 	char name[128];
 	do {
@@ -470,16 +489,16 @@ bool DAL_allocFile( Data *data, long size )
 		#undef X
 		handle = fopen( name, "r" );
 	} while( handle ); // if file exists, try again!
-	
+
 	handle = fopen( name, "w+" );
 	if( ! handle ) {
 		SPD_DEBUG( "File \"%s\" couldn't be opened: %s", name, strerror(errno) );
 	}
-	
+
 	data->medium = File;
 	strncpy( data->file.name, name, sizeof(data->file.name) );
 	data->file.handle = handle;
-	
+
 	return 1;
 }
 
