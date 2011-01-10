@@ -12,9 +12,10 @@ ALGODIR = algorithms
 ALGOS = quicksort samplesort bucketsort bitonicsort lbmergesort nosort sequential
 # ALGOSPP = kmerge lbkmergesort
 ALGOSPP =
-OBJECTS = dal.o debug.o sorting.o
+TESTS = sendrecv probe tsetup
+OBJECTS = dal.o debug.o sorting.o debug.o
 
-all: $(ALGOS) $(ALGOSPP) main
+all: $(ALGOS) $(ALGOSPP) main tests
 
 $(ALGOS): $(OBJECTS)
 	@echo "Compiling "$@"..."
@@ -26,6 +27,12 @@ $(ALGOSPP): $(OBJECTS)
 
 $(OBJECTS):
 	$(MPICC) $(ALGOCFLAGS) -c $$( echo $@ | sed -rs "s/\.o/.c/" )
+
+tests:  $(TESTS)
+
+$(TESTS): $(OBJECTS)
+	@echo "Compiling $@..."
+	$(MPICC) $(CFLAGS) tests/$@.c $(OBJECTS) -o $@
 
 install:
 	mkdir -p $(LIBDIR) $(DATADIR)
@@ -42,4 +49,4 @@ spddbg: spd.c $(OBJECTS)
 	$(MPICC) spd.c $(OBJECTS) $(CFLAGS) $(SPDFLAGS) -DDEBUG -o spddbg
 
 clean:
-	rm -f *~ *.o spd spddbg
+	rm -f *~ *.o spd spddbg $(TESTS)
