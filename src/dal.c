@@ -316,8 +316,8 @@ void DAL_readNextDeviceBlock( Data *device, Data *dst )
 		case Array: {
 			long r;
 			long total = 0;
-			while( total != DAL_dataSize(device) ) {
-				r = FILE_READ( dst->array.data+total, dst->array.size, device->file.handle );
+			while( total != DAL_dataSize(dst) ) {
+				r = FILE_READ( dst->array.data+total, dst->array.size-total, device->file.handle );
 				SPD_ASSERT( r != 0, "Error on read()!" );
 				total += r;
 			}
