@@ -277,6 +277,20 @@ int generate( const TestInfo *ti )
 	return 1;
 }
 
+int checkSorted( int* array, long size ) {
+	long i;
+	int tmp = array[0];
+
+	for( i = 1; i < size; ++ i ) {
+		if( tmp > array[i] ) {
+			printf( "Sorting Failed: %ld-th element (of value %d) is bigger than %ld-th element (of value %d)\n", i-1, tmp, i, array[i] );
+			return 0;
+		}
+		tmp = array[i];
+	}
+	return 1;
+}
+
 /*!
 * loads unsorted data file
 */
@@ -317,10 +331,34 @@ int storeData( const TestInfo *ti, Data *data )
 				path, GET_M(ti), GET_M(ti), DAL_dataSize(data) );
 		return 0;
 	}
+#else
+	switch( data->medium ) {
+		case NoMedium: {
+			break;
+		}
+		case File: {
+			Data buffer;
+			DAL_init( &buffer );
+			DAL_allocBuffer( &buffer, DAL_dataSize(data) );
+			while( DAL_readNextDeviceBlock( data, &buffer ) )
+				SPD_ASSERT( checkSorted( buffer.array.data, buffer.array.size ), "Sorting Failed!" );
+			DAL_destroy( &buffer );
+			DAL_resetDeviceCursor( data );
+			break;
+		}
+		case Array: {
+			checkSorted( data->array.data, data->array.size );
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( data );
+	}
 #endif
 
 	GET_SORTED_DATA_PATH( ti, path, sizeof(path) );
 	DAL_writeFile( data, path );
+
+
 
 	// TODO: check for correctness!
 

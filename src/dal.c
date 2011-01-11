@@ -150,14 +150,14 @@ char * DAL_dataItemsToString( Data *data, char *s, int size )
 void DAL_initialize( int *argc, char ***argv )
 {
 	MPI_Init( argc, argv );
-	
+
 	DAL_init( & DAL_buffer );
 	DAL_allocBuffer( & DAL_buffer, 1024*10 ); // TODO: find a better size... 10 MB for now
 }
 void DAL_finalize( )
 {
 	DAL_destroy( & DAL_buffer );
-	
+
 	MPI_Finalize( );
 }
 
@@ -559,7 +559,6 @@ static inline int DAL_MPI_INCOMING_DATA( MPI_Datatype dataType, int source ) {
 /**
 * @brief Sends data to dest
 *
-* @param[in] ti       	The test info
 * @param[in] data  		Data to be sent
 * @param[in] dest     	Rank of the receiver process
 */
@@ -569,7 +568,7 @@ void DAL_send( Data *data, int dest )
 	char buf[64];
 	DAL_DEBUG( data, "sending %ld items to %d: %s", DAL_dataSize(data), dest, DAL_dataItemsToString(data,buf,sizeof(buf)) );
 	*/
-	
+
 	switch( data->medium ) {
 		case File: {
 			Data buffer = DAL_buffer;
@@ -599,7 +598,6 @@ void DAL_send( Data *data, int dest )
 /**
 * @brief Receives data from source
 *
-* @param[in] ti       	The test info
 * @param[in] data		Data buffer to store received elements
 * @param[in] size  		Max number of elements to be received
 * @param[in] source    	Rank of the sender process
@@ -612,7 +610,7 @@ void DAL_receive( Data *data, long size, int source )
 	char buf[64];
 	DAL_DEBUG( data, "receiving %ld items from %d", size, source );
 	*/
-	
+
 	if( DAL_allocArray( data, size ) ) {
 		// data->medium == Array
 		DAL_MPI_RECEIVE( data->array.data, size, MPI_INT, source );
@@ -625,7 +623,7 @@ void DAL_receive( Data *data, long size, int source )
 			if( missing < DAL_dataSize(&buffer) ) {
 				buffer.array.size = missing;
 			}
-			
+
 			DAL_MPI_RECEIVE( buffer.array.data, DAL_dataSize(&buffer), MPI_INT, source );
 			DAL_writeNextDeviceBlock( data, &buffer );
 			missing -= DAL_dataSize( &buffer );
@@ -634,8 +632,8 @@ void DAL_receive( Data *data, long size, int source )
 	else {
 		SPD_ERROR( "Couldn't allocate any medium to read %ld items into...", size );
 	}
-	
-	/*	
+
+	/*
 	DAL_DEBUG( data, "received %ld items from %d: %s", DAL_dataSize(data), source, DAL_dataItemsToString(data,buf,sizeof(buf)) );
 	*/
 }
@@ -674,7 +672,6 @@ void DAL_receiveAU( Data *data, int source )
 /**
 * @brief Sends and receives data from partner
 *
-* @param[in] ti       	The test info
 * @param[in] sdata		Data to be sent
 * @param[in] scount		Number of elements to be sent
 * @param[in] sdispl		Displacement for the send buffer
@@ -739,7 +736,6 @@ void DAL_scatterReceive( Data *data, long size, int root )
 /**
 * @brief Scatters data among all processes
 *
-* @param[in] ti       	The test info
 * @param[in] data  		Data to be scattered
 * @param[in] size     	Number of elements per process
 * @param[in] root     	Rank of the root process
@@ -782,7 +778,6 @@ void DAL_gatherReceive( Data *data, long size )
 /**
 * @brief Gathers data from all processes
 *
-* @param[in] 		ti       	The test info
 * @param[in,out] 	data  		Data to be gathered/sent
 * @param[in] 		size     	Number of elements to be gathered
 * @param[in] 		root     	Rank of the root process
@@ -835,7 +830,6 @@ void DAL_scattervReceive( Data *data, long size, int root )
 /**
 * @brief Scatters data among all processes
 *
-* @param[in] 		ti       	The test info
 * @param[in,out] 	data  		Data to be scattered/received
 * @param[in] 		sizes     	Array containing the number of elements to be sent to each process
 * @param[in] 		displs     	Array of displacements
@@ -888,7 +882,6 @@ void DAL_gathervReceive( Data *data, long *sizes, long *displs )
 /**
 * @brief Gathers data from all processes
 *
-* @param[in] 		ti       	The test info
 * @param[in,out] 	data  		Data to be gathered/sent
 * @param[in] 		sizes     	Array containing the number of elements to be gathered from each process
 * @param[in] 		displs     	Array of displacements
@@ -913,7 +906,6 @@ void DAL_gatherv( Data *data, long *sizes, long *displs, int root )
 /**
 * @brief Sends data from all to all processes
 *
-* @param[in] 		ti       	The test info
 * @param[in,out] 	data  		Data to be sent/received
 * @param[in] 		size  		Number of elements to be sent/received to/from each process
 */
@@ -945,7 +937,6 @@ void DAL_alltoall( Data *data, long size )
 /**
 * @brief Sends data from all to all processes
 *
-* @param[in] 		ti       	The test info
 * @param[in,out] 	data  		Data to be sent/received
 * @param[in] 		sendSizes  	Array containing the number of elements to be sent to each process
 * @param[in] 		sdispls     Array of displacements
@@ -1009,7 +1000,6 @@ void DAL_bcastReceive( Data *data, long size, int root )
 /**
 * @brief Broadcasts data to processes
 *
-* @param[in] ti       	The test info
 * @param[in] data  		Data to be scattered
 * @param[in] size     	Number of elements per process
 * @param[in] root     	Rank of the root process
