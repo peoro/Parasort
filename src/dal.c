@@ -4,6 +4,12 @@
 #include "dal.h"
 
 
+// a global variable to implement DAL functions (send and receive)
+// with the static solution.
+// is initialized by DAL_initialize
+// and destroyed by DAL_finalize
+Data DAL_buffer;
+
 
 static inline int GET_ID ( ) {
     int x;
@@ -137,6 +143,23 @@ char * DAL_dataItemsToString( Data *data, char *s, int size )
 }
 
 
+/***************************************************************************************************************/
+/********************************************* DAL misc functions **********************************************/
+/***************************************************************************************************************/
+
+void DAL_initialize( int *argc, char ***argv )
+{
+	MPI_Init( argc, argv );
+	
+	DAL_init( & DAL_buffer );
+	DAL_allocBuffer( & DAL_buffer, 1024*10 ); // TODO: find a better size... 10 MB for now
+}
+void DAL_finalize( )
+{
+	DAL_destroy( & DAL_buffer );
+	
+	MPI_Finalize( );
+}
 
 /***************************************************************************************************************/
 /******************************************** DAL Data management **********************************************/

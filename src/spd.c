@@ -376,7 +376,8 @@ int main( int argc, char **argv )
 	TestInfo ti;
 	int r;
 
-	MPI_Init( &argc, &argv );
+	// MPI_Init( &argc, &argv );
+	DAL_initialize( &argc, &argv );
 
 	if( GET_ID(&ti) == 0 ) {
 		// parse arguments
@@ -585,6 +586,7 @@ int main( int argc, char **argv )
 
 	}
 
-	MPI_Finalize( );
+	// MPI_Finalize( );
+	DAL_finalize( );
 	return 0;
 }
