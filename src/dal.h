@@ -55,34 +55,41 @@ const char *DAL_mediumName( DataMedium m );
 char *DAL_dataToString( Data *d, char *s, int size );
 char *DAL_dataItemsToString( Data *d, char *s, int size );
 
+
 #define DAL_UNSUPPORTED(d) \
 	{ \
-		char buf[1024]; \
-		SPD_ERROR( "cannot handle data (%s)", DAL_dataToString((d), buf, sizeof(buf)) ); \
+		char SPD_BUF[1024]; \
+		SPD_ERROR( "cannot handle data (%s)", DAL_dataToString((d), SPD_BUF, sizeof(SPD_BUF)) ); \
 	}
 
 #define DAL_UNIMPLEMENTED(d) \
 	{ \
-		char buf[1024]; \
-		SPD_ERROR( "support for data (%s) not yet implemented", DAL_dataToString((d), buf, sizeof(buf)) ); \
+		char SPD_BUF[1024]; \
+		SPD_ERROR( "support for data (%s) not yet implemented", DAL_dataToString((d), SPD_BUF, sizeof(SPD_BUF)) ); \
 	}
 
 #define DAL_ASSERT(cond, d, fmt, ... ) \
 	if( ! (cond) ) { \
-		char buf[1024]; \
-		SPD_ASSERT( (cond), "error with data (%s) " fmt, DAL_dataToString((d), buf, sizeof(buf)), ##__VA_ARGS__ ); \
+		char SPD_BUF[1024]; \
+		SPD_ASSERT( (cond), "error with data (%s) " fmt, DAL_dataToString((d), SPD_BUF, sizeof(SPD_BUF)), ##__VA_ARGS__ ); \
+	}
+
+#define DAL_ERROR(d, fmt, ... ) \
+	{ \
+		char SPD_BUF[1024]; \
+		SPD_ERROR( "data (%s) " fmt, DAL_dataToString((d), SPD_BUF, sizeof(SPD_BUF)), ##__VA_ARGS__ ); \
 	}
 
 #define DAL_DEBUG(d, fmt, ... ) \
 	{ \
-		char buf[1024]; \
-		SPD_DEBUG( "data (%s) " fmt, DAL_dataToString((d), buf, sizeof(buf)), ##__VA_ARGS__ ); \
+		char SPD_BUF[1024]; \
+		SPD_DEBUG( "data (%s) " fmt, DAL_dataToString((d), SPD_BUF, sizeof(SPD_BUF)), ##__VA_ARGS__ ); \
 	}
 	
 #define DAL_PRINT_DATA(d, fmt, ... ) \
 	{ \
-        char bufx[1024]; \
-        DAL_DEBUG( data, "WTF %s " fmt, DAL_dataItemsToString(data, bufx, sizeof(bufx)), ##__VA_ARGS__ ); \
+        char SPD_BUF[1024]; \
+        DAL_DEBUG( data, "WTF %s " fmt, DAL_dataItemsToString(data, SPD_BUF, sizeof(SPD_BUF)), ##__VA_ARGS__ ); \
 	}
 
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -123,7 +130,7 @@ bool DAL_writeFile( Data *data, const char *path ); // writes data content in a 
 long DAL_deviceCursor( Data *device ); // gets current cursor position
 void DAL_setDeviceCursor( Data *device, long pos ); // moves cursor position
 void DAL_resetDeviceCursor( Data *device ); // moves cursor back to beginning
-void DAL_readNextDeviceBlock( Data *device, Data *dst ); // reads a block of size of dst's moving cursor
+long DAL_readNextDeviceBlock( Data *device, Data *dst ); // reads a block of size of dst's moving cursor
 void DAL_writeNextDeviceBlock( Data *device, Data *src ); // writes a block of size of src's at current cursor (moving it and overwriting current data)
 
 // allocating an Array in memory

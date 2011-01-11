@@ -312,7 +312,7 @@ void DAL_resetDeviceCursor( Data *device )
 		DAL_UNIMPLEMENTED( device );
 	}
 }
-void DAL_readNextDeviceBlock( Data *device, Data *dst )
+long DAL_readNextDeviceBlock( Data *device, Data *dst )
 {
 	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
 
@@ -330,10 +330,12 @@ void DAL_readNextDeviceBlock( Data *device, Data *dst )
 			long total = 0;
 			while( total != DAL_dataSize(device) ) {
 				r = FILE_READ( buffer.array.data, bufSize, device->file.handle );
+				total += r;
+				if( feof(device->file.handle) ) { break; }
 				SPD_ASSERT( r != 0, "Error on read()!" );
 				FILE_WRITE( buffer.array.data, r, dst->file.handle );
-				total += r;
 			}
+			return total;
 			break;
 		}
 		case Array: {
@@ -341,13 +343,16 @@ void DAL_readNextDeviceBlock( Data *device, Data *dst )
 			long total = 0;
 			while( total != DAL_dataSize(dst) ) {
 				r = FILE_READ( dst->array.data+total, dst->array.size-total, device->file.handle );
-				SPD_ASSERT( r != 0, "Error on read()!" );
 				total += r;
+				if( feof(device->file.handle) ) { break; }
+				SPD_ASSERT( r != 0, "Error on read()!" );
 			}
+			return total;
 			break;
 		}
 		default:
 			DAL_UNSUPPORTED( dst );
+			return 0;
 	}
 }
 void DAL_writeNextDeviceBlock( Data *device, Data *src )
@@ -557,15 +562,28 @@ static inline int DAL_MPI_INCOMING_DATA( MPI_Datatype dataType, int source ) {
 */
 void DAL_send( Data *data, int dest )
 {
+	char buf[64];
+	DAL_DEBUG( data, "sending %ld items to %d: %s", DAL_dataSize(data), dest, DAL_dataItemsToString(data,buf,sizeof(buf)) );
+	
 	switch( data->medium ) {
 		case File: {
-			DAL_UNIMPLEMENTED( data );
+			Data buffer = DAL_buffer;
+			long r;
+			long total = 0;
+			while( total != DAL_dataSize(data) ) {
+				buffer = DAL_buffer; // to reset size
+				r = DAL_readNextDeviceBlock( data, &buffer );
+				total += r;
+				if( r == 0 ) {
+					DAL_ERROR( data, "something went wrong, data should be %ld, but I could only read %ld", DAL_dataSize(data), total );
+				}
+				buffer.array.size = r;
+				DAL_send( &buffer, dest );
+			}
 			break;
 		}
 		case Array: {
-			char buf[64];
-				//SPD_DEBUG( "sending %ld items to %d: %s", data->array.size, dest, DAL_dataItemsToString(data,buf,sizeof(buf)) );
-			DAL_MPI_SEND( data->array.data, data->array.size, MPI_INT, dest );
+			DAL_MPI_SEND( data->array.data, DAL_dataSize(data), MPI_INT, dest );
 			break;
 		}
 		default:
@@ -583,17 +601,41 @@ void DAL_send( Data *data, int dest )
 */
 void DAL_receive( Data *data, long size, int source )
 {
+	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
+
 	char buf[64];
-	SPD_ASSERT( DAL_allocArray( data, size ), "not enough memory to allocate data" );
-		//SPD_DEBUG( "receiving %ld items from %d", size, source );
-	DAL_MPI_RECEIVE( data->array.data, size, MPI_INT, source );
-		//SPD_DEBUG( "received items: %s", DAL_dataItemsToString(data,buf,sizeof(buf)) );
+	DAL_DEBUG( data, "receiving %ld items from %d", size, source );
+	
+	if( DAL_allocArray( data, size ) ) {
+		// data->medium == Array
+		DAL_MPI_RECEIVE( data->array.data, size, MPI_INT, source );
+	}
+	else if( DAL_allocFile( data, size ) ) {
+		// data->medium == File
+		Data buffer = DAL_buffer;
+		long missing = size;
+		while( missing != 0 ) {
+			if( missing < DAL_dataSize(&buffer) ) {
+				buffer.array.size = missing;
+			}
+			
+			DAL_MPI_RECEIVE( buffer.array.data, DAL_dataSize(&buffer), MPI_INT, source );
+			DAL_writeNextDeviceBlock( data, &buffer );
+			missing -= DAL_dataSize( &buffer );
+		}
+	}
+	else {
+		SPD_ERROR( "Couldn't allocate any medium to read %ld items into...", size );
+	}
+		
+	DAL_DEBUG( data, "received %ld items from %d: %s", DAL_dataSize(data), source, DAL_dataItemsToString(data,buf,sizeof(buf)) );
 }
 
 void DAL_sendU( Data *data, int dest )
 {
-	//SPD_DEBUG( "telling I'll be sending %ld items", data->array.size );
-	DAL_MPI_SEND( & data->array.size, 1, MPI_LONG, dest ); // sending size
+	long size = DAL_dataSize(data);
+	//SPD_DEBUG( "telling I'll be sending %ld items", size );
+	DAL_MPI_SEND( & size, 1, MPI_LONG, dest ); // sending size
 	DAL_send( data, dest ); // sending data
 }
 void DAL_receiveU( Data *data, int source )
@@ -605,9 +647,9 @@ void DAL_receiveU( Data *data, int source )
 }
 void DAL_receiveA( Data *data, long size, int source )
 {
-	long int oldDataSize = data->array.size;
+	long int oldDataSize = DAL_dataSize(data);
 		//SPD_DEBUG( "appending %ld items to the %ld I've already got: %s", size, oldDataSize, DAL_dataItemsToString(data,buf,sizeof(buf)) );
-	SPD_ASSERT( DAL_reallocArray( data, data->array.size + size ), "not enough memory to allocate data" );
+	SPD_ASSERT( DAL_reallocArray( data, DAL_dataSize(data) + size ), "not enough memory to allocate data" );
 	DAL_MPI_RECEIVE( data->array.data + oldDataSize, size, MPI_INT, source );
 		//SPD_DEBUG( "post-appending items: %s", DAL_dataItemsToString(data,buf,sizeof(buf)) );
 }
