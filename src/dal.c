@@ -315,6 +315,9 @@ void DAL_resetDeviceCursor( Data *device )
 long DAL_readNextDeviceBlock( Data *device, Data *dst )
 {
 	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
+	// TODO: should I get an already initialized destination Data (dst)
+	//       or should I init one?
+	// DAL_ASSERT( DAL_isInitialized(dst), dst, "dst should have been initialized" );
 
 	// DAL_DEBUG( device, "reading from this device" );
 	// DAL_DEBUG( dst, "into this data" );
@@ -441,7 +444,7 @@ bool DAL_reallocAsArray( Data *data )
 	DAL_ASSERT( DAL_isInitialized(data), data, "data shouldn't have been initialized" );
 
 	if( data->medium == Array ) {
-		SPD_WARNING( "tring to reallocate an Array as an Array..." );
+		SPD_WARNING( "trying to reallocate an Array as an Array..." );
 		return 1;
 	}
 
