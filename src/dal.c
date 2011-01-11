@@ -380,8 +380,8 @@ void DAL_writeNextDeviceBlock( Data *device, Data *src )
 			break;
 		}
 		case Array: {
-			long r = FILE_WRITE( src->array.data, src->array.size, device->file.handle );
-			SPD_ASSERT( r != src->array.size, "Error on write()!" );
+			long r = FILE_WRITE( src->array.data, DAL_dataSize(src), device->file.handle );
+			SPD_ASSERT( r == DAL_dataSize(src), "Error on write()!" );
 			break;
 		}
 		default:
@@ -562,8 +562,10 @@ static inline int DAL_MPI_INCOMING_DATA( MPI_Datatype dataType, int source ) {
 */
 void DAL_send( Data *data, int dest )
 {
+	/*
 	char buf[64];
 	DAL_DEBUG( data, "sending %ld items to %d: %s", DAL_dataSize(data), dest, DAL_dataItemsToString(data,buf,sizeof(buf)) );
+	*/
 	
 	switch( data->medium ) {
 		case File: {
@@ -603,8 +605,10 @@ void DAL_receive( Data *data, long size, int source )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
 
+	/*
 	char buf[64];
 	DAL_DEBUG( data, "receiving %ld items from %d", size, source );
+	*/
 	
 	if( DAL_allocArray( data, size ) ) {
 		// data->medium == Array
@@ -627,8 +631,10 @@ void DAL_receive( Data *data, long size, int source )
 	else {
 		SPD_ERROR( "Couldn't allocate any medium to read %ld items into...", size );
 	}
-		
+	
+	/*	
 	DAL_DEBUG( data, "received %ld items from %d: %s", DAL_dataSize(data), source, DAL_dataItemsToString(data,buf,sizeof(buf)) );
+	*/
 }
 
 void DAL_sendU( Data *data, int dest )
