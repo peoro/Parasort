@@ -40,6 +40,7 @@ typedef struct Data
 		{
 			FILE *handle;
 			char name[128];
+			long size;
 		} file;
 	};
 
@@ -74,6 +75,13 @@ char *DAL_dataItemsToString( Data *d, char *s, int size );
 		SPD_ASSERT( (cond), "error with data (%s) " fmt, DAL_dataToString((d), SPD_BUF, sizeof(SPD_BUF)), ##__VA_ARGS__ ); \
 	}
 
+#define DAL_ASSERT2(cond, d1, d2, fmt, ... ) \
+	if( ! (cond) ) { \
+		char SPD_BUF[1024]; \
+		SPD_ASSERT( (cond), "error with data (%s) " fmt, DAL_dataToString((d1), SPD_BUF, sizeof(SPD_BUF)), ##__VA_ARGS__ ); \
+	}
+
+
 #define DAL_ERROR(d, fmt, ... ) \
 	{ \
 		char SPD_BUF[1024]; \
@@ -88,8 +96,8 @@ char *DAL_dataItemsToString( Data *d, char *s, int size );
 	
 #define DAL_PRINT_DATA(d, fmt, ... ) \
 	{ \
-        char SPD_BUF[1024]; \
-        DAL_DEBUG( data, "WTF %s " fmt, DAL_dataItemsToString(data, SPD_BUF, sizeof(SPD_BUF)), ##__VA_ARGS__ ); \
+        char SPD_BUFx[64]; \
+        DAL_DEBUG( (d), " %s " fmt, DAL_dataItemsToString((d), SPD_BUFx, sizeof(SPD_BUFx)), ##__VA_ARGS__ ); \
 	}
 
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -117,31 +125,13 @@ void DAL_finalize( );
 
 bool DAL_isInitialized( Data *data );
 
+long DAL_dataSize( Data *data ); // returns data size, both of array or file...
+
 void DAL_init( Data *data ); // gets Data redy to be worked on - without allocating resources
 void DAL_destroy( Data *data ); // destroys and re-initialize data
 
-long DAL_dataSize( Data *data ); // returns data size, both of array or file...
 bool DAL_allocData( Data *data, long size ); // allocates a Data in an Array, or, if it fails, in a File
 
-// functions to work with any find of block device (ie: Files)
-// TODO: to be removed
-long DAL_readNextDeviceBlock( Data *device, Data *dst ); // reads a block of size of dst's moving cursor
-void DAL_writeNextDeviceBlock( Data *device, Data *src ); // writes a block of size of src's at current cursor (moving it and overwriting current data)
-
-// functions to work with any find of block device (ie: Files)
-long DAL_readDataBlock( Data *data, long size, long dataOffset, Data *dst, long dstOffset ); // reads a block of size of dst's moving cursor
-void DAL_writeDataBlock( Data *data, long size, long dataOffset, Data *src, long srcOffset ); // writes a block of size of src's at current cursor (moving it and overwriting current data)
-	
-// allocating an Array in memory
-bool DAL_allocArray( Data *data, long size );
-bool DAL_reallocArray ( Data *data, long size );
-bool DAL_reallocAsArray( Data *data ); // tries to realloc data as an array
-
-// allocating a temporary buffer in memory (an Array)
-bool DAL_allocBuffer( Data *data, long size ); // allocs a buffer of size equal OR LESSER than size
-
-// allocating a File
-bool DAL_allocFile( Data *data, long size );
 
 /*--------------------------------------------------------------------------------------------------------------*/
 
@@ -150,19 +140,20 @@ bool DAL_allocFile( Data *data, long size );
 /*************************************** DAL Communication Primitives ******************************************/
 /***************************************************************************************************************/
 
+// send receive
 void DAL_send( Data *data, int dest );
 void DAL_receive( Data *data, long size, int source );
 
 // A stands for Append: \data is already initialized, and received data is appended to it
 // U stands for Unknown: \data size is unknown by receiver: sender will send it.
+void DAL_sendU( Data *data, int dest );
 void DAL_receiveU( Data *data, int source );
 void DAL_receiveA( Data *data, long size, int source );
 void DAL_receiveAU( Data *data, int source );
 
-
-
 long DAL_sendrecv( Data *sdata, long scount, long sdispl, Data *rdata, long rcount, long rdispl, int partner );
 
+// scatter
 void DAL_scatterSend( Data *data );
 void DAL_scatterReceive( Data *data, long size, int root );
 void DAL_scatter( Data *data, long size, int root );
@@ -171,6 +162,7 @@ void DAL_scattervSend( Data *data, long *sizes, long *displs );
 void DAL_scattervReceive( Data *data, long size, int root );
 void DAL_scatterv( Data *data, long *sizes, long *displs, int root );
 
+// gather
 void DAL_gatherSend( Data *data, int root );
 void DAL_gatherReceive( Data *data, long size );
 void DAL_gather( Data *data, long size, int root );
@@ -179,28 +171,18 @@ void DAL_gathervSend( Data *data, int root );
 void DAL_gathervReceive( Data *data, long *sizes, long *displs );
 void DAL_gatherv( Data *data, long *sizes, long *displs, int root );
 
+// all to all
 void DAL_alltoall( Data *data, long size );
 
 void DAL_alltoallv( Data *data, long *sendSizes, long *sdispls, long *recvSizes, long *rdispls );
 
+// broadcast
 void DAL_bcastSend( Data *data );
 void DAL_bcastReceive( Data *data, long size, int root );
 void DAL_bcast( Data *data, long size, int root );
 
-/*--------------------------------------------------------------------------------------------------------------*/
-
-/***************************************************************************************************************/
-/***************************************** DAL Internal Functions **********************************************/
-/***************************************************************************************************************/
-
-// functions to work with any find of block device (ie: Files)
-long DAL_deviceCursor( Data *device ); // gets current cursor position
-void DAL_setDeviceCursor( Data *device, long pos ); // moves cursor position
-void DAL_resetDeviceCursor( Data *device ); // moves cursor back to beginning
 
 
-	
-	
 /*--------------------------------------------------------------------------------------------------------------*/
 
 

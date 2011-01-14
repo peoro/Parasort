@@ -64,6 +64,7 @@ inline int isPowerOfTwo( int x )
 /******************************************* Sequential Sort ***************************************************/
 /***************************************************************************************************************/
 
+#if 0
 long readNextBlock( Data *data, Data *dstbuffer, long size, long displ )
 {
 	SPD_ASSERT( dstbuffer->medium == Array, "buffer should be allocated in memory" );
@@ -260,12 +261,14 @@ void fileSort( Data *data )
 // 	DAL_PRINT_DATA( data, "sorted data" );
 }
 
+#endif
+
 /// sequential sort function
 void sequentialSort( const TestInfo *ti, Data *data )
 {
 	switch( data->medium ) {
 		case File: {
-			fileSort( data );
+			//fileSort( data );
 			break;
 		}
 		case Array: {

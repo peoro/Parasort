@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <mpi.h>
 #include "sorting.h"
+#include "dal_internals.h"
 
 #ifndef _GNU_SOURCE
 	// for strdup
@@ -103,7 +104,8 @@ bool DAL_s_readFile( Data *data, const char *path )
 		return 0;
 	}
 	
-	DAL_readNextDeviceBlock( &dataStub, data );
+	// DAL_readNextDeviceBlock( &dataStub, data );
+	DAL_dataCopy( &dataStub, data );
 	
 	fclose( dataStub.file.handle );
 	return 1;
@@ -125,7 +127,8 @@ bool DAL_s_writeFile( Data *data, const char *path )
 		return 0;
 	}
 	
-	DAL_writeNextDeviceBlock( &dataStub, data );
+	// DAL_writeNextDeviceBlock( &dataStub, data );
+	DAL_dataCopy( data, &dataStub );
 	
 	fclose( dataStub.file.handle );
 	return 1;
@@ -348,7 +351,7 @@ int loadData( const TestInfo *ti, Data *data )
 
 	GET_UNSORTED_DATA_PATH( ti, path, sizeof(path) );
 	DAL_s_readFile( data, path );
-	DAL_resetDeviceCursor( data );
+	// DAL_resetDeviceCursor( data );
 
 #ifndef DEBUG
 	if( DAL_dataSize(data) != GET_M(ti) ) {

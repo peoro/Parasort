@@ -2,6 +2,11 @@
 #include <errno.h>
 #include <mpi.h>
 #include "dal.h"
+#include "dal_internals.h"
+
+
+#define MIN(a,b) ( (a)<(b) ? (a) : (b) )
+#define MAX(a,b) ( (a)>(b) ? (a) : (b) )
 
 
 // a global variable to implement DAL functions (send and receive)
@@ -9,6 +14,20 @@
 // is initialized by DAL_initialize
 // and destroyed by DAL_finalize
 Data DAL_buffer;
+bool DAL_bufferAcquired = 0;
+
+void DAL_acquireGlobalBuffer( Data *data )
+{
+	SPD_ASSERT( ! DAL_bufferAcquired, "global buffer already acquired..." );
+	*data = DAL_buffer;
+	DAL_bufferAcquired = 1;
+}
+void DAL_releaseGlobalBuffer( Data *data )
+{
+	SPD_ASSERT( DAL_bufferAcquired, "global buffer not acquired..." );
+	data->medium = NoMedium;
+	DAL_bufferAcquired = 0;
+}
 
 
 static inline int GET_ID ( ) {
@@ -65,10 +84,10 @@ char * DAL_dataToString( Data *d, char *s, int size )
 			strncpy( s, DAL_mediumName(d->medium), size );
 			break;
 		case File:
-			snprintf( s, size, "\"%s\" [file on disk] of %ld bytes", d->file.name, DAL_dataSize(d) );
+			snprintf( s, size, "\"%s\" [file on disk] of %ld items", d->file.name, DAL_dataSize(d) );
 			break;
 		case Array:
-			snprintf( s, size, "array [on principal memory @ %p] of %ld bytes", d->array.data, DAL_dataSize(d) );
+			snprintf( s, size, "array [on principal memory @ %p] of %ld items", d->array.data, DAL_dataSize(d) );
 			break;
 		default:
 			snprintf( s, size, "Unknow medium code %d [%s]", d->medium, DAL_mediumName(d->medium) );
@@ -77,6 +96,16 @@ char * DAL_dataToString( Data *d, char *s, int size )
 }
 char * DAL_dataItemsToString( Data *data, char *s, int size )
 {
+	if( data->medium == File ) {
+		Data b;
+		DAL_init( &b );
+		SPD_ASSERT( DAL_allocBuffer( &b, DAL_dataSize(data) ), "memory completely over..." );
+		
+		DAL_dataCopyO( data, 0, &b, 0 );
+		
+		return DAL_dataItemsToString( &b, s, size );
+	}
+	
 	char buf[64];
 	int i;
 
@@ -98,24 +127,7 @@ char * DAL_dataItemsToString( Data *data, char *s, int size )
 			break;
 		}
 		case File: {
-			long cursor = DAL_deviceCursor( data );
-			DAL_resetDeviceCursor( data );
-
-			Data item;
-			DAL_init( &item );
-			DAL_allocBuffer( &item, 1 );
-			for( i = 0; i < DAL_dataSize(data)-1; ++ i ) {
-				DAL_readDataBlock( data, &item );
-				snprintf( buf, sizeof(buf), "%d,", item.array.data[0] );
-				strncat( s, buf, size );
-			}
-			DAL_readDataBlock( data, &item );
-			snprintf( buf, sizeof(buf), "%d", item.array.data[0] );
-			strncat( s, buf, size );
-
-			// restoring cursor
-			DAL_setDeviceCursor( data, cursor );
-			break;
+			DAL_ERROR( data, "You shouldn't be here O,o" );
 		}
 		case Array: {
 			for( i = 0; i < DAL_dataSize(data)-1; ++ i ) {
@@ -201,6 +213,7 @@ long DAL_dataSize( Data *data )
 {
 	switch( data->medium ) {
 		case File: {
+			/*
 			long len;
 			long cursor;
 			cursor = ftell( data->file.handle );          // getting current position
@@ -208,6 +221,8 @@ long DAL_dataSize( Data *data )
 			len = ftell( data->file.handle );             // getting current position
 			fseek( data->file.handle, cursor, SEEK_SET ); // getting back to where I was
 			return len / sizeof(int);
+			*/
+			return data->file.size;
 			break;
 		}
 		case Array: {
@@ -241,86 +256,106 @@ bool DAL_isDevice( Data *data )
 }
 
 
-long DAL_readDataBlock( Data *data, long size, long dataOffset, Data *dst, long dstOffset ) 
+
+long DAL_dataCopy( Data *src, Data *dst )
 {
-	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
-	// TODO: should I get an already initialized destination Data (dst)
-	//       or should I init one?
-	// DAL_ASSERT( DAL_isInitialized(dst), dst, "dst should have been initialized" );
-
-	// DAL_DEBUG( device, "reading from this device" );
-	// DAL_DEBUG( dst, "into this data" );
-
-	switch( dst->medium ) {
-		case File: {
+	DAL_ASSERT( DAL_dataSize(src) == DAL_dataSize(dst), src, "src and dst size should be the sime" );
+	return DAL_dataCopyO( src, 0, dst, 0 );
+}
+long DAL_dataCopyO( Data *src, long srcOffset, Data *dst, long dstOffset )
+{
+	long size = MIN( DAL_dataSize(src)-srcOffset, DAL_dataSize(dst)-dstOffset );
+	return DAL_dataCopyOS( src, srcOffset, dst, dstOffset, size );
+}
+long DAL_dataCopyOS( Data *src, long srcOffset, Data *dst, long dstOffset, long size )
+{
+	DAL_ASSERT( DAL_dataSize(src)-srcOffset >= size, src, "not enough data to copy" );
+	DAL_ASSERT( DAL_dataSize(dst)-dstOffset >= size, dst, "not enough space to copy data into" );
+	
+	if( src->medium == File ) {
+		if( dst->medium == File ) {
+			// file -> file
+			SPD_DEBUG( "Copying data from file to file" );
+			
+			// allocating a buffer
 			Data buffer;
 			DAL_init( &buffer );
-			SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_dataSize(device) ), "memory completely over..." );
-			const long bufSize = DAL_dataSize(&buffer);
-			long r;
-			long read = 0;
-			long total = 0;
-			while( total != DAL_dataSize(device) ) {
-				r = FILE_READ( buffer.array.data, bufSize, device->file.handle );
-				total += r;
-				if( feof(device->file.handle) ) { break; }
-				SPD_ASSERT( r != 0, "Error on read()!" );
-				FILE_WRITE( buffer.array.data, r, dst->file.handle );
+			SPD_ASSERT( DAL_allocBuffer( &buffer, size ), "memory completely over..." );
+			
+			// moving cursors to offsets
+			fseek( src->file.handle, srcOffset*sizeof(int), SEEK_SET );
+			DAL_ASSERT( ftell( src->file.handle ) == srcOffset*(long)sizeof(int), src, "Error on fseek(%ld)!", srcOffset*sizeof(int) );
+			fseek( dst->file.handle, dstOffset*sizeof(int), SEEK_SET );
+			DAL_ASSERT( ftell( dst->file.handle ) == dstOffset*(long)sizeof(int), dst, "Error on fseek(%ld)!", dstOffset*sizeof(int) );
+			
+			long r1, r2;
+			long current = 0;
+			
+			while( current != size ) {
+				r1 = fread( buffer.array.data, sizeof(int), MIN( size-current, DAL_dataSize(&buffer) ), src->file.handle );
+				SPD_ASSERT( r1 != 0, "Error on fread()!" );
+				r2 = fwrite( buffer.array.data, sizeof(int), r1, dst->file.handle );
+				SPD_ASSERT( r1 == r2, "fwrite() couldn't write as much as fread() got..." );
 			}
-			return total;
-			break;
+			
+			return current;
 		}
-		case Array: {
+		else if( dst->medium == Array ) {
+			// file -> array
 			long r;
-			long total = 0;
-			while( total != DAL_dataSize(dst) ) {
-				r = FILE_READ( dst->array.data+total, dst->array.size-total, device->file.handle );
-				total += r;
-				if( feof(device->file.handle) ) { break; }
-				SPD_ASSERT( r != 0, "Error on read()!" );
+			long current = 0;
+			
+			fseek( src->file.handle, srcOffset*sizeof(int), SEEK_SET );
+			DAL_ASSERT( ftell( src->file.handle ) == srcOffset*(long)sizeof(int), src, "Error on fseek(%ld)!", srcOffset*sizeof(int) );
+			
+			while( current != size ) {
+				r = fread( dst->array.data + dstOffset + current, sizeof(int), size-current, src->file.handle );
+				SPD_ASSERT( r != 0, "Error on fread()!" );
+				current += r;
 			}
-			return total;
-			break;
+			
+			return current;
 		}
-		default:
-			DAL_UNSUPPORTED( dst );
-			return 0;
+		else {
+			DAL_UNIMPLEMENTED( dst );
+		}
 	}
+	else if( src->medium == Array ) {
+		if( dst->medium == File ) {
+			// array -> file
+			long r;
+			long current = 0;
+			
+			fseek( dst->file.handle, dstOffset*sizeof(int), SEEK_SET );
+			DAL_ASSERT( ftell( dst->file.handle ) == dstOffset*(long)sizeof(int), dst, "Error on fseek(%ld)!", dstOffset*sizeof(int) );
+			
+			while( current != size ) {
+				r = fwrite( src->array.data + srcOffset, sizeof(int), size, dst->file.handle );
+				SPD_ASSERT( r != 0, "Error on fwrite()!" );
+				current += r;
+			}
+			
+			return current;
+		}
+		else if( dst->medium == Array ) {
+			// array -> array
+			SPD_DEBUG( "Copying data from array to array" );
+			
+			memcpy( dst->array.data + dstOffset, src->array.data + srcOffset, size*sizeof(int) );
+			return size;
+		}
+		else {
+			DAL_UNIMPLEMENTED( dst );
+		}
+	}
+	else {
+		DAL_UNIMPLEMENTED( src );
+	}
+	
+	SPD_ERROR( "How did we get here!?" );
+	return -1;
 }
 
-void DAL_writeDataBlock( Data *data, long size, long dataOffset, Data *src, long srcOffset )
-{
-	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
-
-	//DAL_DEBUG( device, "writing into this device" );
-	//DAL_DEBUG( src, "from this data" );
-	switch( src->medium ) {
-		case File: {
-			Data buffer;
-			DAL_init( &buffer );
-			SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_dataSize(src) ), "memory completely over..." );
-			const long bufSize = DAL_dataSize(&buffer);
-			long r;
-			long w;
-			long total = 0;
-			while( total != DAL_dataSize(src) ) {
-				r = FILE_READ( buffer.array.data, bufSize, src->file.handle );
-				SPD_ASSERT( r != 0, "Error on read()!" );
-				w = FILE_WRITE( buffer.array.data, r, device->file.handle );
-				SPD_ASSERT( w == r, "Error on write()!" );
-				total += r;
-			}
-			break;
-		}
-		case Array: {
-			long r = FILE_WRITE( src->array.data, DAL_dataSize(src), device->file.handle );
-			SPD_ASSERT( r == DAL_dataSize(src), "Error on write()!" );
-			break;
-		}
-		default:
-			DAL_UNSUPPORTED( src );
-	}
-}
 
 // allocating an Array in memory
 bool DAL_allocArray( Data *data, long size )
@@ -371,7 +406,7 @@ bool DAL_reallocArray ( Data *data, long size )
 }
 bool DAL_reallocAsArray( Data *data )
 {
-	DAL_ASSERT( DAL_isInitialized(data), data, "data shouldn't have been initialized" );
+	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
 
 	if( data->medium == Array ) {
 		SPD_WARNING( "trying to reallocate an Array as an Array..." );
@@ -383,21 +418,12 @@ bool DAL_reallocAsArray( Data *data )
 	if( ! DAL_allocArray( &arrayData, data->array.size ) ) {
 		return 0;
 	}
-
-	// OK, array created, moving actual data into it
-	if( data->medium == File ) {
-		DAL_resetDeviceCursor( data );
-		DAL_readDataBlock( data, &arrayData );
-		return 0;
-	}
-	else {
-		DAL_UNIMPLEMENTED( data );
-	}
-
-	// destroying old data, and replacing it with new one...
+	
+	DAL_dataCopy( data, &arrayData );
+	
 	DAL_destroy( data );
 	*data = arrayData;
-
+	
 	return 1;
 }
 
@@ -445,7 +471,7 @@ bool DAL_allocFile( Data *data, long size )
 	do {
 		#define X ( toFileChar(rand()) )
 		#define X4 X,X,X,X
-		snprintf( name, sizeof(name), "tmp%d_%c%c%c%c-%c%c%c%c-%c%c%c%c-%c%c%c%c", GET_N(), X4, X4, X4, X4 );
+		snprintf( name, sizeof(name), "tmp%d_%c%c%c%c-%c%c%c%c-%c%c%c%c-%c%c%c%c", GET_ID(), X4, X4, X4, X4 );
 		#undef X4
 		#undef X
 		handle = fopen( name, "r" );
@@ -459,6 +485,7 @@ bool DAL_allocFile( Data *data, long size )
 	data->medium = File;
 	strncpy( data->file.name, name, sizeof(data->file.name) );
 	data->file.handle = handle;
+	data->file.size = size;
 
 	return 1;
 }
@@ -474,9 +501,12 @@ bool DAL_allocFile( Data *data, long size )
 static inline void DAL_MPI_SEND( void *array, long size, MPI_Datatype dataType, int dest ) {
 	MPI_Send( array, size, dataType, dest, 0, MPI_COMM_WORLD );
 }
-static inline void DAL_MPI_RECEIVE( void *array, long size, MPI_Datatype dataType, int source ) {
-	MPI_Status 	stat;
+static inline long DAL_MPI_RECEIVE( void *array, long size, MPI_Datatype dataType, int source ) {
+	int sizeR;
+	MPI_Status stat;
 	MPI_Recv( array, size, dataType, source, 0, MPI_COMM_WORLD, &stat );
+	MPI_Get_count( &stat, dataType, &sizeR );
+	return sizeR;
 }
 static inline int DAL_MPI_INCOMING_DATA( MPI_Datatype dataType, int source ) {
 	int size;
@@ -486,6 +516,27 @@ static inline int DAL_MPI_INCOMING_DATA( MPI_Datatype dataType, int source ) {
 	return size;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /**
 * @brief Sends data to dest
 *
@@ -494,13 +545,31 @@ static inline int DAL_MPI_INCOMING_DATA( MPI_Datatype dataType, int source ) {
 */
 void DAL_send( Data *data, int dest )
 {
+	DAL_ASSERT( ! DAL_isInitialized(data), data, "data shouldn't have been initialized" );
+	
 	/*
 	char buf[64];
 	DAL_DEBUG( data, "sending %ld items to %d: %s", DAL_dataSize(data), dest, DAL_dataItemsToString(data,buf,sizeof(buf)) );
 	*/
 
-	switch( data->medium ) {
-		case File: {
+	Data buffer;
+	DAL_acquireGlobalBuffer( &buffer );
+	
+	long i = 0;
+	long r;
+	while( i < DAL_BLOCK_COUNT(data, &buffer) ) {
+		r = DAL_dataCopyO( data, i * DAL_dataSize(&buffer), &buffer, 0 );
+		DAL_MPI_SEND( buffer.array.data, r, MPI_INT, dest );
+		++ i;
+	}
+	
+	DAL_releaseGlobalBuffer( &buffer );
+	
+	// TODO: optimize for Array
+	
+	/*
+			
+			
 			Data buffer = DAL_buffer;
 			long r;
 			long total = 0;
@@ -523,6 +592,7 @@ void DAL_send( Data *data, int dest )
 		default:
 			DAL_UNSUPPORTED( data );
 	}
+	*/
 }
 
 /**
@@ -534,8 +604,30 @@ void DAL_send( Data *data, int dest )
 */
 void DAL_receive( Data *data, long size, int source )
 {
+	char buf[64];
+	// DAL_DEBUG( data, "receiving %ld items from %d", size, source );
+	
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
-
+	
+	DAL_allocData( data, size );
+	Data buffer;
+	DAL_acquireGlobalBuffer( &buffer );
+	
+	long i = 0;
+	long r;
+	while( i < DAL_BLOCK_COUNT(data, &buffer) ) {
+		r = DAL_MPI_RECEIVE( buffer.array.data, DAL_dataSize(&buffer), MPI_INT, source );
+		DAL_dataCopyO( &buffer, 0, data, i * DAL_dataSize(&buffer) );
+		++ i;
+	}
+	
+	// DAL_DEBUG( data, "received %ld items from %d: %s", DAL_dataSize(data), source, DAL_dataItemsToString(data,buf,sizeof(buf)) );
+	
+	DAL_releaseGlobalBuffer( &buffer );
+	
+	
+	
+#if 0
 	/*
 	char buf[64];
 	DAL_DEBUG( data, "receiving %ld items from %d", size, source );
@@ -546,8 +638,6 @@ void DAL_receive( Data *data, long size, int source )
 		DAL_MPI_RECEIVE( data->array.data, size, MPI_INT, source );
 	}
 	else if( DAL_allocFile( data, size ) ) {
-		// data->medium == File
-		/*
 		Data buffer = DAL_buffer;
 		long missing = size;
 		while( missing != 0 ) {
@@ -559,7 +649,6 @@ void DAL_receive( Data *data, long size, int source )
 			DAL_writeDataBlock( data, DAL_dataSize(&buffer), 0, &buffer, 0 );
 			missing -= DAL_dataSize( &buffer );
 		}
-		*/
 	}
 	else {
 		SPD_ERROR( "Couldn't allocate any medium to read %ld items into...", size );
@@ -568,6 +657,7 @@ void DAL_receive( Data *data, long size, int source )
 	/*
 	DAL_DEBUG( data, "received %ld items from %d: %s", DAL_dataSize(data), source, DAL_dataItemsToString(data,buf,sizeof(buf)) );
 	*/
+#endif
 }
 
 void DAL_sendU( Data *data, int dest )
@@ -945,46 +1035,6 @@ void DAL_bcast( Data *data, long size, int root )
 		return DAL_bcastReceive( data, size, root );
 	}
 }
-/*--------------------------------------------------------------------------------------------------------------*/
 
-/***************************************************************************************************************/
-/***************************************** DAL Internal Functions **********************************************/
-/***************************************************************************************************************/
-
-long DAL_deviceCursor( Data *device )
-{
-	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
-
-	if( device->medium == File ) {
-		return ftell( device->file.handle );
-	}
-	else {
-		DAL_UNIMPLEMENTED( device );
-	}
-}
-void DAL_setDeviceCursor( Data *device, long pos )
-{
-	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
-
-	if( device->medium == File ) {
-		fseek( device->file.handle, pos, SEEK_SET );
-	}
-	else {
-		DAL_UNIMPLEMENTED( device );
-	}
-}
-void DAL_resetDeviceCursor( Data *device )
-{
-	DAL_ASSERT( DAL_isDevice(device), device, "not a block/character device" );
-
-	if( device->medium == File ) {
-		rewind( device->file.handle );
-	}
-	else {
-		DAL_UNIMPLEMENTED( device );
-	}
-}
-	
-	
 /*--------------------------------------------------------------------------------------------------------------*/
 
