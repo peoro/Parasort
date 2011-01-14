@@ -85,6 +85,52 @@ long strToInt( const char *str, bool *err )
 	return r;
 }
 
+
+// reads an already existing file (will copy it, if data is a File) 
+bool DAL_s_readFile( Data *data, const char *path )
+{
+	long size = GET_FILE_SIZE(path) / sizeof(int);
+	DAL_allocData( data, size );
+	
+	// temporary, just to use DAL_readNextDeviceBlock
+	// won't destroy it, or it would remove path!
+	Data dataStub;
+	dataStub.medium = File;
+	strncpy( dataStub.file.name, path, sizeof(dataStub.file.name) );
+	dataStub.file.handle = fopen( path, "r" );
+	if( ! dataStub.file.handle ) {
+		SPD_DEBUG( "Cannot open \"%s\" for reading.", path );
+		return 0;
+	}
+	
+	DAL_readNextDeviceBlock( &dataStub, data );
+	
+	fclose( dataStub.file.handle );
+	return 1;
+}
+
+// writes data content in a file (will copy it, if data is a File)
+bool DAL_s_writeFile( Data *data, const char *path )
+{
+	long size = GET_FILE_SIZE(path) / sizeof(int);
+	
+	// temporary, just to use DAL_writeNextDeviceBlock
+	// won't destroy it, or it would remove path!
+	Data dataStub;
+	dataStub.medium = File;
+	strncpy( dataStub.file.name, path, sizeof(dataStub.file.name) );
+	dataStub.file.handle = fopen( path, "w" );
+	if( ! dataStub.file.handle ) {
+		SPD_DEBUG( "Cannot open \"%s\" for writing.", path );
+		return 0;
+	}
+	
+	DAL_writeNextDeviceBlock( &dataStub, data );
+	
+	fclose( dataStub.file.handle );
+	return 1;
+}
+
 // return -1 on error, 0 and 1 on success
 // if 0, program must quit anyway
 int parseArgs( int argc, char **argv, TestInfo *ti )
@@ -301,7 +347,7 @@ int loadData( const TestInfo *ti, Data *data )
 	char path[1024];
 
 	GET_UNSORTED_DATA_PATH( ti, path, sizeof(path) );
-	DAL_readFile( data, path );
+	DAL_s_readFile( data, path );
 	DAL_resetDeviceCursor( data );
 
 #ifndef DEBUG
@@ -356,7 +402,7 @@ int storeData( const TestInfo *ti, Data *data )
 #endif
 
 	GET_SORTED_DATA_PATH( ti, path, sizeof(path) );
-	DAL_writeFile( data, path );
+	DAL_s_writeFile( data, path );
 
 
 

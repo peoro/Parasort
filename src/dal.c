@@ -232,47 +232,7 @@ bool DAL_allocData( Data *data, long size )
 
 	return 0;
 }
-bool DAL_readFile( Data *data, const char *path )
-{
-	long size = GET_FILE_SIZE(path) / sizeof(int);
-	DAL_allocData( data, size );
 
-	// temporary, just to use DAL_readNextDeviceBlock
-	// won't destroy it, or it would remove path!
-	Data dataStub;
-	dataStub.medium = File;
-	strncpy( dataStub.file.name, path, sizeof(dataStub.file.name) );
-	dataStub.file.handle = fopen( path, "r" );
-	if( ! dataStub.file.handle ) {
-		SPD_DEBUG( "Cannot open \"%s\" for reading.", path );
-		return 0;
-	}
-
-	DAL_readNextDeviceBlock( &dataStub, data );
-
-	fclose( dataStub.file.handle );
-	return 1;
-}
-bool DAL_writeFile( Data *data, const char *path )
-{
-	long size = GET_FILE_SIZE(path) / sizeof(int);
-
-	// temporary, just to use DAL_writeNextDeviceBlock
-	// won't destroy it, or it would remove path!
-	Data dataStub;
-	dataStub.medium = File;
-	strncpy( dataStub.file.name, path, sizeof(dataStub.file.name) );
-	dataStub.file.handle = fopen( path, "w" );
-	if( ! dataStub.file.handle ) {
-		SPD_DEBUG( "Cannot open \"%s\" for writing.", path );
-		return 0;
-	}
-
-	DAL_writeNextDeviceBlock( &dataStub, data );
-
-	fclose( dataStub.file.handle );
-	return 1;
-}
 
 // functions to work with any find of block device (ie: Files)
 bool DAL_isDevice( Data *data )

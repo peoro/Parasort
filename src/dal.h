@@ -123,16 +123,15 @@ void DAL_destroy( Data *data ); // destroys and re-initialize data
 long DAL_dataSize( Data *data ); // returns data size, both of array or file...
 bool DAL_allocData( Data *data, long size ); // allocates a Data in an Array, or, if it fails, in a File
 
-bool DAL_readFile( Data *data, const char *path ); // reads an already existing file (will copy it, if data is a File)
-bool DAL_writeFile( Data *data, const char *path ); // writes data content in a file (will copy it, if data is a File)
-
 // functions to work with any find of block device (ie: Files)
-long DAL_deviceCursor( Data *device ); // gets current cursor position
-void DAL_setDeviceCursor( Data *device, long pos ); // moves cursor position
-void DAL_resetDeviceCursor( Data *device ); // moves cursor back to beginning
+// TODO: to be removed
 long DAL_readNextDeviceBlock( Data *device, Data *dst ); // reads a block of size of dst's moving cursor
 void DAL_writeNextDeviceBlock( Data *device, Data *src ); // writes a block of size of src's at current cursor (moving it and overwriting current data)
 
+// functions to work with any find of block device (ie: Files)
+long DAL_readDataBlock( Data *data, long dataSize, long dataOffset, long Data *dst, long dstSize, long dstOffset ); // reads a block of size of dst's moving cursor
+void DAL_writeDataBlock( Data *data, long dataSize, long dataOffset, Data *src, long dstSize, long dstOffset ); // writes a block of size of src's at current cursor (moving it and overwriting current data)
+	
 // allocating an Array in memory
 bool DAL_allocArray( Data *data, long size );
 bool DAL_reallocArray ( Data *data, long size );
@@ -190,6 +189,18 @@ void DAL_bcast( Data *data, long size, int root );
 
 /*--------------------------------------------------------------------------------------------------------------*/
 
+/***************************************************************************************************************/
+/***************************************** DAL Internal Functions **********************************************/
+/***************************************************************************************************************/
+
+// functions to work with any find of block device (ie: Files)
+long DAL_deviceCursor( Data *device ); // gets current cursor position
+void DAL_setDeviceCursor( Data *device, long pos ); // moves cursor position
+void DAL_resetDeviceCursor( Data *device ); // moves cursor back to beginning
+
+	
+	
+/*--------------------------------------------------------------------------------------------------------------*/
 
 
 /* Keep C++ compilers from getting confused */
