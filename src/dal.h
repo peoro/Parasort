@@ -129,8 +129,8 @@ long DAL_readNextDeviceBlock( Data *device, Data *dst ); // reads a block of siz
 void DAL_writeNextDeviceBlock( Data *device, Data *src ); // writes a block of size of src's at current cursor (moving it and overwriting current data)
 
 // functions to work with any find of block device (ie: Files)
-long DAL_readDataBlock( Data *data, long dataSize, long dataOffset, long Data *dst, long dstSize, long dstOffset ); // reads a block of size of dst's moving cursor
-void DAL_writeDataBlock( Data *data, long dataSize, long dataOffset, Data *src, long dstSize, long dstOffset ); // writes a block of size of src's at current cursor (moving it and overwriting current data)
+long DAL_readDataBlock( Data *data, long size, long dataOffset, Data *dst, long dstOffset ); // reads a block of size of dst's moving cursor
+void DAL_writeDataBlock( Data *data, long size, long dataOffset, Data *src, long srcOffset ); // writes a block of size of src's at current cursor (moving it and overwriting current data)
 	
 // allocating an Array in memory
 bool DAL_allocArray( Data *data, long size );
@@ -197,6 +197,7 @@ void DAL_bcast( Data *data, long size, int root );
 long DAL_deviceCursor( Data *device ); // gets current cursor position
 void DAL_setDeviceCursor( Data *device, long pos ); // moves cursor position
 void DAL_resetDeviceCursor( Data *device ); // moves cursor back to beginning
+
 
 	
 	

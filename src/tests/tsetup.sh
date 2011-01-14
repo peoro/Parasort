@@ -7,7 +7,7 @@ mkdir -p $path
 
 #for each data size (M)
 for MB in ${DATA_SIZE_MB[*]}; do
-    M=$(( 2 ** $DATA_SIZE_MB ))
+    M=$(( 2 ** $MB ))
 
     filename=$path/"M"$((2**$MB))"MB"
     rm -f $filename
