@@ -87,26 +87,28 @@ long strToInt( const char *str, bool *err )
 }
 
 
-// reads an already existing file (will copy it, if data is a File) 
+
+// reads an already existing file (will copy it, if data is a File)
 bool DAL_s_readFile( Data *data, const char *path )
 {
 	long size = GET_FILE_SIZE(path) / sizeof(int);
 	DAL_allocData( data, size );
-	
+
 	// temporary, just to use DAL_readNextDeviceBlock
 	// won't destroy it, or it would remove path!
 	Data dataStub;
 	dataStub.medium = File;
+	dataStub.file.size = size;
 	strncpy( dataStub.file.name, path, sizeof(dataStub.file.name) );
 	dataStub.file.handle = fopen( path, "r" );
 	if( ! dataStub.file.handle ) {
 		SPD_DEBUG( "Cannot open \"%s\" for reading.", path );
 		return 0;
 	}
-	
+
 	// DAL_readNextDeviceBlock( &dataStub, data );
 	DAL_dataCopy( &dataStub, data );
-	
+
 	fclose( dataStub.file.handle );
 	return 1;
 }
@@ -114,22 +116,23 @@ bool DAL_s_readFile( Data *data, const char *path )
 // writes data content in a file (will copy it, if data is a File)
 bool DAL_s_writeFile( Data *data, const char *path )
 {
-	long size = GET_FILE_SIZE(path) / sizeof(int);
-	
+	long size = DAL_dataSize( data );
+
 	// temporary, just to use DAL_writeNextDeviceBlock
 	// won't destroy it, or it would remove path!
 	Data dataStub;
 	dataStub.medium = File;
+	dataStub.file.size = size;
 	strncpy( dataStub.file.name, path, sizeof(dataStub.file.name) );
 	dataStub.file.handle = fopen( path, "w" );
 	if( ! dataStub.file.handle ) {
 		SPD_DEBUG( "Cannot open \"%s\" for writing.", path );
 		return 0;
 	}
-	
+
 	// DAL_writeNextDeviceBlock( &dataStub, data );
 	DAL_dataCopy( data, &dataStub );
-	
+
 	fclose( dataStub.file.handle );
 	return 1;
 }
@@ -310,11 +313,8 @@ int generate( const TestInfo *ti )
 
 		for( i = 0; i < M; ++ i ) {
 			int x = JKISS();
-#ifndef DEBUG
+
 			if( ! fwrite( &x, sizeof(int), 1, f ) ) {
-#else
-			if( fprintf( f, "%d\n", x ) < 0 ) {
-#endif
 				printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, x, path );
 				return 0;
 			}
@@ -351,15 +351,12 @@ int loadData( const TestInfo *ti, Data *data )
 
 	GET_UNSORTED_DATA_PATH( ti, path, sizeof(path) );
 	DAL_s_readFile( data, path );
-	// DAL_resetDeviceCursor( data );
 
-#ifndef DEBUG
 	if( DAL_dataSize(data) != GET_M(ti) ) {
 		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
 				path, GET_M(ti), GET_M(ti), DAL_dataSize(data) );
 		return 0;
 	}
-#endif
 
 	return 1;
 }
@@ -374,13 +371,16 @@ int storeData( const TestInfo *ti, Data *data )
 	char path[1024];
 	long i;
 
-#ifndef DEBUG
 	if( DAL_dataSize(data) != GET_M(ti) ) {
 		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
 				path, GET_M(ti), GET_M(ti), DAL_dataSize(data) );
 		return 0;
 	}
-#else
+
+	GET_SORTED_DATA_PATH( ti, path, sizeof(path) );
+	DAL_s_writeFile( data, path );
+
+#ifdef DEBUG
 	switch( data->medium ) {
 		case NoMedium: {
 			break;
@@ -389,10 +389,12 @@ int storeData( const TestInfo *ti, Data *data )
 			Data buffer;
 			DAL_init( &buffer );
 			DAL_allocBuffer( &buffer, DAL_dataSize(data) );
-			while( DAL_readNextDeviceBlock( data, &buffer ) )
+			long offset = 0;
+			while( offset < DAL_dataSize( data ) ) {
+				offset += DAL_dataCopyO( data, offset, &buffer, 0 );
 				SPD_ASSERT( checkSorted( buffer.array.data, buffer.array.size ), "Sorting Failed!" );
+			}
 			DAL_destroy( &buffer );
-			DAL_resetDeviceCursor( data );
 			break;
 		}
 		case Array: {
@@ -403,13 +405,6 @@ int storeData( const TestInfo *ti, Data *data )
 			DAL_UNSUPPORTED( data );
 	}
 #endif
-
-	GET_SORTED_DATA_PATH( ti, path, sizeof(path) );
-	DAL_s_writeFile( data, path );
-
-
-
-	// TODO: check for correctness!
 
 	return 1;
 }

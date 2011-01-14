@@ -13,6 +13,7 @@
 #include <mpi.h>
 #include "../sorting.h"
 #include "../common.h"
+#include "../dal_internals.h"
 
 struct Min_val {
 	Min_val( int val, int run_index ) {

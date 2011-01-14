@@ -100,12 +100,12 @@ char * DAL_dataItemsToString( Data *data, char *s, int size )
 		Data b;
 		DAL_init( &b );
 		SPD_ASSERT( DAL_allocBuffer( &b, DAL_dataSize(data) ), "memory completely over..." );
-		
+
 		DAL_dataCopyO( data, 0, &b, 0 );
-		
+
 		return DAL_dataItemsToString( &b, s, size );
 	}
-	
+
 	char buf[64];
 	int i;
 
@@ -259,7 +259,7 @@ bool DAL_isDevice( Data *data )
 
 long DAL_dataCopy( Data *src, Data *dst )
 {
-	DAL_ASSERT( DAL_dataSize(src) == DAL_dataSize(dst), src, "src and dst size should be the sime" );
+	DAL_ASSERT( DAL_dataSize(src) == DAL_dataSize(dst), src, "src and dst size should be the same" );
 	return DAL_dataCopyO( src, 0, dst, 0 );
 }
 long DAL_dataCopyO( Data *src, long srcOffset, Data *dst, long dstOffset )
@@ -271,49 +271,51 @@ long DAL_dataCopyOS( Data *src, long srcOffset, Data *dst, long dstOffset, long 
 {
 	DAL_ASSERT( DAL_dataSize(src)-srcOffset >= size, src, "not enough data to copy" );
 	DAL_ASSERT( DAL_dataSize(dst)-dstOffset >= size, dst, "not enough space to copy data into" );
-	
+
 	if( src->medium == File ) {
 		if( dst->medium == File ) {
 			// file -> file
 			SPD_DEBUG( "Copying data from file to file" );
-			
+
 			// allocating a buffer
 			Data buffer;
 			DAL_init( &buffer );
 			SPD_ASSERT( DAL_allocBuffer( &buffer, size ), "memory completely over..." );
-			
+
 			// moving cursors to offsets
 			fseek( src->file.handle, srcOffset*sizeof(int), SEEK_SET );
 			DAL_ASSERT( ftell( src->file.handle ) == srcOffset*(long)sizeof(int), src, "Error on fseek(%ld)!", srcOffset*sizeof(int) );
 			fseek( dst->file.handle, dstOffset*sizeof(int), SEEK_SET );
 			DAL_ASSERT( ftell( dst->file.handle ) == dstOffset*(long)sizeof(int), dst, "Error on fseek(%ld)!", dstOffset*sizeof(int) );
-			
+
 			long r1, r2;
 			long current = 0;
-			
+
 			while( current != size ) {
 				r1 = fread( buffer.array.data, sizeof(int), MIN( size-current, DAL_dataSize(&buffer) ), src->file.handle );
 				SPD_ASSERT( r1 != 0, "Error on fread()!" );
 				r2 = fwrite( buffer.array.data, sizeof(int), r1, dst->file.handle );
 				SPD_ASSERT( r1 == r2, "fwrite() couldn't write as much as fread() got..." );
+
+				current += r1;
 			}
-			
+
 			return current;
 		}
 		else if( dst->medium == Array ) {
 			// file -> array
 			long r;
 			long current = 0;
-			
+
 			fseek( src->file.handle, srcOffset*sizeof(int), SEEK_SET );
 			DAL_ASSERT( ftell( src->file.handle ) == srcOffset*(long)sizeof(int), src, "Error on fseek(%ld)!", srcOffset*sizeof(int) );
-			
+
 			while( current != size ) {
 				r = fread( dst->array.data + dstOffset + current, sizeof(int), size-current, src->file.handle );
 				SPD_ASSERT( r != 0, "Error on fread()!" );
 				current += r;
 			}
-			
+
 			return current;
 		}
 		else {
@@ -325,22 +327,22 @@ long DAL_dataCopyOS( Data *src, long srcOffset, Data *dst, long dstOffset, long 
 			// array -> file
 			long r;
 			long current = 0;
-			
+
 			fseek( dst->file.handle, dstOffset*sizeof(int), SEEK_SET );
 			DAL_ASSERT( ftell( dst->file.handle ) == dstOffset*(long)sizeof(int), dst, "Error on fseek(%ld)!", dstOffset*sizeof(int) );
-			
+
 			while( current != size ) {
 				r = fwrite( src->array.data + srcOffset, sizeof(int), size, dst->file.handle );
 				SPD_ASSERT( r != 0, "Error on fwrite()!" );
 				current += r;
 			}
-			
+
 			return current;
 		}
 		else if( dst->medium == Array ) {
 			// array -> array
 			SPD_DEBUG( "Copying data from array to array" );
-			
+
 			memcpy( dst->array.data + dstOffset, src->array.data + srcOffset, size*sizeof(int) );
 			return size;
 		}
@@ -351,7 +353,7 @@ long DAL_dataCopyOS( Data *src, long srcOffset, Data *dst, long dstOffset, long 
 	else {
 		DAL_UNIMPLEMENTED( src );
 	}
-	
+
 	SPD_ERROR( "How did we get here!?" );
 	return -1;
 }
@@ -418,12 +420,12 @@ bool DAL_reallocAsArray( Data *data )
 	if( ! DAL_allocArray( &arrayData, data->array.size ) ) {
 		return 0;
 	}
-	
+
 	DAL_dataCopy( data, &arrayData );
-	
+
 	DAL_destroy( data );
 	*data = arrayData;
-	
+
 	return 1;
 }
 
@@ -546,7 +548,7 @@ static inline int DAL_MPI_INCOMING_DATA( MPI_Datatype dataType, int source ) {
 void DAL_send( Data *data, int dest )
 {
 	DAL_ASSERT( ! DAL_isInitialized(data), data, "data shouldn't have been initialized" );
-	
+
 	/*
 	char buf[64];
 	DAL_DEBUG( data, "sending %ld items to %d: %s", DAL_dataSize(data), dest, DAL_dataItemsToString(data,buf,sizeof(buf)) );
@@ -554,7 +556,7 @@ void DAL_send( Data *data, int dest )
 
 	Data buffer;
 	DAL_acquireGlobalBuffer( &buffer );
-	
+
 	long i = 0;
 	long r;
 	while( i < DAL_BLOCK_COUNT(data, &buffer) ) {
@@ -562,14 +564,14 @@ void DAL_send( Data *data, int dest )
 		DAL_MPI_SEND( buffer.array.data, r, MPI_INT, dest );
 		++ i;
 	}
-	
+
 	DAL_releaseGlobalBuffer( &buffer );
-	
+
 	// TODO: optimize for Array
-	
+
 	/*
-			
-			
+
+
 			Data buffer = DAL_buffer;
 			long r;
 			long total = 0;
@@ -606,13 +608,13 @@ void DAL_receive( Data *data, long size, int source )
 {
 	char buf[64];
 	// DAL_DEBUG( data, "receiving %ld items from %d", size, source );
-	
+
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
-	
+
 	DAL_allocData( data, size );
 	Data buffer;
 	DAL_acquireGlobalBuffer( &buffer );
-	
+
 	long i = 0;
 	long r;
 	while( i < DAL_BLOCK_COUNT(data, &buffer) ) {
@@ -620,13 +622,13 @@ void DAL_receive( Data *data, long size, int source )
 		DAL_dataCopyO( &buffer, 0, data, i * DAL_dataSize(&buffer) );
 		++ i;
 	}
-	
+
 	// DAL_DEBUG( data, "received %ld items from %d: %s", DAL_dataSize(data), source, DAL_dataItemsToString(data,buf,sizeof(buf)) );
-	
+
 	DAL_releaseGlobalBuffer( &buffer );
-	
-	
-	
+
+
+
 #if 0
 	/*
 	char buf[64];

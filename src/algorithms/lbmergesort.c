@@ -12,6 +12,7 @@
 #include <mpi.h>
 #include "../sorting.h"
 #include "../common.h"
+#include "../dal_internals.h"
 
 /**
 * @brief Merges two sorted sequences

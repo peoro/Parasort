@@ -1,6 +1,7 @@
 
 #include <limits.h>
 #include "common.h"
+#include "dal_internals.h"
 
 #define DEBUG
 
@@ -64,7 +65,6 @@ inline int isPowerOfTwo( int x )
 /******************************************* Sequential Sort ***************************************************/
 /***************************************************************************************************************/
 
-#if 0
 long readNextBlock( Data *data, Data *dstbuffer, long size, long displ )
 {
 	SPD_ASSERT( dstbuffer->medium == Array, "buffer should be allocated in memory" );
@@ -247,10 +247,10 @@ void fileSort( Data *data )
 		readSize = readNextBlock( &dataStub, &buffer, runSize, 0 );
 		qsort( buffer.array.data, readSize, sizeof(int), compare );
 		writeNextBlock( &run_devices[i], &buffer, readSize, 0 );
-		DAL_resetDeviceCursor( &run_devices[i] );
+		rewind( run_devices[i].file.handle );
 	}
 	DAL_destroy( &buffer );
-	DAL_resetDeviceCursor( &dataStub );
+	rewind( dataStub.file.handle );
 
  	fileKMerge( run_devices, k, runSize, dataSize, &dataStub );		//k-way merge
 
@@ -261,14 +261,13 @@ void fileSort( Data *data )
 // 	DAL_PRINT_DATA( data, "sorted data" );
 }
 
-#endif
-
 /// sequential sort function
 void sequentialSort( const TestInfo *ti, Data *data )
 {
 	switch( data->medium ) {
 		case File: {
-			//fileSort( data );
+			rewind( data->file.handle );
+			fileSort( data );
 			break;
 		}
 		case Array: {

@@ -11,6 +11,7 @@
 #include <string.h>
 #include "../sorting.h"
 #include "../common.h"
+#include "../dal_internals.h"
 
 /**
 * @brief Compare and Exchange operation on the low part of two sequences sorted in ascending order

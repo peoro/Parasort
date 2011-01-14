@@ -93,7 +93,7 @@ char *DAL_dataItemsToString( Data *d, char *s, int size );
 		char SPD_BUF[1024]; \
 		SPD_DEBUG( "data (%s) " fmt, DAL_dataToString((d), SPD_BUF, sizeof(SPD_BUF)), ##__VA_ARGS__ ); \
 	}
-	
+
 #define DAL_PRINT_DATA(d, fmt, ... ) \
 	{ \
         char SPD_BUFx[64]; \
