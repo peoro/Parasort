@@ -65,23 +65,6 @@ inline int isPowerOfTwo( int x )
 /******************************************* Sequential Sort ***************************************************/
 /***************************************************************************************************************/
 
-long readNextBlock( Data *data, Data *dstbuffer, long size, long displ )
-{
-	SPD_ASSERT( dstbuffer->medium == Array, "buffer should be allocated in memory" );
-	SPD_ASSERT( dstbuffer->array.size >= size+displ, "buffer size exceeded" );
-
-	return fread( dstbuffer->array.data+displ, sizeof(int), size, data->file.handle );
-}
-
-long writeNextBlock( Data *data, Data *srcBuffer, long size, long displ )
-{
-	SPD_ASSERT( srcBuffer->medium == Array, "buffer should be allocated in memory" );
-	SPD_ASSERT( srcBuffer->array.size >= size+displ, "buffer size exceeded" );
-
-	return fwrite( srcBuffer->array.data+displ, sizeof(int), size, data->file.handle );;
-}
-
-
 typedef struct {
 	int val;
 	long run_index;
@@ -129,38 +112,41 @@ void HeapPop( Heap *h ) {
 	h->elements[i] = *last;
 }
 
+#define MIN(a,b) ( (a)<(b) ? (a) : (b) )
+#define MAX(a,b) ( (a)>(b) ? (a) : (b) )
 
-void fileKMerge( Data *run_devices, const int k, const long runSize, const long dataSize, Data *merged_device ) {
-	const long bufferedRunSize = runSize / (k + 1); //Size of a single buffered run (+1 because of the output buffer)
+void fileKMerge( Data *run_devices, const int k, const long dataSize, Data *output_device ) {
+	const long bufferedRunSize = run_devices[0].file.size / (k + 1); //Size of a single buffered run (+1 because of the output buffer)
 
-	if ( k > runSize ) {
+	if ( k > run_devices[0].file.size ) {
 		/* TODO: Handle this case */
 		SPD_ASSERT( 0, "fileKMerge function doesn't allow a number of runs greater than memory buffer size" );
 	}
 
 	/* Runs Buffer */
-	Data runs_buffer, output_buffer;
+	Data runs_buffer;
 	DAL_init( &runs_buffer );
-	DAL_allocArray( &runs_buffer, bufferedRunSize * k );
+	DAL_allocBuffer( &runs_buffer, bufferedRunSize * k );
 	int* runs = runs_buffer.array.data;
 
 	/* Output buffer */
+	Data output_buffer;
 	DAL_init( &output_buffer );
-	DAL_allocArray( &output_buffer, bufferedRunSize );
+	DAL_allocBuffer( &output_buffer, bufferedRunSize );
 	int* output = output_buffer.array.data;
 
-	/* Indexes for the k buffered runs */
+	/* Indexes and Offsets for the k buffered runs */
 	long *runs_indexes = (long*) calloc( sizeof(long), k );
+	long *runs_offsets = (long*) malloc( k * sizeof(long) );
 
 	/* The auxiliary heap struct */
 	Heap heap;
 	HeapInit( &heap, k );
 
 	long i;
-
 	/* Initializing the buffered runs */
 	for ( i=0; i < k; i++ )
-		readNextBlock( &run_devices[i], &runs_buffer, bufferedRunSize, i*bufferedRunSize );
+		runs_offsets[i] = DAL_dataCopyOS( &run_devices[i], 0, &runs_buffer, i*bufferedRunSize, bufferedRunSize );;
 
 	/* Initializing the heap */
     for ( i=0; i<k; i++ )
@@ -168,6 +154,7 @@ void fileKMerge( Data *run_devices, const int k, const long runSize, const long 
 
 	/* Merging the runs */
 	int outputSize = 0;
+	long outputOffset = 0;
     for ( i=0; i<dataSize; i++ ) {
         Min_val min = HeapTop( &heap );
         HeapPop( &heap );
@@ -177,7 +164,8 @@ void fileKMerge( Data *run_devices, const int k, const long runSize, const long 
 
         if ( ++(runs_indexes[j]) < bufferedRunSize )							//If there are others elements in the buffered run
 			HeapPush( &heap, runs[j*bufferedRunSize+runs_indexes[j]], j );		//pushes a new element in the heap
-		else if (readNextBlock( &run_devices[j], &runs_buffer, bufferedRunSize, j*bufferedRunSize ) ) {	//else, if the run has not been read completely
+		else if ( run_devices[j].file.size-runs_offsets[j] ) {									//else, if the run has not been read completely
+			runs_offsets[j] += DAL_dataCopyOS( &run_devices[j], runs_offsets[j], &runs_buffer, j*bufferedRunSize, MIN(bufferedRunSize,run_devices[j].file.size-runs_offsets[j]) );
 			runs_indexes[j] = 0;
 			HeapPush( &heap, runs[j*bufferedRunSize], j );
 		}
@@ -185,12 +173,7 @@ void fileKMerge( Data *run_devices, const int k, const long runSize, const long 
         output[outputSize++] = min.val;
 
 		if ( (outputSize % bufferedRunSize) == 0 || i==dataSize-1 ) {										//If the output buffer is full
-			SPD_ASSERT( writeNextBlock( merged_device,
-										&output_buffer,
-										outputSize,
-										0 )
-										== outputSize, "fwrite fails" );	//writes it into the merged Data device
-
+			outputOffset += DAL_dataCopyOS( &output_buffer, 0, output_device, outputOffset, outputSize );
 			outputSize = 0;
 		}
     }
@@ -199,6 +182,7 @@ void fileKMerge( Data *run_devices, const int k, const long runSize, const long 
     DAL_destroy( &runs_buffer );
 	DAL_destroy( &output_buffer );
 	free( runs_indexes );
+	free( runs_offsets );
 }
 
 void initRuns( Data *run_devices, int k, int size ) {
@@ -231,34 +215,17 @@ void fileSort( Data *data )
 	Data run_devices[k];
 	initRuns( run_devices, k, runSize );
 
-	/* Stub for reading/writing the sorted data */
-	Data dataStub;
-	dataStub.medium = File;
-	dataStub.file.handle = fopen( data->file.name, "r+b" );
-	if( ! dataStub.file.handle ) {
-		SPD_DEBUG( "Cannot open \"%s\" for reading.", data->file.name );
-		return;
-	}
-
 	long readSize = 0;
 	int i;
 	/* Sorting single runs */
 	for( i=0; i<k; i++ ) {
-		readSize = readNextBlock( &dataStub, &buffer, runSize, 0 );
+		readSize = DAL_dataCopyO( data, i*runSize, &buffer, 0 );
 		qsort( buffer.array.data, readSize, sizeof(int), compare );
-		writeNextBlock( &run_devices[i], &buffer, readSize, 0 );
-		rewind( run_devices[i].file.handle );
+		DAL_dataCopyOS( &buffer, 0, &run_devices[i], 0, readSize );
 	}
 	DAL_destroy( &buffer );
-	rewind( dataStub.file.handle );
-
- 	fileKMerge( run_devices, k, runSize, dataSize, &dataStub );		//k-way merge
-
-	fclose( dataStub.file.handle );
+ 	fileKMerge( run_devices, k, dataSize, data );		//k-way merge
 	destroyRuns( run_devices, k );
-
-// 	//DEBUG
-// 	DAL_PRINT_DATA( data, "sorted data" );
 }
 
 /// sequential sort function
@@ -266,7 +233,6 @@ void sequentialSort( const TestInfo *ti, Data *data )
 {
 	switch( data->medium ) {
 		case File: {
-			rewind( data->file.handle );
 			fileSort( data );
 			break;
 		}
