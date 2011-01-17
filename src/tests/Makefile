@@ -6,7 +6,7 @@ OBJECTS = ../debug.o
 TESTS = sendrecv probe tsetup
 
 DALOBJECTS = $(OBJECTS) ../dal.o
-DALTESTS = dalsendrecv dalalltoall dalalltoallv dalscatterv
+DALTESTS = dalsendrecv dalalltoall dalalltoallv dalscatterv dalgatherv
 
 all: tests
 

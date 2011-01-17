@@ -17,7 +17,7 @@ void TEST_DAL_scattervSend( Data *data, long *counts, long *displs )
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
-	DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is %ld, but there are %d processes)", globalBuf.array.size, GET_N() );
+	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a scatter communication (its size is %ld, but there are %d processes)", globalBuf.array.size, GET_N() );
 
 	//VALID ONLY FOR THIS TEST//
 	globalBuf.array.size = GET_N();
@@ -59,7 +59,7 @@ void TEST_DAL_scattervSend( Data *data, long *counts, long *displs )
 
 			for ( i=0; i<num_iterations; i++ ) {
 
-				for ( s=0, j=0; j<GET_N(); j++ ) {
+				for ( j=0; j<GET_N(); j++ ) {
 					tmp = MIN( blockSize, (counts[j]-i*blockSize) );
 					sc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
 					sd[j] = displs[j] + i*blockSize;
@@ -84,8 +84,6 @@ void TEST_DAL_scattervReceive( Data *data, long size, int root )
 
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
-
-	DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is %ld, but there are %d processes)", globalBuf.array.size, GET_N() );
 
 	//VALID ONLY FOR THIS TEST//
 	globalBuf.array.size = GET_N();
@@ -163,7 +161,7 @@ int main( int argc, char **argv )
 	long scounts[n];
 	long sdispls[n];
 	int size = n*3;	//size of data d
-	int s, r;
+	int s;
 
 	//Initializing send counts randomly
 	memset( scounts, 0, n*sizeof(long) );
@@ -171,7 +169,7 @@ int main( int argc, char **argv )
 		scounts[rand()%n]++;
 
 	//Computing displacements
-	for ( s=0, r=0, i=0; i<n; i++ ) {
+	for ( s=0, i=0; i<n; i++ ) {
 		sdispls[i] = s;
 		s += scounts[i];
 	}
