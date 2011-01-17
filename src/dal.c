@@ -98,10 +98,16 @@ char * DAL_dataItemsToString( Data *data, char *s, int size )
 {
 	if( data->medium == File ) {
 		Data b;
-		DAL_init( &b );
-		SPD_ASSERT( DAL_allocBuffer( &b, DAL_dataSize(data) ), "memory completely over..." );
 
-		DAL_dataCopyO( data, 0, &b, 0 );
+		DAL_init( &b );
+
+		if( DAL_dataSize(data) ) {
+			SPD_ASSERT( DAL_allocBuffer( &b, DAL_dataSize(data) ), "memory completely over..." );
+			DAL_dataCopyO( data, 0, &b, 0 );
+		}
+		else {
+			SPD_ASSERT( DAL_allocArray( &b, 0 ), "fails allocating 0 bytes!" );
+		}
 
 		return DAL_dataItemsToString( &b, s, size );
 	}
@@ -822,7 +828,7 @@ void DAL_gather( Data *data, long size, int root )
 
 
 
-void DAL_scattervSend( Data *data, long *sizes, long *displs )
+void DAL_scattervSend( Data *data, long *counts, long *displs )
 {
 	switch( data->medium ) {
 		case File: {
@@ -835,7 +841,7 @@ void DAL_scattervSend( Data *data, long *sizes, long *displs )
 			int i;
 
 			for ( i=0; i<GET_N(); i++ ) {
-				scounts[i] = sizes[i];
+				scounts[i] = counts[i];
 				sdispls[i] = displs[i];
 			}
 		 	MPI_Scatterv( data->array.data, scounts, sdispls, MPI_INT, MPI_IN_PLACE, scounts[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
@@ -855,17 +861,17 @@ void DAL_scattervReceive( Data *data, long size, int root )
 * @brief Scatters data among all processes
 *
 * @param[in,out] 	data  		Data to be scattered/received
-* @param[in] 		sizes     	Array containing the number of elements to be sent to each process
+* @param[in] 		counts     	Array containing the number of elements to be sent to each process
 * @param[in] 		displs     	Array of displacements
 * @param[in] 		root     	Rank of the root process
 */
-void DAL_scatterv( Data *data, long *sizes, long *displs, int root )
+void DAL_scatterv( Data *data, long *counts, long *displs, int root )
 {
 	if( GET_ID() == root ) {
-		return DAL_scattervSend( data, sizes, displs );
+		return DAL_scattervSend( data, counts, displs );
 	}
 	else {
-		return DAL_scattervReceive( data, sizes[GET_ID()], root );
+		return DAL_scattervReceive( data, counts[GET_ID()], root );
 	}
 }
 
@@ -887,7 +893,7 @@ void DAL_gathervSend( Data *data, int root )
 			DAL_UNSUPPORTED( data );
 	}
 }
-void DAL_gathervReceive( Data *data, long *sizes, long *displs )
+void DAL_gathervReceive( Data *data, long *counts, long *displs )
 {
 	int rcounts[GET_N()];
 	int rdispls[GET_N()];
@@ -895,10 +901,10 @@ void DAL_gathervReceive( Data *data, long *sizes, long *displs )
 	int i;
 
 	for ( i=0; i<GET_N(); i++ ) {
-		rcounts[i] = sizes[i];
+		rcounts[i] = counts[i];
 		rdispls[i] = displs[i];
 
-		rcount += sizes[i];
+		rcount += counts[i];
 	}
 	SPD_ASSERT( DAL_reallocArray( data, rcount ), "not enough memory to allocate data" );
 	MPI_Gatherv( MPI_IN_PLACE, rcounts[GET_ID()], MPI_INT, data->array.data, rcounts, rdispls, MPI_INT, GET_ID(), MPI_COMM_WORLD );
@@ -907,14 +913,14 @@ void DAL_gathervReceive( Data *data, long *sizes, long *displs )
 * @brief Gathers data from all processes
 *
 * @param[in,out] 	data  		Data to be gathered/sent
-* @param[in] 		sizes     	Array containing the number of elements to be gathered from each process
+* @param[in] 		counts     	Array containing the number of elements to be gathered from each process
 * @param[in] 		displs     	Array of displacements
 * @param[in] 		root     	Rank of the root process
 */
-void DAL_gatherv( Data *data, long *sizes, long *displs, int root )
+void DAL_gatherv( Data *data, long *counts, long *displs, int root )
 {
 	if( GET_ID() == root ) {
-		return DAL_gathervReceive( data, sizes, displs );
+		return DAL_gathervReceive( data, counts, displs );
 	}
 	else {
 		return DAL_gathervSend( data, root );

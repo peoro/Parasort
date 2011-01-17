@@ -9,7 +9,7 @@
 #define MAX(a,b) ( (a)>(b) ? (a) : (b) )
 
 /**
-* @brief Sends data from all to all processes
+* @brief Split a Data into several parts
 *
 * @param[in] 	buf  		Data buffer to be split
 * @param[in] 	parts  		Number of parts to split buf
@@ -55,7 +55,7 @@ void TEST_DAL_alltoall( Data *data, long count )
 			DAL_ASSERT( data->file.size >= sendBuf->array.size, data, "Data to be sent is too small, should be of type Array, but it's of type File" );
 
 			int i, j;
-			int blockSize = sendBuf->array.size/GET_N();
+			int blockSize = DAL_dataSize(sendBuf) / GET_N();
 
 			for ( i=0; i<DAL_BLOCK_COUNT(data, sendBuf); i++ ) {
 				int currCount = MIN( blockSize, (count-i*blockSize) );		//Number of elements to be sent to each process by MPI_Alltoall
@@ -73,6 +73,9 @@ void TEST_DAL_alltoall( Data *data, long count )
 			break;
 		}
 		case Array: {
+
+			//TODO: Is it possible to avoid a double copy!?!?
+
 			SPD_ASSERT( count > 0, "You are sending %ld elements to each process", count );
 			int i;
 
