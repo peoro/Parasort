@@ -51,7 +51,7 @@ void TEST_DAL_scattervSend( Data *data, long *counts, long *displs )
 				MPI_Scatterv( globalBuf.array.data, sc, sd, MPI_INT, MPI_IN_PLACE, sc[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
 			}
 
-			//TODO: resize root data
+			//TODO: resize root data (maybe a DAL_reallocData function would be useful)
 			data->file.size = counts[GET_ID()];
 			break;
 		}
@@ -79,8 +79,8 @@ void TEST_DAL_scattervReceive( Data *data, long size, int root )
 {
 	int i, j;
 
-	SPD_ASSERT( DAL_allocArray( data, size ), "not enough memory to allocate data" );
-// 	SPD_ASSERT( DAL_allocData( data, size ), "not enough space to allocate data" );
+// 	SPD_ASSERT( DAL_allocArray( data, size ), "not enough memory to allocate data" );
+	SPD_ASSERT( DAL_allocData( data, size ), "not enough space to allocate data" );
 
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
