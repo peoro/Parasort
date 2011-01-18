@@ -1,6 +1,6 @@
 MPICC = mpicc
 MPICPP = mpicxx
-CFLAGS = -Wall -W -Wno-unused -Werr -O2 -g
+CFLAGS = -Wall -W -Wno-unused -O2 -g
 ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC
 SPDFLAGS = -ldl -rdynamic
 
@@ -8,10 +8,10 @@ INSTALLDIR = $(HOME)/.spd
 DATADIR = $(INSTALLDIR)/data
 LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
-ALGOS = mergesort samplesort bucketsort bitonicsort lbmergesort sequential quicksort # nosort
-ALGOSPP = kmerge lbkmergesort
+ALGOS = bucketsort sequential # mergesort samplesort bucketsort bitonicsort lbmergesort sequential quicksort # nosort
+ALGOSPP = # kmerge lbkmergesort
 TESTS = sendrecv probe tsetup
-OBJECTS = dal.o debug.o sorting.o
+OBJECTS = dal.o debug.o sorting.o common.o
 
 all: $(ALGOS) $(ALGOSPP) main
 
