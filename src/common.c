@@ -116,9 +116,9 @@ void HeapPop( Heap *h ) {
 #define MAX(a,b) ( (a)>(b) ? (a) : (b) )
 
 void fileKMerge( Data *run_devices, const int k, const long dataSize, Data *output_device ) {
-	const long bufferedRunSize = run_devices[0].file.size / (k + 1); //Size of a single buffered run (+1 because of the output buffer)
+	const long bufferedRunSize = DAL_dataSize(&run_devices[0]) / (k + 1); //Size of a single buffered run (+1 because of the output buffer)
 
-	if ( k > run_devices[0].file.size ) {
+	if ( k > DAL_dataSize(&run_devices[0]) ) {
 		/* TODO: Handle this case */
 		SPD_ASSERT( 0, "fileKMerge function doesn't allow a number of runs greater than memory buffer size" );
 	}
@@ -164,8 +164,8 @@ void fileKMerge( Data *run_devices, const int k, const long dataSize, Data *outp
 
         if ( ++(runs_indexes[j]) < bufferedRunSize )							//If there are others elements in the buffered run
 			HeapPush( &heap, runs[j*bufferedRunSize+runs_indexes[j]], j );		//pushes a new element in the heap
-		else if ( run_devices[j].file.size-runs_offsets[j] ) {									//else, if the run has not been read completely
-			runs_offsets[j] += DAL_dataCopyOS( &run_devices[j], runs_offsets[j], &runs_buffer, j*bufferedRunSize, MIN(bufferedRunSize,run_devices[j].file.size-runs_offsets[j]) );
+		else if ( DAL_dataSize(&run_devices[j])-runs_offsets[j] ) {				//else, if the run has not been read completely
+			runs_offsets[j] += DAL_dataCopyOS( &run_devices[j], runs_offsets[j], &runs_buffer, j*bufferedRunSize, MIN(bufferedRunSize,DAL_dataSize(&run_devices[j])-runs_offsets[j]) );
 			runs_indexes[j] = 0;
 			HeapPush( &heap, runs[j*bufferedRunSize], j );
 		}
@@ -203,23 +203,29 @@ void fileSort( Data *data )
 {
 	const long dataSize = DAL_dataSize( data );
 
+	if ( dataSize < 2 )
+		return;
+
 	/* Memory buffer */
 	Data buffer;
 	DAL_init( &buffer );
  	SPD_ASSERT( DAL_allocBuffer( &buffer, dataSize ), "not enough memory..." );
 
-	const long runSize = DAL_dataSize( &buffer );	//Single run size
-	const int k = dataSize / runSize;				//Number of runs_
+	const long runSize = DAL_dataSize( &buffer );			//Single run size
+	const int k = dataSize / runSize + dataSize % runSize;	//Number of runs_
 
 	/* Data that will contain temporary runs */
 	Data run_devices[k];
 	initRuns( run_devices, k, runSize );
 
 	long readSize = 0;
+	long count = 0;
 	int i;
 	/* Sorting single runs */
 	for( i=0; i<k; i++ ) {
-		readSize = DAL_dataCopyO( data, i*runSize, &buffer, 0 );
+		count = MIN( runSize, dataSize-i*runSize );
+
+		readSize = DAL_dataCopyOS( data, i*runSize, &buffer, 0, count );
 		qsort( buffer.array.data, readSize, sizeof(int), compare );
 		DAL_dataCopyOS( &buffer, 0, &run_devices[i], 0, readSize );
 	}
@@ -237,7 +243,7 @@ void sequentialSort( const TestInfo *ti, Data *data )
 			break;
 		}
 		case Array: {
-			qsort( data->array.data, data->array.size, sizeof(int), compare );
+			qsort( data->array.data, DAL_dataSize(data), sizeof(int), compare );
 			break;
 		}
 		default:
@@ -335,7 +341,7 @@ void chooseSplittersFromData( Data *data, const int n, int *newSplitters )
 			break;
 		}
 		case Array: {
-			chooseSplitters( data->array.data, data->array.size, n, newSplitters );
+			chooseSplitters( data->array.data, DAL_dataSize(data), n, newSplitters );
 			break;
 		}
 		default:

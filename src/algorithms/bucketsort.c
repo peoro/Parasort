@@ -13,6 +13,10 @@
 #include <mpi.h>
 #include "../sorting.h"
 #include "../common.h"
+#include "../dal_internals.h"
+
+#define MIN(a,b) ( (a)<(b) ? (a) : (b) )
+#define MAX(a,b) ( (a)>(b) ? (a) : (b) )
 
 /**
 * @brief Gets the number of element to be inserted in each small bucket
@@ -25,13 +29,30 @@ void getSendCounts( Data *data, const int n, long *lengths )
 {
 	/* TODO: Implement it the right way!! */
 
-	int i, j;
+	int i, j, k;
 	const double 	range = INT_MAX / n;	//Range of elements in each bucket
 
 	/* Computing the number of integers to be sent to each process */
 	switch( data->medium ) {
 		case File: {
-			DAL_UNIMPLEMENTED( data );
+			/* Memory buffer */
+			Data buffer;
+			DAL_init( &buffer );
+			SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_dataSize(data) ), "not enough memory..." );
+
+			int blocks = DAL_BLOCK_COUNT(data, &buffer);
+			long readCount = 0;
+			int i;
+			/* Sorting single runs */
+			for( i=0; i<blocks; i++ ) {
+				readCount += DAL_dataCopyOS( data, i*DAL_dataSize(&buffer), &buffer, 0, MIN(DAL_dataSize(&buffer), DAL_dataSize(data)-readCount) );
+
+				for ( k=0; k<buffer.array.size; k++ ) {
+					j = ((double) buffer.array.data[k]) / range;
+					lengths[j]++;
+				}
+			}
+			DAL_destroy( &buffer );
 			break;
 		}
 		case Array: {
@@ -59,7 +80,6 @@ void bucketSort( const TestInfo *ti, Data *data )
 	const int		n = GET_N( ti );                    //Number of processes
 	const long		M = GET_M( ti );                    //Number of data elements
 	const long		local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
-
 
 	long 			sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
 	long			sdispls[n], rdispls[n];				//Send/receive buffer displacements

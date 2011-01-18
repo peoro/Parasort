@@ -830,32 +830,114 @@ void DAL_gather( Data *data, long size, int root )
 
 void DAL_scattervSend( Data *data, long *counts, long *displs )
 {
+	int sc[GET_N()];
+	int sd[GET_N()];
+	int i, j;
+
+	Data globalBuf;
+	DAL_acquireGlobalBuffer( &globalBuf );
+
+	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a scatter communication (its size is %ld, but there are %d processes)", globalBuf.array.size, GET_N() );
+
+	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
+
+	//Retrieving the number of iterations
+	long max_count = 0;
+	for ( i=0; i<GET_N(); i++ )
+		if ( counts[i] > max_count )
+			max_count = counts[i];
+	MPI_Bcast( &max_count, 1, MPI_LONG, GET_ID(), MPI_COMM_WORLD );
+	int num_iterations = max_count / blockSize + max_count % blockSize;
+	int s, tmp;
+
 	switch( data->medium ) {
 		case File: {
-			DAL_UNIMPLEMENTED( data );
+
+			for ( i=0; i<num_iterations; i++ ) {
+
+				for ( s=0, j=0; j<GET_N(); j++ ) {
+					tmp = MIN( blockSize, (counts[j]-i*blockSize) );
+					sc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
+					sd[j] = s;
+					s += sc[j];
+
+					if( sc[j] )
+						DAL_dataCopyOS( data, displs[j] + i*blockSize, &globalBuf, sd[j], sc[j] );
+				}
+				MPI_Scatterv( globalBuf.array.data, sc, sd, MPI_INT, MPI_IN_PLACE, sc[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
+			}
+
+			//TODO: resize root data (maybe a DAL_reallocData function would be useful)
+			data->file.size = counts[GET_ID()];
 			break;
 		}
 		case Array: {
-			int scounts[GET_N()];
-			int sdispls[GET_N()];
-			int i;
 
-			for ( i=0; i<GET_N(); i++ ) {
-				scounts[i] = counts[i];
-				sdispls[i] = displs[i];
+			for ( i=0; i<num_iterations; i++ ) {
+
+				for ( j=0; j<GET_N(); j++ ) {
+					tmp = MIN( blockSize, (counts[j]-i*blockSize) );
+					sc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
+					sd[j] = displs[j] + i*blockSize;
+				}
+				MPI_Scatterv( data->array.data, sc, sd, MPI_INT, MPI_IN_PLACE, sc[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
 			}
-		 	MPI_Scatterv( data->array.data, scounts, sdispls, MPI_INT, MPI_IN_PLACE, scounts[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
-			SPD_ASSERT( DAL_reallocArray( data, scounts[GET_ID()] ), "not enough memory to allocate data" );
+			SPD_ASSERT( DAL_reallocArray( data, counts[GET_ID()] ), "not enough memory to allocate data" );
 			break;
 		}
 		default:
 			DAL_UNSUPPORTED( data );
 	}
+
+	DAL_releaseGlobalBuffer( &globalBuf );
 }
 void DAL_scattervReceive( Data *data, long size, int root )
 {
-	SPD_ASSERT( DAL_allocArray( data, size ), "not enough memory to allocate data" );
- 	MPI_Scatterv( NULL, NULL, NULL, MPI_INT, data->array.data, size, MPI_INT, root, MPI_COMM_WORLD );
+	int i, j;
+
+	SPD_ASSERT( DAL_isInitialized(data), "Data should be initialized" );
+	SPD_ASSERT( DAL_allocData( data, size ), "not enough space to allocate data" );
+
+	Data globalBuf;
+	DAL_acquireGlobalBuffer( &globalBuf );
+
+	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
+
+	//Retrieving the number of iterations
+	long max_count;
+	MPI_Bcast( &max_count, 1, MPI_LONG, GET_ID(), MPI_COMM_WORLD );
+	int num_iterations = max_count / blockSize + max_count % blockSize;
+	int recvCount, tmp;
+
+	switch( data->medium ) {
+		case File: {
+
+			for ( i=0; i<num_iterations; i++ ) {
+				tmp = MIN( blockSize, size-i*blockSize );
+				recvCount = tmp > 0 ? tmp : 0;
+				MPI_Scatterv( NULL, NULL, NULL, MPI_INT, globalBuf.array.data, recvCount, MPI_INT, root, MPI_COMM_WORLD );
+
+				if ( recvCount )
+					DAL_dataCopyOS( &globalBuf, 0, data, i*blockSize, recvCount );
+			}
+			break;
+		}
+		case Array: {
+			int recvDispl = 0;
+
+			for ( i=0; i<num_iterations; i++ ) {
+				tmp = MIN( blockSize, size-i*blockSize );
+				recvCount = tmp > 0 ? tmp : 0;
+				MPI_Scatterv( NULL, NULL, NULL, MPI_INT, data->array.data+recvDispl, recvCount, MPI_INT, root, MPI_COMM_WORLD );
+				recvDispl += recvCount;
+			}
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( data );
+	}
+
+	DAL_releaseGlobalBuffer( &globalBuf );
 }
 /**
 * @brief Scatters data among all processes
@@ -878,36 +960,122 @@ void DAL_scatterv( Data *data, long *counts, long *displs, int root )
 
 
 
+
 void DAL_gathervSend( Data *data, int root )
 {
+	int i, j;
+
+	Data globalBuf;
+	DAL_acquireGlobalBuffer( &globalBuf );
+
+	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
+
+	//Retrieving the number of iterations
+	long max_count;
+	long size = DAL_dataSize(data);
+	MPI_Allreduce( &size, &max_count, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
+	int num_iterations = max_count / blockSize + max_count % blockSize;
+	int sendCount, tmp;
+
 	switch( data->medium ) {
 		case File: {
-			DAL_UNIMPLEMENTED( data );
+
+			for ( i=0; i<num_iterations; i++ ) {
+				tmp = MIN( blockSize, size-i*blockSize );
+				sendCount = tmp > 0 ? tmp : 0;
+
+				if ( sendCount )
+					DAL_dataCopyOS( data, i*blockSize, &globalBuf, 0, sendCount );
+
+				MPI_Gatherv( globalBuf.array.data, sendCount, MPI_INT, NULL, NULL, NULL, MPI_INT, root, MPI_COMM_WORLD );
+			}
 			break;
 		}
 		case Array: {
-			MPI_Gatherv( data->array.data, data->array.size, MPI_INT, NULL, NULL, NULL, MPI_INT, root, MPI_COMM_WORLD );
+			int sendDispl = 0;
+
+			for ( i=0; i<num_iterations; i++ ) {
+				tmp = MIN( blockSize, size-i*blockSize );
+				sendCount = tmp > 0 ? tmp : 0;
+				MPI_Gatherv( data->array.data+sendDispl, sendCount, MPI_INT, NULL, NULL, NULL, MPI_INT, root, MPI_COMM_WORLD );
+				sendDispl += sendCount;
+			}
 			break;
 		}
 		default:
 			DAL_UNSUPPORTED( data );
 	}
+
+	DAL_releaseGlobalBuffer( &globalBuf );
 }
 void DAL_gathervReceive( Data *data, long *counts, long *displs )
 {
-	int rcounts[GET_N()];
-	int rdispls[GET_N()];
-	int rcount = 0;
-	int i;
+	int rc[GET_N()];
+	int rd[GET_N()];
+	int i, j;
 
+	Data globalBuf;
+	DAL_acquireGlobalBuffer( &globalBuf );
+
+	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a gather communication (its size is %ld, but there are %d processes)", globalBuf.array.size, GET_N() );
+
+	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
+
+	//Retrieving the number of iterations
+	long max_count = 0;
+	MPI_Allreduce( &counts[GET_ID()], &max_count, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
+	int num_iterations = max_count / blockSize + max_count % blockSize;
+	int r, tmp;
+
+	//Computing the total number of elements to be received
+	long rcount = 0;
 	for ( i=0; i<GET_N(); i++ ) {
-		rcounts[i] = counts[i];
-		rdispls[i] = displs[i];
-
 		rcount += counts[i];
 	}
-	SPD_ASSERT( DAL_reallocArray( data, rcount ), "not enough memory to allocate data" );
-	MPI_Gatherv( MPI_IN_PLACE, rcounts[GET_ID()], MPI_INT, data->array.data, rcounts, rdispls, MPI_INT, GET_ID(), MPI_COMM_WORLD );
+
+	//Data to store the received elements
+	Data recvData;
+	DAL_init( &recvData );
+	SPD_ASSERT( DAL_allocData(&recvData, rcount), "not enough space to allocate data" );
+
+	if( data->medium == File || recvData.medium == File ) {
+		for ( i=0; i<num_iterations; i++ ) {
+
+			for ( r=0, j=0; j<GET_N(); j++ ) {
+				tmp = MIN( blockSize, (counts[j]-i*blockSize) );
+				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
+				rd[j] = r;
+				r += rc[j];
+			}
+			if ( rc[GET_ID()] )
+				DAL_dataCopyOS( data, i*blockSize, &globalBuf, rd[GET_ID()], rc[GET_ID()] );
+
+			MPI_Gatherv( MPI_IN_PLACE, rc[GET_ID()], MPI_INT, globalBuf.array.data, rc, rd, MPI_INT, GET_ID(), MPI_COMM_WORLD );
+
+			for ( j=0; j<GET_N(); j++ )
+				if( rc[j] )
+					DAL_dataCopyOS( &globalBuf, rd[j], &recvData, displs[j] + i*blockSize, rc[j] );
+		}
+	}
+	else if (data->medium == Array && recvData.medium == Array ) {
+
+		for ( i=0; i<num_iterations; i++ ) {
+
+			for ( j=0; j<GET_N(); j++ ) {
+				tmp = MIN( blockSize, (counts[j]-i*blockSize) );
+				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
+				rd[j] = displs[j] + i*blockSize;
+			}
+			MPI_Gatherv( data->array.data+rd[GET_ID()], rc[GET_ID()], MPI_INT, recvData.array.data, rc, rd, MPI_INT, GET_ID(), MPI_COMM_WORLD );
+		}
+	}
+	else
+		DAL_UNSUPPORTED( data );
+
+	DAL_destroy( data );
+	*data = recvData;
+
+	DAL_releaseGlobalBuffer( &globalBuf );
 }
 /**
 * @brief Gathers data from all processes
@@ -934,25 +1102,63 @@ void DAL_gatherv( Data *data, long *counts, long *displs, int root )
 
 
 /**
+* @brief Split a Data into several parts
+*
+* @param[in] 	buf  		Data buffer to be split
+* @param[in] 	parts  		Number of parts to split buf
+* @param[out] 	bufs  		Array of Data as result of splitting
+*/
+void DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
+{
+	DAL_ASSERT( buf->medium == Array, buf, "Data should be of type Array" );
+	DAL_ASSERT( buf->array.size % parts == 0, buf, "Data size should be a multiple of %d, but it's %ld", parts, buf->array.size );
+	int i;
+	for ( i=0; i<parts; i++ ) {
+		bufs[i] = *buf;
+		bufs[i].array.data = buf->array.data+(buf->array.size/parts)*i;
+		bufs[i].array.size /= parts;
+	}
+}
+
+/**
 * @brief Sends data from all to all processes
 *
-* @param[in,out] 	data  		Data to be sent/received
-* @param[in] 		size  		Number of elements to be sent/received to/from each process
+* @param[in,out] 	data  		Data to be sent and in which receive
+* @param[in] 		count  		Number of elements to be sent/received to/from each process
 */
-void DAL_alltoall( Data *data, long size )
+void DAL_alltoall( Data *data, long count )
 {
-// 	DAL_UNSUPPORTED( data );
-	int count = size;
-	int i;
+	if( data->medium != File && data->medium != Array )
+		DAL_UNSUPPORTED( data );
 
-	Data recvData;
-	DAL_init( &recvData );
-	SPD_ASSERT( DAL_allocArray(&recvData, count), "not enough memory to allocate data" );
+	Data globalBuf;
+	DAL_acquireGlobalBuffer( &globalBuf );
 
-	MPI_Alltoall( data->array.data, count, MPI_INT, recvData.array.data, count, MPI_INT, MPI_COMM_WORLD );
+	DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is %ld, but there are %d processes)", globalBuf.array.size, GET_N() );
 
-	DAL_destroy( data );
-	*data = recvData;
+	Data bufs[2];
+	DAL_splitBuffer( &globalBuf, 2, bufs );
+	Data *sendBuf = &bufs[0];
+	Data *recvBuf = &bufs[1];
+
+	DAL_ASSERT( data->file.size >= sendBuf->array.size, data, "Data to be sent is too small, should be of type Array, but it's of type File" );
+
+	int i, j;
+	int blockSize = DAL_dataSize(sendBuf) / GET_N();
+
+	for ( i=0; i<DAL_BLOCK_COUNT(data, sendBuf); i++ ) {
+		int currCount = MIN( blockSize, (count-i*blockSize) );		//Number of elements to be sent to each process by MPI_Alltoall
+
+		for ( j=0; j<GET_N(); j++ )
+			DAL_dataCopyOS( data, j*count + i*blockSize, sendBuf, j*currCount, currCount );
+
+		MPI_Alltoall( sendBuf->array.data, currCount, MPI_INT, recvBuf->array.data, currCount, MPI_INT, MPI_COMM_WORLD );
+
+		for ( j=0; j<GET_N(); j++ )
+			DAL_dataCopyOS( recvBuf, j*currCount, data, j*count + i*blockSize, currCount );
+	}
+
+	DAL_releaseGlobalBuffer( &globalBuf );
 }
 
 
@@ -967,41 +1173,82 @@ void DAL_alltoall( Data *data, long size )
 /**
 * @brief Sends data from all to all processes
 *
-* @param[in,out] 	data  		Data to be sent/received
-* @param[in] 		sendSizes  	Array containing the number of elements to be sent to each process
+* @param[in,out] 	data  		Data to be sent and in which receive
+* @param[in] 		scounts  	Array containing the number of elements to be sent to each process
 * @param[in] 		sdispls     Array of displacements
-* @param[in] 		recvSizes  	Array containing the number of elements to be received from each process
+* @param[in] 		rcounts  	Array containing the number of elements to be received from each process
 * @param[in] 		rdispls     Array of displacements
 */
-void DAL_alltoallv( Data *data, long *sendSizes, long *sdispls, long *recvSizes, long *rdispls )
+void DAL_alltoallv( Data *data, long *scounts, long *sdispls, long *rcounts, long *rdispls )
 {
-// 	DAL_UNSUPPORTED( data );
+	if( data->medium != File && data->medium != Array )
+		DAL_UNSUPPORTED( data );
 
-	int scounts[GET_N()];
+	int i, j;
+	int sc[GET_N()];
 	int sd[GET_N()];
-	int rcounts[GET_N()];
+	int rc[GET_N()];
 	int rd[GET_N()];
-	int rcount = 0;
-	int i;
+	long rcount = 0;
 
-	for ( i=0; i<GET_N(); i++ ) {
-		scounts[i] = sendSizes[i];
-		sd[i] = sdispls[i];
-
-		rcounts[i] = recvSizes[i];
-		rd[i] = rdispls[i];
-
+	//Computing the total number of elements to be received
+	for ( i=0; i<GET_N(); i++ )
 		rcount += rcounts[i];
-	}
+
+	//Data to store the received elements
 	Data recvData;
 	DAL_init( &recvData );
-	SPD_ASSERT( DAL_allocArray(&recvData, rcount), "not enough memory to allocate data" );
+	SPD_ASSERT( DAL_allocData(&recvData, rcount), "not enough space to allocate data" );
 
-	MPI_Alltoallv( data->array.data, scounts, sd, MPI_INT, recvData.array.data, rcounts, rd, MPI_INT, MPI_COMM_WORLD );
+	Data globalBuf;
+	DAL_acquireGlobalBuffer( &globalBuf );
+
+	DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is %ld, but there are %d processes)", globalBuf.array.size, GET_N() );
+
+	Data bufs[2];
+	DAL_splitBuffer( &globalBuf, 2, bufs );
+	Data *sendBuf = &bufs[0];
+	Data *recvBuf = &bufs[1];
+
+	int blockSize = DAL_dataSize(sendBuf) / GET_N();
+
+	//Retrieving the number of iterations
+	long max_count;
+	MPI_Allreduce( &rcount, &max_count, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
+	int num_iterations = max_count / blockSize + max_count % blockSize;
+	int s, r, tmp;
+
+	for ( i=0; i<num_iterations; i++ ) {
+
+		for ( s=0, r=0, j=0; j<GET_N(); j++ ) {
+			tmp = MIN( blockSize, (scounts[j]-i*blockSize) );
+			sc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
+			sd[j] = s;
+			s += sc[j];
+
+			if( sc[j] )
+				DAL_dataCopyOS( data, sdispls[j] + i*blockSize, sendBuf, sd[j], sc[j] );
+
+			tmp = MIN( blockSize, (rcounts[j]-i*blockSize) );
+			rc[j] =	tmp > 0 ? tmp : 0; 	//Number of elements to be received from process j by MPI_Alltoallv
+			rd[j] = r;
+			r += rc[j];
+		}
+
+		MPI_Alltoallv( sendBuf->array.data, sc, sd, MPI_INT, recvBuf->array.data, rc, rd, MPI_INT, MPI_COMM_WORLD );
+
+		for ( j=0; j<GET_N(); j++ )
+			if( rc[j] )
+				DAL_dataCopyOS( recvBuf, rd[j], &recvData, rdispls[j] + i*blockSize, rc[j] );
+
+	}
+
+	DAL_releaseGlobalBuffer( &globalBuf );
 
 	DAL_destroy( data );
 	*data = recvData;
 }
+
 
 
 

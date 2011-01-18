@@ -83,8 +83,6 @@ void TEST_DAL_gathervReceive( Data *data, long *counts, long *displs )
 	int num_iterations = max_count / blockSize + max_count % blockSize;
 	int r, tmp;
 
-	SPD_DEBUG( "num_iterations = %d", num_iterations );
-
 	//Computing the total number of elements to be received
 	long rcount = 0;
 	for ( i=0; i<GET_N(); i++ ) {
@@ -210,7 +208,6 @@ int main( int argc, char **argv )
 	TEST_DAL_gatherv( &d, rcounts, rdispls, root );
 
 	if ( GET_ID() == root ) {
-		DAL_DEBUG( &d, "size = %ld",  DAL_dataSize( &d ) );
 		DAL_PRINT_DATA( &d, "This is what I got" );
 	}
 

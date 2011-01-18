@@ -66,7 +66,7 @@ void TEST_DAL_scattervSend( Data *data, long *counts, long *displs )
 				}
 				MPI_Scatterv( data->array.data, sc, sd, MPI_INT, MPI_IN_PLACE, sc[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
 			}
-			SPD_ASSERT( DAL_reallocArray( data, sc[GET_ID()] ), "not enough memory to allocate data" );
+			SPD_ASSERT( DAL_reallocArray( data, counts[GET_ID()] ), "not enough memory to allocate data" );
 			break;
 		}
 		default:
@@ -79,8 +79,8 @@ void TEST_DAL_scattervReceive( Data *data, long size, int root )
 {
 	int i, j;
 
-// 	SPD_ASSERT( DAL_allocArray( data, size ), "not enough memory to allocate data" );
-	SPD_ASSERT( DAL_allocData( data, size ), "not enough space to allocate data" );
+	SPD_ASSERT( DAL_allocArray( data, size ), "not enough memory to allocate data" );
+// 	SPD_ASSERT( DAL_allocData( data, size ), "not enough space to allocate data" );
 
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
@@ -160,7 +160,7 @@ int main( int argc, char **argv )
 
 	long scounts[n];
 	long sdispls[n];
-	int size = n*25;	//size of data d
+	int size = n*5;	//size of data d
 	int s;
 
 	//Initializing send counts randomly
@@ -179,8 +179,8 @@ int main( int argc, char **argv )
 	DAL_init( &d );
 
 	if ( GET_ID() == root ) {
-// 		SPD_ASSERT( DAL_allocArray( &d, size ), "error allocating data..." );
-		SPD_ASSERT( DAL_allocData( &d, size ), "error allocating data..." );
+		SPD_ASSERT( DAL_allocArray( &d, size ), "error allocating data..." );
+// 		SPD_ASSERT( DAL_allocData( &d, size ), "error allocating data..." );
 
 		//tmp buffer to init data
 		Data buffer;
@@ -196,6 +196,10 @@ int main( int argc, char **argv )
 		DAL_destroy( &buffer );
 
 	}
+
+	if( GET_ID() == root )
+		DAL_PRINT_DATA( &d, "This is what I had" );
+
 	//Scatter communication
 	TEST_DAL_scatterv( &d, scounts, sdispls, root );
 

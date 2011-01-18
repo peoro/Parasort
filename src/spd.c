@@ -312,7 +312,11 @@ int generate( const TestInfo *ti )
 		_seed_c = _seed_z<<13;
 
 		for( i = 0; i < M; ++ i ) {
+#ifndef DEBUG
 			int x = JKISS();
+#else
+			int x = JKISS()%100;
+#endif
 
 			if( ! fwrite( &x, sizeof(int), 1, f ) ) {
 				printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, x, path );
@@ -354,7 +358,7 @@ int loadData( const TestInfo *ti, Data *data )
 
 	if( DAL_dataSize(data) != GET_M(ti) ) {
 		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
-				path, GET_M(ti), GET_M(ti), DAL_dataSize(data) );
+				path, GET_M(ti)*sizeof(int), GET_M(ti), DAL_dataSize(data)*sizeof(int) );
 		return 0;
 	}
 
@@ -373,7 +377,7 @@ int storeData( const TestInfo *ti, Data *data )
 
 	if( DAL_dataSize(data) != GET_M(ti) ) {
 		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
-				path, GET_M(ti), GET_M(ti), DAL_dataSize(data) );
+				path, GET_M(ti)*sizeof(int), GET_M(ti), DAL_dataSize(data)*sizeof(int) );
 		return 0;
 	}
 
