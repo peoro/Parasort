@@ -8,8 +8,6 @@
 #define MIN(a,b) ( (a)<(b) ? (a) : (b) )
 #define MAX(a,b) ( (a)>(b) ? (a) : (b) )
 
-
-
 void TEST_DAL_gathervSend( Data *data, int root )
 {
 	int i, j;
@@ -27,7 +25,7 @@ void TEST_DAL_gathervSend( Data *data, int root )
 	long max_count;
 	long size = DAL_dataSize(data);
 	MPI_Allreduce( &size, &max_count, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
-	int num_iterations = max_count / DAL_dataSize(&globalBuf) + max_count % DAL_dataSize(&globalBuf);
+	int num_iterations = max_count / blockSize + max_count % blockSize;
 	int sendCount, tmp;
 
 
@@ -82,8 +80,10 @@ void TEST_DAL_gathervReceive( Data *data, long *counts, long *displs )
 	//Retrieving the number of iterations
 	long max_count = 0;
 	MPI_Allreduce( &counts[GET_ID()], &max_count, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
-	int num_iterations = max_count / DAL_dataSize(&globalBuf) + max_count % DAL_dataSize(&globalBuf);
+	int num_iterations = max_count / blockSize + max_count % blockSize;
 	int r, tmp;
+
+	SPD_DEBUG( "num_iterations = %d", num_iterations );
 
 	//Computing the total number of elements to be received
 	long rcount = 0;
@@ -91,47 +91,47 @@ void TEST_DAL_gathervReceive( Data *data, long *counts, long *displs )
 		rcount += counts[i];
 	}
 
-	//TODO: resize root data (maybe a DAL_reallocData function would be useful)
-	if ( data->medium == File )
-		data->file.size = rcount;
-	else
-		SPD_ASSERT( DAL_reallocArray( data, rcount ), "not enough memory to allocate data" );
+	//Data to store the received elements
+	Data recvData;
+	DAL_init( &recvData );
+	SPD_ASSERT( DAL_allocData(&recvData, rcount), "not enough space to allocate data" );
 
-	switch( data->medium ) {
-		case File: {
+	if( data->medium == File || recvData.medium == File ) {
+		for ( i=0; i<num_iterations; i++ ) {
 
-			for ( i=0; i<num_iterations; i++ ) {
-
-				for ( r=0, j=0; j<GET_N(); j++ ) {
-					tmp = MIN( blockSize, (counts[j]-i*blockSize) );
-					rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
-					rd[j] = r;
-					r += rc[j];
-				}
-				MPI_Gatherv( MPI_IN_PLACE, rc[GET_ID()], MPI_INT, globalBuf.array.data, rc, rd, MPI_INT, GET_ID(), MPI_COMM_WORLD );
-
-				for ( j=0; j<GET_N(); j++ )
-					if( rc[j] )
-						DAL_dataCopyOS( &globalBuf, rd[j], data, displs[j] + i*blockSize, rc[j] );
+			for ( r=0, j=0; j<GET_N(); j++ ) {
+				tmp = MIN( blockSize, (counts[j]-i*blockSize) );
+				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
+				rd[j] = r;
+				r += rc[j];
 			}
-			break;
-		}
-		case Array: {
+			if ( rc[GET_ID()] )
+				DAL_dataCopyOS( data, i*blockSize, &globalBuf, rd[GET_ID()], rc[GET_ID()] );
 
-			for ( i=0; i<num_iterations; i++ ) {
+			MPI_Gatherv( MPI_IN_PLACE, rc[GET_ID()], MPI_INT, globalBuf.array.data, rc, rd, MPI_INT, GET_ID(), MPI_COMM_WORLD );
 
-				for ( j=0; j<GET_N(); j++ ) {
-					tmp = MIN( blockSize, (counts[j]-i*blockSize) );
-					rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
-					rd[j] = displs[j] + i*blockSize;
-				}
-				MPI_Gatherv( MPI_IN_PLACE, rc[GET_ID()], MPI_INT, data->array.data, rc, rd, MPI_INT, GET_ID(), MPI_COMM_WORLD );
-			}
-			break;
+			for ( j=0; j<GET_N(); j++ )
+				if( rc[j] )
+					DAL_dataCopyOS( &globalBuf, rd[j], &recvData, displs[j] + i*blockSize, rc[j] );
 		}
-		default:
-			DAL_UNSUPPORTED( data );
 	}
+	else if (data->medium == Array && recvData.medium == Array ) {
+
+		for ( i=0; i<num_iterations; i++ ) {
+
+			for ( j=0; j<GET_N(); j++ ) {
+				tmp = MIN( blockSize, (counts[j]-i*blockSize) );
+				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
+				rd[j] = displs[j] + i*blockSize;
+			}
+			MPI_Gatherv( data->array.data+rd[GET_ID()], rc[GET_ID()], MPI_INT, recvData.array.data, rc, rd, MPI_INT, GET_ID(), MPI_COMM_WORLD );
+		}
+	}
+	else
+		DAL_UNSUPPORTED( data );
+
+	DAL_destroy( data );
+	*data = recvData;
 
 	DAL_releaseGlobalBuffer( &globalBuf );
 }
@@ -167,7 +167,7 @@ int main( int argc, char **argv )
 
 	long rcounts[n];
 	long rdispls[n];
-	int size = n*3;	//size of data to collect
+	int size = n*25;	//size of data to collect
 	int r;
 
 	//Initializing send counts randomly
@@ -209,8 +209,10 @@ int main( int argc, char **argv )
 	//Gather communication
 	TEST_DAL_gatherv( &d, rcounts, rdispls, root );
 
-	if ( GET_ID() == root )
+	if ( GET_ID() == root ) {
+		DAL_DEBUG( &d, "size = %ld",  DAL_dataSize( &d ) );
 		DAL_PRINT_DATA( &d, "This is what I got" );
+	}
 
 	DAL_destroy( &d );
 

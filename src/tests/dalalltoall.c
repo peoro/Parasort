@@ -15,7 +15,7 @@
 * @param[in] 	parts  		Number of parts to split buf
 * @param[out] 	bufs  		Array of Data as result of splitting
 */
-void DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
+void TEST_DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
 {
 	DAL_ASSERT( buf->medium == Array, buf, "Data should be of type Array" );
 	DAL_ASSERT( buf->array.size % parts == 0, buf, "Data size should be a multiple of %d, but it's %ld", parts, buf->array.size );
@@ -43,7 +43,7 @@ void TEST_DAL_alltoall( Data *data, long count )
 			DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is %ld, but there are %d processes)", globalBuf.array.size, GET_N() );
 
 			Data bufs[2];
-			DAL_splitBuffer( &globalBuf, 2, bufs );
+			TEST_DAL_splitBuffer( &globalBuf, 2, bufs );
 			Data *sendBuf = &bufs[0];
 			Data *recvBuf = &bufs[1];
 

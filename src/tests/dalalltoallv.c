@@ -15,7 +15,7 @@
 * @param[in] 	parts  		Number of parts to split buf
 * @param[out] 	bufs  		Array of Data as result of splitting
 */
-void DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
+void TEST_DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
 {
 	DAL_ASSERT( buf->medium == Array, buf, "Data should be of type Array" );
 	DAL_ASSERT( buf->array.size % parts == 0, buf, "Data size should be a multiple of %d, but it's %ld", parts, buf->array.size );
@@ -61,7 +61,7 @@ void TEST_DAL_alltoallv( Data *data, long *scounts, long *sdispls, long *rcounts
 		DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is %ld, but there are %d processes)", globalBuf.array.size, GET_N() );
 
 		Data bufs[2];
-		DAL_splitBuffer( &globalBuf, 2, bufs );
+		TEST_DAL_splitBuffer( &globalBuf, 2, bufs );
 		Data *sendBuf = &bufs[0];
 		Data *recvBuf = &bufs[1];
 
@@ -75,7 +75,7 @@ void TEST_DAL_alltoallv( Data *data, long *scounts, long *sdispls, long *rcounts
 		//Retrieving the number of iterations
 		long max_count;
 		MPI_Allreduce( &rcount, &max_count, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
-		int num_iterations = max_count / DAL_dataSize(sendBuf) + max_count % DAL_dataSize(sendBuf);
+		int num_iterations = max_count / blockSize + max_count % blockSize;
 		int s, r, tmp;
 
 		for ( i=0; i<num_iterations; i++ ) {
@@ -141,7 +141,7 @@ int main( int argc, char **argv )
 	long sdispls[n];
 	long rcounts[n];
 	long rdispls[n];
-	int size = n;	//size of data d
+	int size = n*25;	//size of data d
 	int s, r;
 
 	//Initializing send counts randomly
