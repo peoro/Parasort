@@ -75,7 +75,7 @@ struct Min_val {
 //merges #runs data on a File
 void fileFusion ( Data *data_owned, Data *merging, int runs )
 {
-	DAL_UNIMPLEMENTED ( data_owned );
+	fileKMerge ( data_owned, runs, DAL_dataSize ( data_owned ) * runs, merging );
 }
 
 //invariant: all buckets have equal size
@@ -106,7 +106,6 @@ void memoryFusion ( Data *data_owned, Data *merging, int runs )
 Data fusion ( Data *data_owned, int runs )
 {
 	Data merging;
-	int merging_size = DAL_dataSize ( data_owned ) * runs;
 
 	DAL_init ( &merging );
 
@@ -117,7 +116,7 @@ Data fusion ( Data *data_owned, int runs )
 			break;
 		}
 		case Array: {
-			if ( DAL_allocArray ( &merging, merging_size ))
+			if ( DAL_allocData ( &merging, DAL_dataSize ( data_owned ) * runs ))
 				memoryFusion ( data_owned, &merging, runs );
 			else
 				fileFusion ( data_owned, &merging, runs );
@@ -192,8 +191,7 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 
 	//frees memory
 	for ( int i = 1; i < k; i++ )
-		if ( ! DAL_isDestroyed ( data_owned + i ))
-			DAL_destroy ( data_owned + i );
+		DAL_destroy ( data_owned + i );
 	free ( dests );
 	free ( data_owned );
 }

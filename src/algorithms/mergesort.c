@@ -63,8 +63,10 @@ int do_i_send ( const TestInfo *ti, int step )
 //merges two data on a File
 void fileFusion ( Data *data_local, Data *data_received, Data *data_merged )
 {
-	//data_merged has to be initialized within this function (medium -> File, file name..)
-	DAL_UNIMPLEMENTED ( data_local );
+	Data data_to_merge[2];
+	data_to_merge[0] = *data_local;
+	data_to_merge[1] = *data_received;
+	fileKMerge ( data_to_merge, 2, DAL_dataSize ( data_local ) + DAL_dataSize ( data_received ), data_merged );
 }
 
 //merges two data in memory. data_merged is preallocated
@@ -88,7 +90,6 @@ void memoryFusion ( Data *data_local, Data *data_received, Data *data_merged )
 Data fusion ( Data *data_local, Data *data_received )
 {
 	Data merging;
-	int merging_size = DAL_dataSize ( data_local ) + DAL_dataSize ( data_received );
 
 	DAL_init ( &merging );
 
@@ -98,7 +99,7 @@ Data fusion ( Data *data_local, Data *data_received )
 			break;
 		}
 		case Array: {
-			if ( DAL_allocArray ( &merging, merging_size ))
+			if ( DAL_allocData ( &merging, DAL_dataSize ( data_local ) + DAL_dataSize ( data_received ) ))
 				//memory merge
 				memoryFusion ( data_local, data_received, &merging );
 			else

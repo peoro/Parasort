@@ -26,6 +26,9 @@ int isPowerOfTwo( int x );
 /// sequential sort function
 void sequentialSort( const TestInfo *ti, Data *data );
 
+//merge k Data runs into an output Data of size dataSize
+void fileKMerge( Data *run_devices, const int k, const long dataSize, Data *output_device );
+
 int getBucketIndex( const int *ele, const int *splitters, const long length );
 void chooseSplitters( int *array, const long length, const int n, int *newSplitters );
 void chooseSplittersFromData( Data *data, const int n, int *newSplitters );
