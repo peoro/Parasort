@@ -91,7 +91,7 @@ long strToInt( const char *str, bool *err )
 // reads an already existing file (will copy it, if data is a File)
 bool DAL_s_readFile( Data *data, const char *path )
 {
-	long size = GET_FILE_SIZE(path) / sizeof(int);
+	long size = GET_FILE_SIZE(path) / (long)sizeof(int);
 	DAL_allocData( data, size );
 
 	// temporary, just to use DAL_readNextDeviceBlock
@@ -358,7 +358,7 @@ int loadData( const TestInfo *ti, Data *data )
 
 	if( DAL_dataSize(data) != GET_M(ti) ) {
 		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
-				path, GET_M(ti)*sizeof(int), GET_M(ti), DAL_dataSize(data)*sizeof(int) );
+				path, GET_M(ti)*(long)sizeof(int), GET_M(ti), DAL_dataSize(data)*(long)sizeof(int) );
 		return 0;
 	}
 
@@ -377,7 +377,7 @@ int storeData( const TestInfo *ti, Data *data )
 
 	if( DAL_dataSize(data) != GET_M(ti) ) {
 		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
-				path, GET_M(ti)*sizeof(int), GET_M(ti), DAL_dataSize(data)*sizeof(int) );
+				path, GET_M(ti)*(long)sizeof(int), GET_M(ti), DAL_dataSize(data)*(long)sizeof(int) );
 		return 0;
 	}
 
