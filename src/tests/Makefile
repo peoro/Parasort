@@ -3,7 +3,7 @@ MPICPP = mpic++
 CFLAGS = -Wall -Wextra -Wno-unused -Werror -g
 
 OBJECTS = ../debug.o
-TESTS = sendrecv probe tsetup
+TESTS = sendrecv probe tsetup fwrite
 
 DALOBJECTS = $(OBJECTS) ../dal.o
 DALTESTS = dalsendrecv dalalltoall dalalltoallv dalscatterv dalgatherv
