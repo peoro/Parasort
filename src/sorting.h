@@ -17,18 +17,18 @@ typedef struct
 	bool verbose;
 	bool threaded; // use multithread between cores
 
-    long M; //data count
-    long seed;
+    dal_size_t M; //data count
+    dal_size_t seed;
     char algo[64];
     int algoVar[3];
 } TestInfo;
 
 int GET_ID ( const TestInfo *ti );
 int GET_N ( const TestInfo *ti );
-long GET_M ( const TestInfo *ti );
-long GET_LOCAL_M ( const TestInfo *ti );
+dal_size_t GET_M ( const TestInfo *ti );
+dal_size_t GET_LOCAL_M ( const TestInfo *ti );
 const char* GET_ALGO ( const TestInfo *ti );
-long GET_SEED ( const TestInfo *ti );
+dal_size_t GET_SEED ( const TestInfo *ti );
 char * GET_ALGORITHM_PATH( const char *algo, char *path, int pathLen );
 
 #ifndef DEBUG

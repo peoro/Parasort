@@ -75,7 +75,7 @@ struct Min_val {
 //merges #runs data on a File
 void fileFusion ( Data *data_owned, Data *merging, int runs )
 {
-	fileKMerge ( data_owned, runs, DAL_dataSize ( data_owned ) * runs, merging );
+	fileKMerge ( data_owned, runs, merging );
 }
 
 //invariant: all buckets have equal size

@@ -25,7 +25,7 @@ void TEST_DAL_gathervSend( Data *data, int root )
 	long max_count;
 	long size = DAL_dataSize(data);
 	MPI_Allreduce( &size, &max_count, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
-	int num_iterations = max_count / blockSize + max_count % blockSize;
+	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int sendCount, tmp;
 
 
@@ -80,7 +80,7 @@ void TEST_DAL_gathervReceive( Data *data, long *counts, long *displs )
 	//Retrieving the number of iterations
 	long max_count = 0;
 	MPI_Allreduce( &counts[GET_ID()], &max_count, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
-	int num_iterations = max_count / blockSize + max_count % blockSize;
+	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int r, tmp;
 
 	//Computing the total number of elements to be received

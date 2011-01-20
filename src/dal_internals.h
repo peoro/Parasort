@@ -11,22 +11,22 @@ extern "C" {
 
 
 // they return how much they copied
-long DAL_dataCopy( Data *src, Data *dst ); // src.size must be equal to dst.size
-long DAL_dataCopyO( Data *src, long srcOffset, Data *dst, long dstOffset ); // read the min of (src+off).size and (dst+off).size
-long DAL_dataCopyOS( Data *src, long srcOffset, Data *dst, long dstOffset, long size );
+dal_size_t DAL_dataCopy( Data *src, Data *dst ); // src.size must be equal to dst.size
+dal_size_t DAL_dataCopyO( Data *src, dal_size_t srcOffset, Data *dst, dal_size_t dstOffset ); // read the min of (src+off).size and (dst+off).size
+dal_size_t DAL_dataCopyOS( Data *src, dal_size_t srcOffset, Data *dst, dal_size_t dstOffset, dal_size_t size );
 
 
 
 // allocating an Array in memory
-bool DAL_allocArray( Data *data, long size );
-bool DAL_reallocArray ( Data *data, long size );
+bool DAL_allocArray( Data *data, dal_size_t size );
+bool DAL_reallocArray ( Data *data, dal_size_t size );
 bool DAL_reallocAsArray( Data *data ); // tries to realloc data as an array
 
 // allocating a temporary buffer in memory (an Array)
-bool DAL_allocBuffer( Data *data, long size ); // allocs a buffer of size equal OR LESSER than size
+bool DAL_allocBuffer( Data *data, dal_size_t size ); // allocs a buffer of size equal OR LESSER than size
 
 // allocating a File
-bool DAL_allocFile( Data *data, long size );
+bool DAL_allocFile( Data *data, dal_size_t size );
 
 
 

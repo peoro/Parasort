@@ -66,7 +66,7 @@ void fileFusion ( Data *data_local, Data *data_received, Data *data_merged )
 	Data data_to_merge[2];
 	data_to_merge[0] = *data_local;
 	data_to_merge[1] = *data_received;
-	fileKMerge ( data_to_merge, 2, DAL_dataSize ( data_local ) + DAL_dataSize ( data_received ), data_merged );
+	fileKMerge ( data_to_merge, 2, data_merged );
 }
 
 //merges two data in memory. data_merged is preallocated

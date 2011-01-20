@@ -75,7 +75,7 @@ void TEST_DAL_alltoallv( Data *data, long *scounts, long *sdispls, long *rcounts
 		//Retrieving the number of iterations
 		long max_count;
 		MPI_Allreduce( &rcount, &max_count, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
-		int num_iterations = max_count / blockSize + max_count % blockSize;
+		int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 		int s, r, tmp;
 
 		for ( i=0; i<num_iterations; i++ ) {

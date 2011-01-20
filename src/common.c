@@ -67,7 +67,7 @@ inline int isPowerOfTwo( int x )
 
 typedef struct {
 	int val;
-	long run_index;
+	dal_size_t run_index;
 } Min_val;
 typedef struct {
 	int size;
@@ -115,8 +115,11 @@ void HeapPop( Heap *h ) {
 #define MIN(a,b) ( (a)<(b) ? (a) : (b) )
 #define MAX(a,b) ( (a)>(b) ? (a) : (b) )
 
-void fileKMerge( Data *run_devices, const int k, const long dataSize, Data *output_device ) {
-	const long bufferedRunSize = DAL_dataSize(&run_devices[0]) / (k + 1); //Size of a single buffered run (+1 because of the output buffer)
+void fileKMerge( Data *run_devices, const int k, Data *output_device )
+{
+	SPD_ASSERT( output_device->medium == File || output_device->medium == Array, "output_device must be pre-allocated!" );
+	const dal_size_t dataSize = DAL_dataSize( output_device );
+	const dal_size_t bufferedRunSize = DAL_dataSize(&run_devices[0]) / (k + 1); //Size of a single buffered run (+1 because of the output buffer)
 
 	if ( k > DAL_dataSize(&run_devices[0]) ) {
 		/* TODO: Handle this case */
@@ -136,17 +139,17 @@ void fileKMerge( Data *run_devices, const int k, const long dataSize, Data *outp
 	int* output = output_buffer.array.data;
 
 	/* Indexes and Offsets for the k buffered runs */
-	long *runs_indexes = (long*) calloc( sizeof(long), k );
-	long *runs_offsets = (long*) malloc( k * sizeof(long) );
+	dal_size_t *runs_indexes = (dal_size_t*) calloc( sizeof(dal_size_t), k );
+	dal_size_t *runs_offsets = (dal_size_t*) malloc( k * sizeof(dal_size_t) );
 
 	/* The auxiliary heap struct */
 	Heap heap;
 	HeapInit( &heap, k );
 
-	long i;
+	dal_size_t i;
 	/* Initializing the buffered runs */
 	for ( i=0; i < k; i++ )
-		runs_offsets[i] = DAL_dataCopyOS( &run_devices[i], 0, &runs_buffer, i*bufferedRunSize, bufferedRunSize );;
+		runs_offsets[i] = DAL_dataCopyOS( &run_devices[i], 0, &runs_buffer, i*bufferedRunSize, MIN(bufferedRunSize, DAL_dataSize(&run_devices[i])) );;
 
 	/* Initializing the heap */
     for ( i=0; i<k; i++ )
@@ -154,25 +157,27 @@ void fileKMerge( Data *run_devices, const int k, const long dataSize, Data *outp
 
 	/* Merging the runs */
 	int outputSize = 0;
-	long outputOffset = 0;
+	dal_size_t outputOffset = 0;
     for ( i=0; i<dataSize; i++ ) {
         Min_val min = HeapTop( &heap );
         HeapPop( &heap );
 
 		//the run index
 		int j = min.run_index;
+		dal_size_t remainingSize = DAL_dataSize(&run_devices[j])-runs_offsets[j];
+		dal_size_t run_buf_size = MIN( bufferedRunSize, remainingSize );
 
-        if ( ++(runs_indexes[j]) < bufferedRunSize )							//If there are others elements in the buffered run
-			HeapPush( &heap, runs[j*bufferedRunSize+runs_indexes[j]], j );		//pushes a new element in the heap
-		else if ( DAL_dataSize(&run_devices[j])-runs_offsets[j] ) {				//else, if the run has not been read completely
-			runs_offsets[j] += DAL_dataCopyOS( &run_devices[j], runs_offsets[j], &runs_buffer, j*bufferedRunSize, MIN(bufferedRunSize,DAL_dataSize(&run_devices[j])-runs_offsets[j]) );
+        if ( ++(runs_indexes[j]) <  run_buf_size )							//If there are others elements in the buffered run
+			HeapPush( &heap, runs[j*bufferedRunSize+runs_indexes[j]], j );	//pushes a new element in the heap
+		else if ( remainingSize ) {											//else, if the run has not been read completely
+			runs_offsets[j] += DAL_dataCopyOS( &run_devices[j], runs_offsets[j], &runs_buffer, j*bufferedRunSize, run_buf_size );
 			runs_indexes[j] = 0;
 			HeapPush( &heap, runs[j*bufferedRunSize], j );
 		}
 
         output[outputSize++] = min.val;
 
-		if ( (outputSize % bufferedRunSize) == 0 || i==dataSize-1 ) {										//If the output buffer is full
+		if ( outputSize == bufferedRunSize || i==dataSize-1 ) {										//If the output buffer is full
 			outputOffset += DAL_dataCopyOS( &output_buffer, 0, output_device, outputOffset, outputSize );
 			outputSize = 0;
 		}
@@ -185,15 +190,8 @@ void fileKMerge( Data *run_devices, const int k, const long dataSize, Data *outp
 	free( runs_offsets );
 }
 
-void initRuns( Data *run_devices, int k, int size ) {
-	int i;
-	for ( i=0; i<k; i++ ) {
-		DAL_init( &run_devices[i] );
-		SPD_ASSERT( DAL_allocFile( &run_devices[i], size ), "couldn't create a temporary file for runs" );
-	}
-}
-
-void destroyRuns( Data *run_devices, int k ) {
+void destroyRuns( Data *run_devices, int k )
+{
 	int i;
 	for ( i=0; i<k; i++ )
 		DAL_destroy( &run_devices[i] );
@@ -201,7 +199,7 @@ void destroyRuns( Data *run_devices, int k ) {
 
 void fileSort( Data *data )
 {
-	const long dataSize = DAL_dataSize( data );
+	const dal_size_t dataSize = DAL_dataSize( data );
 
 	if ( dataSize < 2 )
 		return;
@@ -209,28 +207,31 @@ void fileSort( Data *data )
 	/* Memory buffer */
 	Data buffer;
 	DAL_init( &buffer );
- 	SPD_ASSERT( DAL_allocBuffer( &buffer, dataSize ), "not enough memory..." );
+ 	SPD_ASSERT( DAL_allocBuffer( &buffer, dataSize / 2.0 ), "not enough memory..." );
 
-	const long runSize = DAL_dataSize( &buffer );			//Single run size
-	const int k = dataSize / runSize + dataSize % runSize;	//Number of runs_
+	const dal_size_t runSize = DAL_dataSize( &buffer );				//Single run size
+	const int k = dataSize / runSize + (dataSize % runSize > 0);	//Number of runs_
 
 	/* Data that will contain temporary runs */
 	Data run_devices[k];
-	initRuns( run_devices, k, runSize );
-
-	long readSize = 0;
-	long count = 0;
+	dal_size_t readSize = 0;
+	dal_size_t count = 0;
 	int i;
 	/* Sorting single runs */
 	for( i=0; i<k; i++ ) {
 		count = MIN( runSize, dataSize-i*runSize );
 
 		readSize = DAL_dataCopyOS( data, i*runSize, &buffer, 0, count );
+
+		DAL_init( &run_devices[i] );
+		SPD_ASSERT( DAL_allocFile( &run_devices[i], readSize ), "couldn't create a temporary file for the %d-th run", i );
+
 		qsort( buffer.array.data, readSize, sizeof(int), compare );
+
 		DAL_dataCopyOS( &buffer, 0, &run_devices[i], 0, readSize );
 	}
 	DAL_destroy( &buffer );
- 	fileKMerge( run_devices, k, dataSize, data );		//k-way merge
+ 	fileKMerge( run_devices, k, data );		//k-way merge
 	destroyRuns( run_devices, k );
 }
 
@@ -274,7 +275,7 @@ void sequentialSort( const TestInfo *ti, Data *data )
 *
 * @return The index of the bucket in which to insert ele
 */
-int getBucketIndex( const int *ele, const int *splitters, const long length )
+int getBucketIndex( const int *ele, const int *splitters, const dal_size_t length )
 {
 	int low = 0;
 	int high = length;
@@ -308,7 +309,7 @@ int getBucketIndex( const int *ele, const int *splitters, const long length )
 * @param[in] 	n 					Number of parts in which to split data
 * @param[out] 	newSplitters	 	Chosen splitters
 */
-void chooseSplitters( int *array, const long length, const int n, int *newSplitters )
+void chooseSplitters( int *array, const dal_size_t length, const int n, int *newSplitters )
 {
 	int i, j, k;
 

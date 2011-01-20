@@ -26,11 +26,11 @@ int isPowerOfTwo( int x );
 /// sequential sort function
 void sequentialSort( const TestInfo *ti, Data *data );
 
-//merge k Data runs into an output Data of size dataSize
-void fileKMerge( Data *run_devices, const int k, const long dataSize, Data *output_device );
+//merge k Data runs into an output Data
+void fileKMerge( Data *run_devices, const int k, Data *output_device );
 
-int getBucketIndex( const int *ele, const int *splitters, const long length );
-void chooseSplitters( int *array, const long length, const int n, int *newSplitters );
+int getBucketIndex( const int *ele, const int *splitters, const dal_size_t length );
+void chooseSplitters( int *array, const dal_size_t length, const int n, int *newSplitters );
 void chooseSplittersFromData( Data *data, const int n, int *newSplitters );
 
 /* Keep C++ compilers from getting confused */

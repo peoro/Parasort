@@ -18,6 +18,7 @@
 extern "C" {
 #endif
 
+typedef long long dal_size_t;
 
 typedef enum DataMedium {
 	NoMedium,
@@ -34,13 +35,13 @@ typedef struct Data
 		struct
 		{
 			int *data;
-			long size;
+			dal_size_t size;
 		} array;
 		struct
 		{
 			FILE *handle;
 			char name[128];
-			long size;
+			dal_size_t size;
 		} file;
 	};
 
@@ -107,7 +108,7 @@ char *DAL_dataItemsToString( Data *d, char *s, int size );
 /*************************************** DAL file management functions *****************************************/
 /***************************************************************************************************************/
 
-long GET_FILE_SIZE( const char *path );
+dal_size_t GET_FILE_SIZE( const char *path );
 
 /*--------------------------------------------------------------------------------------------------------------*/
 
@@ -125,12 +126,12 @@ void DAL_finalize( );
 
 bool DAL_isInitialized( Data *data );
 
-long DAL_dataSize( Data *data ); // returns data size, both of array or file...
+dal_size_t DAL_dataSize( Data *data ); // returns data size, both of array or file...
 
 void DAL_init( Data *data ); // gets Data redy to be worked on - without allocating resources
 void DAL_destroy( Data *data ); // destroys and re-initialize data
 
-bool DAL_allocData( Data *data, long size ); // allocates a Data in an Array, or, if it fails, in a File
+bool DAL_allocData( Data *data, dal_size_t size ); // allocates a Data in an Array, or, if it fails, in a File
 
 
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -142,44 +143,44 @@ bool DAL_allocData( Data *data, long size ); // allocates a Data in an Array, or
 
 // send receive
 void DAL_send( Data *data, int dest );
-void DAL_receive( Data *data, long size, int source );
+void DAL_receive( Data *data, dal_size_t size, int source );
 
 // A stands for Append: \data is already initialized, and received data is appended to it
 // U stands for Unknown: \data size is unknown by receiver: sender will send it.
 void DAL_sendU( Data *data, int dest );
 void DAL_receiveU( Data *data, int source );
-void DAL_receiveA( Data *data, long size, int source );
+void DAL_receiveA( Data *data, dal_size_t size, int source );
 void DAL_receiveAU( Data *data, int source );
 
-long DAL_sendrecv( Data *sdata, long scount, long sdispl, Data *rdata, long rcount, long rdispl, int partner );
+dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data *rdata, dal_size_t rcount, dal_size_t rdispl, int partner );
 
 // scatter
 void DAL_scatterSend( Data *data );
-void DAL_scatterReceive( Data *data, long size, int root );
-void DAL_scatter( Data *data, long size, int root );
+void DAL_scatterReceive( Data *data, dal_size_t size, int root );
+void DAL_scatter( Data *data, dal_size_t size, int root );
 
-void DAL_scattervSend( Data *data, long *sizes, long *displs );
-void DAL_scattervReceive( Data *data, long size, int root );
-void DAL_scatterv( Data *data, long *sizes, long *displs, int root );
+void DAL_scattervSend( Data *data, dal_size_t *sizes, dal_size_t *displs );
+void DAL_scattervReceive( Data *data, dal_size_t size, int root );
+void DAL_scatterv( Data *data, dal_size_t *sizes, dal_size_t *displs, int root );
 
 // gather
 void DAL_gatherSend( Data *data, int root );
-void DAL_gatherReceive( Data *data, long size );
-void DAL_gather( Data *data, long size, int root );
+void DAL_gatherReceive( Data *data, dal_size_t size );
+void DAL_gather( Data *data, dal_size_t size, int root );
 
 void DAL_gathervSend( Data *data, int root );
-void DAL_gathervReceive( Data *data, long *sizes, long *displs );
-void DAL_gatherv( Data *data, long *sizes, long *displs, int root );
+void DAL_gathervReceive( Data *data, dal_size_t *sizes, dal_size_t *displs );
+void DAL_gatherv( Data *data, dal_size_t *sizes, dal_size_t *displs, int root );
 
 // all to all
-void DAL_alltoall( Data *data, long size );
+void DAL_alltoall( Data *data, dal_size_t size );
 
-void DAL_alltoallv( Data *data, long *sendSizes, long *sdispls, long *recvSizes, long *rdispls );
+void DAL_alltoallv( Data *data, dal_size_t *sendSizes, dal_size_t *sdispls, dal_size_t *recvSizes, dal_size_t *rdispls );
 
 // broadcast
 void DAL_bcastSend( Data *data );
-void DAL_bcastReceive( Data *data, long size, int root );
-void DAL_bcast( Data *data, long size, int root );
+void DAL_bcastReceive( Data *data, dal_size_t size, int root );
+void DAL_bcast( Data *data, dal_size_t size, int root );
 
 
 

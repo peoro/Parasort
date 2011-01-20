@@ -18,7 +18,7 @@
 	#define _GNU_SOURCE
 #endif
 
-static const struct option long_options[] =
+static const struct option dal_size_t_options[] =
 {
 	{"version", no_argument,       0, 'V'},
 	{"help",    no_argument,       0, 'h'},
@@ -76,10 +76,10 @@ void printVersion( )
 	printf( "Released under the terms of GPL version 3 or higher\n" );
 }
 
-long strToInt( const char *str, bool *err )
+dal_size_t strToInt( const char *str, bool *err )
 {
 	char *end;
-	long r = strtol( str, &end, 10 );
+	dal_size_t r = strtol( str, &end, 10 );
 
 	*err = ! ( *str != '\0' && *end == '\0' );
 
@@ -91,7 +91,7 @@ long strToInt( const char *str, bool *err )
 // reads an already existing file (will copy it, if data is a File)
 bool DAL_s_readFile( Data *data, const char *path )
 {
-	long size = GET_FILE_SIZE(path) / (long)sizeof(int);
+	dal_size_t size = GET_FILE_SIZE(path) / (dal_size_t)sizeof(int);
 	DAL_allocData( data, size );
 
 	// temporary, just to use DAL_readNextDeviceBlock
@@ -100,7 +100,7 @@ bool DAL_s_readFile( Data *data, const char *path )
 	dataStub.medium = File;
 	dataStub.file.size = size;
 	strncpy( dataStub.file.name, path, sizeof(dataStub.file.name) );
-	dataStub.file.handle = fopen( path, "r" );
+	dataStub.file.handle = fopen( path, "rb" );
 	if( ! dataStub.file.handle ) {
 		SPD_DEBUG( "Cannot open \"%s\" for reading.", path );
 		return 0;
@@ -116,7 +116,7 @@ bool DAL_s_readFile( Data *data, const char *path )
 // writes data content in a file (will copy it, if data is a File)
 bool DAL_s_writeFile( Data *data, const char *path )
 {
-	long size = DAL_dataSize( data );
+	dal_size_t size = DAL_dataSize( data );
 
 	// temporary, just to use DAL_writeNextDeviceBlock
 	// won't destroy it, or it would remove path!
@@ -124,7 +124,7 @@ bool DAL_s_writeFile( Data *data, const char *path )
 	dataStub.medium = File;
 	dataStub.file.size = size;
 	strncpy( dataStub.file.name, path, sizeof(dataStub.file.name) );
-	dataStub.file.handle = fopen( path, "w" );
+	dataStub.file.handle = fopen( path, "wb" );
 	if( ! dataStub.file.handle ) {
 		SPD_DEBUG( "Cannot open \"%s\" for writing.", path );
 		return 0;
@@ -148,14 +148,14 @@ int parseArgs( int argc, char **argv, TestInfo *ti )
 	bool MGiven = 0, seedGiven = 0, algoGiven = 0;
 
 	while( 1 ) {
-		/* getopt_long stores the option index here. */
+		/* getopt_dal_size_t stores the option index here. */
 		int option_index = 0;
 		int c;
 
 		bool err = 0;
 
-		// c = getopt_long( argc, argv, "Vhvton:M:s:a:", long_options, &option_index );
-		c = getopt_long( argc, argv, "VhvtoM:s:a:1:2:3:", long_options, &option_index );
+		// c = getopt_long( argc, argv, "Vhvton:M:s:a:", dal_size_t_options, &option_index );
+		c = getopt_long( argc, argv, "VhvtoM:s:a:1:2:3:", dal_size_t_options, &option_index );
 
 		/* Detect the end of the options. */
 		if( c == -1 ) {
@@ -223,7 +223,7 @@ int parseArgs( int argc, char **argv, TestInfo *ti )
 				break;
 
 			case '?':
-				/* getopt_long already printed an error message. */
+				/* getopt_dal_size_t already printed an error message. */
 				return -1;
 
 			default:
@@ -292,7 +292,7 @@ int generate( const TestInfo *ti )
 {
 	FILE *f;
 	char path[1024];
-	long M = GET_M(ti), i;
+	dal_size_t M = GET_M(ti), i;
 
 	GET_UNSORTED_DATA_PATH( ti, path, sizeof(path) );
 
@@ -319,7 +319,7 @@ int generate( const TestInfo *ti )
 #endif
 
 			if( ! fwrite( &x, sizeof(int), 1, f ) ) {
-				printf( "Couldn't write %ld-th element (of value %d) to %s\n", i, x, path );
+				printf( "Couldn't write %lld-th element (of value %d) to %s\n", i, x, path );
 				return 0;
 			}
 		}
@@ -330,13 +330,13 @@ int generate( const TestInfo *ti )
 	return 1;
 }
 
-int checkSorted( int* array, long size ) {
-	long i;
+int checkSorted( int* array, dal_size_t size ) {
+	dal_size_t i;
 	int tmp = array[0];
 
 	for( i = 1; i < size; ++ i ) {
 		if( tmp > array[i] ) {
-			printf( "Sorting Failed: %ld-th element (of value %d) is bigger than %ld-th element (of value %d)\n", i-1, tmp, i, array[i] );
+			printf( "Sorting Failed: %lld-th element (of value %d) is bigger than %lld-th element (of value %d)\n", i-1, tmp, i, array[i] );
 			return 0;
 		}
 		tmp = array[i];
@@ -357,8 +357,8 @@ int loadData( const TestInfo *ti, Data *data )
 	DAL_s_readFile( data, path );
 
 	if( DAL_dataSize(data) != GET_M(ti) ) {
-		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
-				path, GET_M(ti)*(long)sizeof(int), GET_M(ti), DAL_dataSize(data)*(long)sizeof(int) );
+		printf( "%s should be of %lld bytes (%lld elements), while it is %lld bytes\n",
+				path, GET_M(ti)*(dal_size_t)sizeof(int), GET_M(ti), DAL_dataSize(data)*(dal_size_t)sizeof(int) );
 		return 0;
 	}
 
@@ -373,11 +373,11 @@ int storeData( const TestInfo *ti, Data *data )
 	DAL_ASSERT( ! DAL_isInitialized(data), data, "data shouldn't have been destroyed" );
 
 	char path[1024];
-	long i;
+	dal_size_t i;
 
 	if( DAL_dataSize(data) != GET_M(ti) ) {
-		printf( "%s should be of %ld bytes (%ld elements), while it is %ld bytes\n",
-				path, GET_M(ti)*(long)sizeof(int), GET_M(ti), DAL_dataSize(data)*(long)sizeof(int) );
+		printf( "%s should be of %lld bytes (%lld elements), while it is %lld bytes\n",
+				path, GET_M(ti)*(dal_size_t)sizeof(int), GET_M(ti), DAL_dataSize(data)*(dal_size_t)sizeof(int) );
 		return 0;
 	}
 
@@ -392,8 +392,8 @@ int storeData( const TestInfo *ti, Data *data )
 		case File: {
 			Data buffer;
 			DAL_init( &buffer );
-			DAL_allocBuffer( &buffer, DAL_dataSize(data) );
-			long offset = 0;
+			DAL_allocBuffer( &buffer, 1024*1024 );
+			dal_size_t offset = 0;
 			while( offset < DAL_dataSize( data ) ) {
 				offset += DAL_dataCopyO( data, offset, &buffer, 0 );
 				SPD_ASSERT( checkSorted( buffer.array.data, buffer.array.size ), "Sorting Failed!" );
@@ -586,7 +586,7 @@ int main( int argc, char **argv )
 				for( j = 0; j < GET_N(&ti); ++ j ) {
 					Phase *p = & ( allPhases[j][i] );
 					struct timeval t1 = p->start, t2 = p->end;
-					long utime, mtime, time, secs, usecs;
+					dal_size_t utime, mtime, time, secs, usecs;
 
 					secs  = t2.tv_sec  - t1.tv_sec;
 					usecs = t2.tv_usec - t1.tv_usec;
@@ -595,7 +595,7 @@ int main( int argc, char **argv )
 					mtime = (secs*1000 + usecs/1000.0) + 0.5;
 					time = secs + usecs/1000000.0 + 0.5;
 
-					printf( "   node %2d: %7ld microsecs :: %4ld millisecs :: %ld secs\n", j, utime, mtime, time );
+					printf( "   node %2d: %7lld microsecs :: %4lld millisecs :: %lld secs\n", j, utime, mtime, time );
 				}
 			}
 
@@ -671,6 +671,7 @@ int main( int argc, char **argv )
 		}
 
 	}
+
 
 	// MPI_Finalize( );
 	DAL_finalize( );
