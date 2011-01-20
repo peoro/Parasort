@@ -319,7 +319,7 @@ int generate( const TestInfo *ti )
 #endif
 
 			if( ! fwrite( &x, sizeof(int), 1, f ) ) {
-				printf( "Couldn't write %lld-th element (of value %d) to %s\n", i, x, path );
+				printf( "Couldn't write "DST"-th element (of value %d) to %s\n", i, x, path );
 				return 0;
 			}
 		}
@@ -336,7 +336,7 @@ int checkSorted( int* array, dal_size_t size ) {
 
 	for( i = 1; i < size; ++ i ) {
 		if( tmp > array[i] ) {
-			printf( "Sorting Failed: %lld-th element (of value %d) is bigger than %lld-th element (of value %d)\n", i-1, tmp, i, array[i] );
+			printf( "Sorting Failed: "DST"-th element (of value %d) is bigger than "DST"-th element (of value %d)\n", i-1, tmp, i, array[i] );
 			return 0;
 		}
 		tmp = array[i];
@@ -357,7 +357,7 @@ int loadData( const TestInfo *ti, Data *data )
 	DAL_s_readFile( data, path );
 
 	if( DAL_dataSize(data) != GET_M(ti) ) {
-		printf( "%s should be of %lld bytes (%lld elements), while it is %lld bytes\n",
+		printf( "%s should be of "DST" bytes ("DST" elements), while it is "DST" bytes\n",
 				path, GET_M(ti)*(dal_size_t)sizeof(int), GET_M(ti), DAL_dataSize(data)*(dal_size_t)sizeof(int) );
 		return 0;
 	}
@@ -376,7 +376,7 @@ int storeData( const TestInfo *ti, Data *data )
 	dal_size_t i;
 
 	if( DAL_dataSize(data) != GET_M(ti) ) {
-		printf( "%s should be of %lld bytes (%lld elements), while it is %lld bytes\n",
+		printf( "%s should be of "DST" bytes ("DST" elements), while it is "DST" bytes\n",
 				path, GET_M(ti)*(dal_size_t)sizeof(int), GET_M(ti), DAL_dataSize(data)*(dal_size_t)sizeof(int) );
 		return 0;
 	}
@@ -595,7 +595,7 @@ int main( int argc, char **argv )
 					mtime = (secs*1000 + usecs/1000.0) + 0.5;
 					time = secs + usecs/1000000.0 + 0.5;
 
-					printf( "   node %2d: %7lld microsecs :: %4lld millisecs :: %lld secs\n", j, utime, mtime, time );
+					printf( "   node %2d: %7lld microsecs :: %4lld millisecs :: "DST" secs\n", j, utime, mtime, time );
 				}
 			}
 

@@ -1,6 +1,6 @@
 MPICC = mpicc
 MPICPP = mpicxx
-CFLAGS = -Wall -W -Wno-unused -O2 -g
+CFLAGS = -D_FILE_OFFSET_BITS=64 -Wall -W -Wno-unused -O2 -g
 ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC
 SPDFLAGS = -ldl -rdynamic
 

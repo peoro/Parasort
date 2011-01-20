@@ -47,26 +47,26 @@ char * GET_ALGORITHM_PATH( const char *algo, char *path, int pathLen )
 #ifndef DEBUG
 char * GET_UNSORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen )
 {
-	snprintf( path, pathLen, "%s/.spd/data/M%lld_s%lld.unsorted",
+	snprintf( path, pathLen, "%s/.spd/data/M"DST"_s"DST".unsorted",
 							 getenv("HOME"), GET_M(ti), GET_SEED(ti) );
 	return path;
 }
 char * GET_SORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen )
 {
-	snprintf( path, pathLen, "%s/.spd/data/M%lld_s%lld.%s.sorted",
+	snprintf( path, pathLen, "%s/.spd/data/M"DST"_s"DST".%s.sorted",
 							 getenv("HOME"), GET_M(ti), GET_SEED(ti), GET_ALGO(ti) );
 	return path;
 }
 #else
 char * GET_UNSORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen )
 {
-	snprintf( path, pathLen, "%s/.spd/data/M%lld_s%lld_human.unsorted",
+	snprintf( path, pathLen, "%s/.spd/data/M"DST"_s"DST"_human.unsorted",
 							 getenv("HOME"), GET_M(ti), GET_SEED(ti) );
 	return path;
 }
 char * GET_SORTED_DATA_PATH( const TestInfo *ti, char *path, int pathLen )
 {
-	snprintf( path, pathLen, "%s/.spd/data/M%lld_s%lld_human.%s.sorted",
+	snprintf( path, pathLen, "%s/.spd/data/M"DST"_s"DST"_human.%s.sorted",
 							 getenv("HOME"), GET_M(ti), GET_SEED(ti), GET_ALGO(ti) );
 	return path;
 }

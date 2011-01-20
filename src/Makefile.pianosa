@@ -1,6 +1,6 @@
 MPICC = gcc
 MPICPP = g++
-CFLAGS = -Wall -W -Wno-unused -Werr -O2 -g
+CFLAGS = -D_FILE_OFFSET_BITS=64 -Wall -W -Wno-unused -Werr -O2 -g
 ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC
 SPDFLAGS = -lmpich -ldl -rdynamic
 

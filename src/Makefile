@@ -1,6 +1,6 @@
 MPICC = mpicc
 MPICPP = mpic++
-CFLAGS = -Wall -Wextra -Wno-unused -Werror -O2 -g
+CFLAGS = -D_FILE_OFFSET_BITS=64 -Wall -Wextra -Wno-unused -Werror -O2 -g
 ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC
 
 INSTALLDIR = $(HOME)/.spd

@@ -84,10 +84,10 @@ char * DAL_dataToString( Data *d, char *s, int size )
 			strncpy( s, DAL_mediumName(d->medium), size );
 			break;
 		case File:
-			snprintf( s, size, "\"%s\" [file on disk] of %lld items", d->file.name, DAL_dataSize(d) );
+			snprintf( s, size, "\"%s\" [file on disk] of "DST" items", d->file.name, DAL_dataSize(d) );
 			break;
 		case Array:
-			snprintf( s, size, "array [on principal memory @ %p] of %lld items", d->array.data, DAL_dataSize(d) );
+			snprintf( s, size, "array [on principal memory @ %p] of "DST" items", d->array.data, DAL_dataSize(d) );
 			break;
 		default:
 			snprintf( s, size, "Unknow medium code %d [%s]", d->medium, DAL_mediumName(d->medium) );
@@ -293,9 +293,9 @@ dal_size_t DAL_dataCopyOS( Data *src, dal_size_t srcOffset, Data *dst, dal_size_
 
 			// moving cursors to offsets
 			fseek( srcHandle, srcOffset*sizeof(int), SEEK_SET );
-			DAL_ASSERT( ftell( srcHandle ) == srcOffset*(dal_size_t)sizeof(int), src, "Error on fseek(%lld)!", srcOffset*sizeof(int) );
+			DAL_ASSERT( ftell( srcHandle ) == srcOffset*(dal_size_t)sizeof(int), src, "Error on fseek("DST")!", srcOffset*sizeof(int) );
 			fseek( dstHandle, dstOffset*sizeof(int), SEEK_SET );
-			DAL_ASSERT( ftell( dstHandle ) == dstOffset*(dal_size_t)sizeof(int), dst, "Error on fseek(%lld)!", dstOffset*sizeof(int) );
+			DAL_ASSERT( ftell( dstHandle ) == dstOffset*(dal_size_t)sizeof(int), dst, "Error on fseek("DST")!", dstOffset*sizeof(int) );
 
 			dal_size_t r1, r2;
 			dal_size_t current = 0;
@@ -322,7 +322,7 @@ dal_size_t DAL_dataCopyOS( Data *src, dal_size_t srcOffset, Data *dst, dal_size_
 			FILE *srcHandle = fopen( src->file.name, "rb" );
 
 			fseek( srcHandle, srcOffset*sizeof(int), SEEK_SET );
-			DAL_ASSERT( ftell( srcHandle ) == srcOffset*(dal_size_t)sizeof(int), src, "Error on fseek(%lld)!", srcOffset*sizeof(int) );
+			DAL_ASSERT( ftell( srcHandle ) == srcOffset*(dal_size_t)sizeof(int), src, "Error on fseek("DST")!", srcOffset*sizeof(int) );
 
 			while( current != size ) {
 				r = fread( dst->array.data + dstOffset + current, sizeof(int), size-current, srcHandle );
@@ -347,7 +347,7 @@ dal_size_t DAL_dataCopyOS( Data *src, dal_size_t srcOffset, Data *dst, dal_size_
 			FILE *dstHandle = fopen( dst->file.name, "wb" );
 
 			fseek( dstHandle, dstOffset*sizeof(int), SEEK_SET );
-			DAL_ASSERT( ftell( dstHandle ) == dstOffset*(dal_size_t)sizeof(int), dst, "Error on fseek(%lld)!", dstOffset*sizeof(int) );
+			DAL_ASSERT( ftell( dstHandle ) == dstOffset*(dal_size_t)sizeof(int), dst, "Error on fseek("DST")!", dstOffset*sizeof(int) );
 
 			while( current != size ) {
 				r = fwrite( src->array.data + srcOffset, sizeof(int), size, dstHandle );
@@ -571,7 +571,7 @@ void DAL_send( Data *data, int dest )
 
 	/*
 	char buf[64];
-	DAL_DEBUG( data, "sending %lld items to %d: %s", DAL_dataSize(data), dest, DAL_dataItemsToString(data,buf,sizeof(buf)) );
+	DAL_DEBUG( data, "sending "DST" items to %d: %s", DAL_dataSize(data), dest, DAL_dataItemsToString(data,buf,sizeof(buf)) );
 	*/
 
 	Data buffer;
@@ -600,7 +600,7 @@ void DAL_send( Data *data, int dest )
 				r = DAL_readDataBlock( data, DAL_dataSize(&buffer), 0, &buffer, 0 );
 				total += r;
 				if( r == 0 ) {
-					DAL_ERROR( data, "something went wrong, data should be %lld, but I could only read %lld", DAL_dataSize(data), total );
+					DAL_ERROR( data, "something went wrong, data should be "DST", but I could only read "DST"", DAL_dataSize(data), total );
 				}
 				buffer.array.size = r;
 				DAL_send( &buffer, dest );
@@ -627,7 +627,7 @@ void DAL_send( Data *data, int dest )
 void DAL_receive( Data *data, dal_size_t size, int source )
 {
 	char buf[64];
-	// DAL_DEBUG( data, "receiving %lld items from %d", size, source );
+	// DAL_DEBUG( data, "receiving "DST" items from %d", size, source );
 
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
 
@@ -643,7 +643,7 @@ void DAL_receive( Data *data, dal_size_t size, int source )
 		++ i;
 	}
 
-	// DAL_DEBUG( data, "received %lld items from %d: %s", DAL_dataSize(data), source, DAL_dataItemsToString(data,buf,sizeof(buf)) );
+	// DAL_DEBUG( data, "received "DST" items from %d: %s", DAL_dataSize(data), source, DAL_dataItemsToString(data,buf,sizeof(buf)) );
 
 	DAL_releaseGlobalBuffer( &buffer );
 
@@ -652,7 +652,7 @@ void DAL_receive( Data *data, dal_size_t size, int source )
 #if 0
 	/*
 	char buf[64];
-	DAL_DEBUG( data, "receiving %lld items from %d", size, source );
+	DAL_DEBUG( data, "receiving "DST" items from %d", size, source );
 	*/
 
 	if( DAL_allocArray( data, size ) ) {
@@ -673,11 +673,11 @@ void DAL_receive( Data *data, dal_size_t size, int source )
 		}
 	}
 	else {
-		SPD_ERROR( "Couldn't allocate any medium to read %lld items into...", size );
+		SPD_ERROR( "Couldn't allocate any medium to read "DST" items into...", size );
 	}
 
 	/*
-	DAL_DEBUG( data, "received %lld items from %d: %s", DAL_dataSize(data), source, DAL_dataItemsToString(data,buf,sizeof(buf)) );
+	DAL_DEBUG( data, "received "DST" items from %d: %s", DAL_dataSize(data), source, DAL_dataItemsToString(data,buf,sizeof(buf)) );
 	*/
 #endif
 }
@@ -685,7 +685,7 @@ void DAL_receive( Data *data, dal_size_t size, int source )
 void DAL_sendU( Data *data, int dest )
 {
 	dal_size_t size = DAL_dataSize(data);
-	//SPD_DEBUG( "telling I'll be sending %lld items", size );
+	//SPD_DEBUG( "telling I'll be sending "DST" items", size );
 	DAL_MPI_SEND( & size, 1, MPI_LONG, dest ); // sending size
 	DAL_send( data, dest ); // sending data
 }
@@ -693,13 +693,13 @@ void DAL_receiveU( Data *data, int source )
 {
 	dal_size_t size;
 	DAL_MPI_RECEIVE( &size, 1, MPI_LONG, source ); // receiving size
-	//SPD_DEBUG( "heard I'll be receiving %lld items", size );
+	//SPD_DEBUG( "heard I'll be receiving "DST" items", size );
 	DAL_receive( data, size, source ); // receiving data
 }
 void DAL_receiveA( Data *data, dal_size_t size, int source )
 {
 	dal_size_t oldDataSize = DAL_dataSize(data);
-		//SPD_DEBUG( "appending %lld items to the %lld I've already got: %s", size, oldDataSize, DAL_dataItemsToString(data,buf,sizeof(buf)) );
+		//SPD_DEBUG( "appending "DST" items to the "DST" I've already got: %s", size, oldDataSize, DAL_dataItemsToString(data,buf,sizeof(buf)) );
 	SPD_ASSERT( DAL_reallocArray( data, DAL_dataSize(data) + size ), "not enough memory to allocate data" );
 	DAL_MPI_RECEIVE( data->array.data + oldDataSize, size, MPI_INT, source );
 		//SPD_DEBUG( "post-appending items: %s", DAL_dataItemsToString(data,buf,sizeof(buf)) );
@@ -708,7 +708,7 @@ void DAL_receiveAU( Data *data, int source )
 {
 	dal_size_t size;
 	DAL_MPI_RECEIVE( &size, 1, MPI_LONG, source ); // receiving size
-	//SPD_DEBUG( "heard I'll be appending %lld items to the %lld I've already got", size, data->array.size );
+	//SPD_DEBUG( "heard I'll be appending "DST" items to the "DST" I've already got", size, data->array.size );
 	DAL_receiveA( data, size, source ); // receiving data
 }
 
@@ -763,7 +763,7 @@ void DAL_scatterSend( Data *data )
 			break;
 		}
 		case Array: {
-			DAL_ASSERT( data->array.size % GET_N() == 0, data, "data should be a multiple of %d (but it's %lld)", GET_N(), data->array.size );
+			DAL_ASSERT( data->array.size % GET_N() == 0, data, "data should be a multiple of %d (but it's "DST")", GET_N(), data->array.size );
 			MPI_Scatter( data->array.data, data->array.size/GET_N(), MPI_INT, MPI_IN_PLACE, data->array.size/GET_N(), MPI_INT, GET_ID(), MPI_COMM_WORLD );
 			SPD_ASSERT( DAL_reallocArray( data, data->array.size/GET_N() ), "not enough memory to allocate data" );
 			break;
@@ -815,7 +815,7 @@ void DAL_gatherSend( Data *data, int root )
 }
 void DAL_gatherReceive( Data *data, dal_size_t size )
 {
-	SPD_ASSERT( size % GET_N() == 0, "size should be a multiple of %d (but it's %lld)", GET_N(), size );
+	SPD_ASSERT( size % GET_N() == 0, "size should be a multiple of %d (but it's "DST")", GET_N(), size );
 	SPD_ASSERT( DAL_reallocArray( data, size ), "not enough memory to allocate data" );
 	MPI_Gather( MPI_IN_PLACE, size/GET_N(), MPI_INT, data->array.data, size/GET_N(), MPI_INT, GET_ID(), MPI_COMM_WORLD );
 }
@@ -851,7 +851,7 @@ void DAL_scattervSend( Data *data, dal_size_t *counts, dal_size_t *displs )
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
-	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a scatter communication (its size is %lld, but there are %d processes)", globalBuf.array.size, GET_N() );
+	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a scatter communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
 	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
@@ -1031,7 +1031,7 @@ void DAL_gathervReceive( Data *data, dal_size_t *counts, dal_size_t *displs )
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
-	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a gather communication (its size is %lld, but there are %d processes)", globalBuf.array.size, GET_N() );
+	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a gather communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
 	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
@@ -1125,7 +1125,7 @@ void DAL_gatherv( Data *data, dal_size_t *counts, dal_size_t *displs, int root )
 void DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
 {
 	DAL_ASSERT( buf->medium == Array, buf, "Data should be of type Array" );
-	DAL_ASSERT( buf->array.size % parts == 0, buf, "Data size should be a multiple of %d, but it's %lld", parts, buf->array.size );
+	DAL_ASSERT( buf->array.size % parts == 0, buf, "Data size should be a multiple of %d, but it's "DST"", parts, buf->array.size );
 	int i;
 	for ( i=0; i<parts; i++ ) {
 		bufs[i] = *buf;
@@ -1148,7 +1148,7 @@ void DAL_alltoall( Data *data, dal_size_t count )
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
-	DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is %lld, but there are %d processes)", globalBuf.array.size, GET_N() );
+	DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
 	Data bufs[2];
 	DAL_splitBuffer( &globalBuf, 2, bufs );
@@ -1217,7 +1217,7 @@ void DAL_alltoallv( Data *data, dal_size_t *scounts, dal_size_t *sdispls, dal_si
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
-	DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is %lld, but there are %d processes)", globalBuf.array.size, GET_N() );
+	DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
 	Data bufs[2];
 	DAL_splitBuffer( &globalBuf, 2, bufs );

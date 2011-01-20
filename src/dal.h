@@ -18,6 +18,7 @@
 extern "C" {
 #endif
 
+#define DST "%lld"
 typedef long long dal_size_t;
 
 typedef enum DataMedium {
