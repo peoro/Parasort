@@ -1,21 +1,19 @@
-MPICC = gcc
-MPICPP = g++
-CFLAGS = -D_FILE_OFFSET_BITS=64 -Wall -W -Wno-unused -Werr -O2 -g
+MPICC = mpicc
+MPICPP = mpicxx
+CFLAGS = -D_FILE_OFFSET_BITS=64 -Wall -W -Wno-unused -O2 -g
 ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC
-SPDFLAGS = -lmpich -ldl -rdynamic
+SPDFLAGS = -ldl -rdynamic
 
 INSTALLDIR = $(HOME)/.spd
 DATADIR = $(INSTALLDIR)/data
 LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
-# ALGOS = mergesort quicksort samplesort bucketsort bitonicsort lbmergesort nosort sequential
-ALGOS = quicksort samplesort bucketsort bitonicsort lbmergesort nosort sequential
-# ALGOSPP = kmerge lbkmergesort
-ALGOSPP =
+ALGOS = sequential # mergesort samplesort bucketsort bitonicsort lbmergesort sequential quicksort # nosort
+ALGOSPP = # kmerge lbkmergesort
 TESTS = sendrecv probe tsetup
-OBJECTS = dal.o debug.o sorting.o
+OBJECTS = dal.o debug.o sorting.o common.o
 
-all: $(ALGOS) $(ALGOSPP) main tests
+all: $(ALGOS) $(ALGOSPP) main
 
 $(ALGOS): $(OBJECTS)
 	@echo "Compiling "$@"..."
@@ -23,10 +21,28 @@ $(ALGOS): $(OBJECTS)
 
 $(ALGOSPP): $(OBJECTS)
 	@echo "Compiling "$@"..."
-	$(MPICPP) $(ALGOCFLAGS) -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
+	$(MPICPP) $(ALGOCFLAGS) -DMPICH_IGNORE_CXX_SEEK -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
 
 $(OBJECTS):
 	$(MPICC) $(ALGOCFLAGS) -c $$( echo $@ | sed -rs "s/\.o/.c/" )
+
+install:
+	mkdir -p $(LIBDIR) $(DATADIR)
+	cp $(ALGODIR)/lib*.so $(LIBDIR)
+
+main: spd spddbg spdlog
+
+spd: spd.c  $(OBJECTS)
+	@echo "Compiling spd..."
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -o spd
+
+spddbg: spd.c $(OBJECTS)
+	@echo "Compiling spddbg (debug mode)..."
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -DDEBUG -o spddbg
+
+spdlog: spd.c
+	@echo "Compiling spdlog (profiling mode)..."
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -mpe=mpilog -o spdlog
 
 tests:  $(TESTS)
 
@@ -34,19 +50,5 @@ $(TESTS): $(OBJECTS)
 	@echo "Compiling $@..."
 	$(MPICC) $(CFLAGS) tests/$@.c $(OBJECTS) -o $@
 
-install:
-	mkdir -p $(LIBDIR) $(DATADIR)
-	cp $(ALGODIR)/lib*.so $(LIBDIR)
-
-main: spd spddbg
-
-spd: spd.c $(OBJECTS)
-	@echo "Compiling spd..."
-	$(MPICC) spd.c $(OBJECTS) $(CFLAGS) $(SPDFLAGS) -o spd
-
-spddbg: spd.c $(OBJECTS)
-	@echo "Compiling spddbg (debug mode)..."
-	$(MPICC) spd.c $(OBJECTS) $(CFLAGS) $(SPDFLAGS) -DDEBUG -o spddbg
-
 clean:
-	rm -f *~ *.o spd spddbg $(TESTS)
+	rm -f *~ *.o *.clog2 spd spddbg spdlog

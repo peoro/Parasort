@@ -34,7 +34,7 @@ void DAL_releaseGlobalBuffer( Data *data )
 dal_size_t DAL_allowedBufSize( )
 {
 	//TODO: find the optimal value
-	return 256*1024*1024;
+	return 64*1024*1024;
 }
 
 
@@ -329,6 +329,8 @@ dal_size_t DAL_dataCopyOS( Data *src, dal_size_t srcOffset, Data *dst, dal_size_
 		}
 		else if( dst->medium == Array ) {
 			// file -> array
+			SPD_DEBUG( "Copying data from file to array" );
+
 			DAL_setFileCursor( src, srcOffset );
 			READ_FILE( src->file.handle, dst->array.data+dstOffset, size );
 			return size;
@@ -340,6 +342,8 @@ dal_size_t DAL_dataCopyOS( Data *src, dal_size_t srcOffset, Data *dst, dal_size_
 	else if( src->medium == Array ) {
 		if( dst->medium == File ) {
 			// array -> file
+			SPD_DEBUG( "Copying data from array to file" );
+
 			DAL_setFileCursor( dst, dstOffset );
 			WRITE_FILE( dst->file.handle, src->array.data+srcOffset, size );
 			return size;
