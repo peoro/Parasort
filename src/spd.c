@@ -405,9 +405,11 @@ int storeData( const TestInfo *ti, Data *data )
 			DAL_init( &buffer );
 			DAL_allocBuffer( &buffer, 1024*1024 );
 			dal_size_t offset = 0;
+			dal_size_t readSize;
 			while( offset < DAL_dataSize( data ) ) {
-				offset += DAL_dataCopyO( data, offset, &buffer, 0 );
-				SPD_ASSERT( checkSorted( buffer.array.data, buffer.array.size ), "Sorting Failed!" );
+				readSize = DAL_dataCopyO( data, offset, &buffer, 0 );
+				offset += readSize;
+				SPD_ASSERT( checkSorted( buffer.array.data, readSize ), "Sorting Failed!" );
 			}
 			DAL_destroy( &buffer );
 			break;

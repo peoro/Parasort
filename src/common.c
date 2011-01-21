@@ -119,18 +119,18 @@ void fileKMerge( Data *run_devices, const int k, Data *output_device )
 {
 	SPD_ASSERT( output_device->medium == File || output_device->medium == Array, "output_device must be pre-allocated!" );
 	const dal_size_t dataSize = DAL_dataSize( output_device );
-	const dal_size_t bufferedRunSize = DAL_dataSize(&run_devices[0]) / (k + 1); //Size of a single buffered run (+1 because of the output buffer)
+	const dal_size_t bufferedRunSize = DAL_allowedBufSize() / (k + 1); //Size of a single buffered run (+1 because of the output buffer)
 
-	if ( k > DAL_dataSize(&run_devices[0]) ) {
+	if ( k > DAL_allowedBufSize() ) {
 		/* TODO: Handle this case */
 		SPD_ASSERT( 0, "fileKMerge function doesn't allow a number of runs greater than memory buffer size" );
 	}
 
 	/* Runs Buffer */
-	Data runs_buffer;
-	DAL_init( &runs_buffer );
-	DAL_allocBuffer( &runs_buffer, bufferedRunSize * k );
-	int* runs = runs_buffer.array.data;
+	Data run_buffer;
+	DAL_init( &run_buffer );
+	DAL_allocBuffer( &run_buffer, bufferedRunSize * k );
+	int* runs = run_buffer.array.data;
 
 	/* Output buffer */
 	Data output_buffer;
@@ -139,55 +139,60 @@ void fileKMerge( Data *run_devices, const int k, Data *output_device )
 	int* output = output_buffer.array.data;
 
 	/* Indexes and Offsets for the k buffered runs */
-	dal_size_t *runs_indexes = (dal_size_t*) calloc( sizeof(dal_size_t), k );
-	dal_size_t *runs_offsets = (dal_size_t*) malloc( k * sizeof(dal_size_t) );
+	dal_size_t *run_indexes = (dal_size_t*) calloc( sizeof(dal_size_t), k );
+	dal_size_t *run_offsets = (dal_size_t*) malloc( k * sizeof(dal_size_t) );
+	dal_size_t *run_buf_sizes = (dal_size_t*) malloc( k * sizeof(dal_size_t) );
 
 	/* The auxiliary heap struct */
 	Heap heap;
 	HeapInit( &heap, k );
 
-	dal_size_t i;
+	int j;
 	/* Initializing the buffered runs */
-	for ( i=0; i < k; i++ )
-		runs_offsets[i] = DAL_dataCopyOS( &run_devices[i], 0, &runs_buffer, i*bufferedRunSize, MIN(bufferedRunSize, DAL_dataSize(&run_devices[i])) );;
+	for ( j=0; j < k; j++ ) {
+		run_buf_sizes[j] = DAL_dataCopyOS( &run_devices[j], 0, &run_buffer, j*bufferedRunSize, MIN(bufferedRunSize, DAL_dataSize(&run_devices[j])) );
+		run_offsets[j] = run_buf_sizes[j];
+	}
 
 	/* Initializing the heap */
-    for ( i=0; i<k; i++ )
-		HeapPush( &heap, runs[i*bufferedRunSize], i );
+    for ( j=0; j<k; j++ )
+		HeapPush( &heap, runs[j*bufferedRunSize], j );
 
 	/* Merging the runs */
 	int outputSize = 0;
 	dal_size_t outputOffset = 0;
+	dal_size_t i;
     for ( i=0; i<dataSize; i++ ) {
         Min_val min = HeapTop( &heap );
         HeapPop( &heap );
 
 		//the run index
-		int j = min.run_index;
-		dal_size_t remainingSize = DAL_dataSize(&run_devices[j])-runs_offsets[j];
-		dal_size_t run_buf_size = MIN( bufferedRunSize, remainingSize );
+		j = min.run_index;
+		dal_size_t remainingSize = DAL_dataSize(&run_devices[j])-run_offsets[j];
 
-        if ( ++(runs_indexes[j]) <  run_buf_size )							//If there are others elements in the buffered run
-			HeapPush( &heap, runs[j*bufferedRunSize+runs_indexes[j]], j );	//pushes a new element in the heap
-		else if ( remainingSize ) {											//else, if the run has not been read completely
-			runs_offsets[j] += DAL_dataCopyOS( &run_devices[j], runs_offsets[j], &runs_buffer, j*bufferedRunSize, run_buf_size );
-			runs_indexes[j] = 0;
+        if ( ++(run_indexes[j]) <  run_buf_sizes[j] )							//If there are others elements in the buffered run
+			HeapPush( &heap, runs[j*bufferedRunSize+run_indexes[j]], j );		//pushes a new element in the heap
+		else if ( remainingSize ) {												//else, if the run has not been read completely
+			run_buf_sizes[j] = DAL_dataCopyOS( &run_devices[j], run_offsets[j], &run_buffer, j*bufferedRunSize, MIN(remainingSize,bufferedRunSize) );
+			run_offsets[j] += run_buf_sizes[j];
+			run_indexes[j] = 0;
 			HeapPush( &heap, runs[j*bufferedRunSize], j );
 		}
 
         output[outputSize++] = min.val;
 
-		if ( outputSize == bufferedRunSize || i==dataSize-1 ) {										//If the output buffer is full
+		if ( outputSize == bufferedRunSize || i==dataSize-1 ) {					//If the output buffer is full
 			outputOffset += DAL_dataCopyOS( &output_buffer, 0, output_device, outputOffset, outputSize );
 			outputSize = 0;
 		}
     }
 	/* Freeing memory */
 	HeapDestroy( &heap );
-    DAL_destroy( &runs_buffer );
+    DAL_destroy( &run_buffer );
 	DAL_destroy( &output_buffer );
-	free( runs_indexes );
-	free( runs_offsets );
+	free( run_indexes );
+	free( run_offsets );
+	free( run_buf_sizes );
 }
 
 void destroyRuns( Data *run_devices, int k )
@@ -210,29 +215,37 @@ void fileSort( Data *data )
  	SPD_ASSERT( DAL_allocBuffer( &buffer, dataSize ), "not enough memory..." );
 
 	const dal_size_t runSize = DAL_dataSize( &buffer );				//Single run size
-	const int k = dataSize / runSize + (dataSize % runSize > 0);	//Number of runs_
+	const int k = dataSize / runSize + (dataSize % runSize > 0);	//Number of run_
 
-	/* Data that will contain temporary runs */
-	Data run_devices[k];
-	dal_size_t readSize = 0;
-	dal_size_t count = 0;
-	int i;
-	/* Sorting single runs */
-	for( i=0; i<k; i++ ) {
-		count = MIN( runSize, dataSize-i*runSize );
-
-		readSize = DAL_dataCopyOS( data, i*runSize, &buffer, 0, count );
-
-		DAL_init( &run_devices[i] );
-		SPD_ASSERT( DAL_allocFile( &run_devices[i], readSize ), "couldn't create a temporary file for the %d-th run", i );
-
-		qsort( buffer.array.data, readSize, sizeof(int), compare );
-
-		DAL_dataCopyOS( &buffer, 0, &run_devices[i], 0, readSize );
+	if ( k < 2 ) {
+		DAL_dataCopy( data, &buffer);
+		qsort( buffer.array.data, dataSize, sizeof(int), compare );
+		DAL_dataCopy( &buffer, data );
+		DAL_destroy( &buffer );
 	}
-	DAL_destroy( &buffer );
- 	fileKMerge( run_devices, k, data );		//k-way merge
-	destroyRuns( run_devices, k );
+	else {
+		/* Data that will contain temporary runs */
+		Data run_devices[k];
+		dal_size_t readSize = 0;
+		dal_size_t count = 0;
+		int i;
+		/* Sorting single runs */
+		for( i=0; i<k; i++ ) {
+			count = MIN( runSize, dataSize-i*runSize );
+
+			readSize = DAL_dataCopyOS( data, i*runSize, &buffer, 0, count );
+
+			DAL_init( &run_devices[i] );
+			SPD_ASSERT( DAL_allocFile( &run_devices[i], readSize ), "couldn't create a temporary file for the %d-th run", i );
+
+			qsort( buffer.array.data, readSize, sizeof(int), compare );
+
+			DAL_dataCopyOS( &buffer, 0, &run_devices[i], 0, readSize );
+		}
+		DAL_destroy( &buffer );
+		fileKMerge( run_devices, k, data );		//k-way merge
+		destroyRuns( run_devices, k );
+	}
 }
 
 /// sequential sort function

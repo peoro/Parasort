@@ -89,7 +89,7 @@ static void WRITE_FILE( FILE *f, int *buf, dal_size_t size )
 	dal_size_t current = 0;
 
 	while( current != size ) {
-		w = fwrite( buf, sizeof(int), size, f );
+		w = fwrite( buf, sizeof(int), size-current, f );
 		SPD_ASSERT( w != 0, "Error on fwrite(): %s", strerror(errno) );
 		current += w;
 	}
@@ -133,7 +133,7 @@ char * DAL_dataItemsToString( Data *data, char *s, int size )
 		DAL_init( &b );
 
 		if( DAL_dataSize(data) ) {
-			SPD_ASSERT( DAL_allocBuffer( &b, DAL_dataSize(data) ), "memory completely over..." );
+			SPD_ASSERT( DAL_allocArray( &b, DAL_dataSize(data) ), "memory completely over..." );
 			DAL_dataCopyO( data, 0, &b, 0 );
 		}
 		else {
