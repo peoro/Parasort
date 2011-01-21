@@ -14,6 +14,8 @@
 #include "sorting.h"
 #include "common.h"
 
+#include "dal_internals.h"
+
 using namespace std;
 
 const int PARAM_K 	= 1;
@@ -112,14 +114,17 @@ Data fusion ( Data *data_owned, int runs )
 	//if the local data is already on File, than the merged will be performed on File too for sure
 	switch ( data_owned->medium ) {
 		case File: {
+			DAL_allocFile ( &merging, DAL_dataSize ( data_owned ) * runs );
 			fileFusion ( data_owned, &merging, runs );
 			break;
 		}
 		case Array: {
-			if ( DAL_allocData ( &merging, DAL_dataSize ( data_owned ) * runs ))
+			if ( DAL_allocArray ( &merging, DAL_dataSize ( data_owned ) * runs ))
 				memoryFusion ( data_owned, &merging, runs );
-			else
+			else {
+				DAL_allocFile ( &merging, DAL_dataSize ( data_owned ) * runs );
 				fileFusion ( data_owned, &merging, runs );
+			}
 			break;
 		}
 		default:
@@ -136,13 +141,14 @@ Data fusion ( Data *data_owned, int runs )
 //invariant: given n = #processors, k = #ways, q an integer, it must be n == k * q
 void mk_mergesort ( const TestInfo *ti, Data *data_local )
 {
-	const int 	total_size	= GET_M ( ti );
-	const int 	rank 		= GET_ID ( ti );
-	const int 	k 			= ti->algoVar[PARAM_K];
-	int 		active_proc = GET_N ( ti );
+	const dal_size_t 	total_size	= GET_M ( ti );
+	
+	const int 			rank 		= GET_ID ( ti );
+	const int 			k 			= ti->algoVar[PARAM_K];
+	int 				active_proc = GET_N ( ti );
 
-	Data		*data_owned = (Data*) malloc ( sizeof(Data) * k );
-	PhaseHandle scatterP, localP, gatherP;
+	Data				*data_owned = (Data*) malloc ( sizeof(Data) * k );
+	PhaseHandle 		scatterP, localP, gatherP;
 
 	//initializing datas
 	data_owned[0] = *data_local;
@@ -168,7 +174,7 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 			int receiving, n_dests;
 			from_who( rank, k, active_proc, dests, &n_dests );
 			for ( receiving = 0; receiving < n_dests; receiving++ )
-				DAL_receive ( data_owned + receiving + 1, total_size / active_proc, dests[receiving] );
+				DAL_receive ( data_owned + receiving + 1, total_size / (dal_size_t)active_proc, dests[receiving] );
 
 			//fusion phase
 			if ( active_proc >= k )

@@ -12,6 +12,8 @@
 #include "common.h"
 #include "string.h"
 
+#include "dal_internals.h"
+
 /**************************************/
 /*               STENCIL              */
 /**************************************/
@@ -95,15 +97,18 @@ Data fusion ( Data *data_local, Data *data_received )
 
 	switch ( data_local->medium ) {
 		case File: {
+			DAL_allocFile ( &merging, DAL_dataSize ( data_local ) + DAL_dataSize ( data_received ) );
 			fileFusion ( data_local, data_received, &merging );
 			break;
 		}
 		case Array: {
-			if ( DAL_allocData ( &merging, DAL_dataSize ( data_local ) + DAL_dataSize ( data_received ) ))
+			if ( DAL_allocArray ( &merging, DAL_dataSize ( data_local ) + DAL_dataSize ( data_received ) ))
 				//memory merge
 				memoryFusion ( data_local, data_received, &merging );
-			else
+			else {
+				DAL_allocFile ( &merging, DAL_dataSize ( data_local ) + DAL_dataSize ( data_received ) );
 				fileFusion ( data_local, data_received, &merging );
+			}
 			break;
 		}
 		default:
@@ -119,12 +124,13 @@ Data fusion ( Data *data_local, Data *data_received )
 
 void mergesort ( const TestInfo *ti, Data *data_local )
 {
-	const int 	total_size 	= GET_M ( ti );
-	const int 	rank 		= GET_ID ( ti );
-	int 		active_proc = GET_N ( ti );
+	const dal_size_t 	total_size 	= GET_M ( ti );
+	
+	const int 			rank 		= GET_ID ( ti );
+	int 				active_proc = GET_N ( ti );
 
-	Data 		data_received;
-	PhaseHandle	scatterP, localP;
+	Data 				data_received;
+	PhaseHandle			scatterP, localP;
 
 	DAL_init ( &data_received );
 
@@ -140,7 +146,7 @@ void mergesort ( const TestInfo *ti, Data *data_local )
 	int step;
 	for ( step = 0; step < _log2(GET_N(ti)); step++ ) {
 		if ( do_i_receive( ti, step ) ) {
-			DAL_receive ( &data_received, total_size / active_proc, from_who( ti, step ) );
+			DAL_receive ( &data_received, total_size / (dal_size_t)active_proc, from_who( ti, step ) );
 
 			//merge phase
 			*data_local = fusion ( data_local, &data_received );
