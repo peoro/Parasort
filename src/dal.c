@@ -325,6 +325,9 @@ dal_size_t DAL_dataCopyOS( Data *src, dal_size_t srcOffset, Data *dst, dal_size_
 
 				current += toReadSize;
 			}
+
+			DAL_destroy( &buffer );
+
 			return current;
 		}
 		else if( dst->medium == Array ) {
