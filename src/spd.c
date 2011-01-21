@@ -94,6 +94,8 @@ bool DAL_s_readFile( Data *data, const char *path )
 	dal_size_t size = GET_FILE_SIZE(path) / (dal_size_t)sizeof(int);
 	DAL_allocData( data, size );
 
+	//SPD_DEBUG( "Size = "DST, size );
+
 	// temporary, just to use DAL_readNextDeviceBlock
 	// won't destroy it, or it would remove path!
 	Data dataStub;

@@ -1,4 +1,6 @@
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <mpi.h>
 #include "dal.h"
@@ -29,6 +31,12 @@ void DAL_releaseGlobalBuffer( Data *data )
 	DAL_bufferAcquired = 0;
 }
 
+dal_size_t DAL_allowedBufSize( ) 
+{
+	//TODO: find the optimal value
+	return 256*1024*1024;
+}
+
 
 static inline int GET_ID ( ) {
     int x;
@@ -45,22 +53,13 @@ static inline int GET_N ( ) {
 
 dal_size_t GET_FILE_SIZE( const char *path )
 {
-	FILE *f;
-	dal_size_t len;
+	struct stat sb;
 
-	f = fopen( path, "rb" );
-	if( ! f ) {
-		return -1;
-	}
+	SPD_ASSERT( stat(path, &sb) != -1, "Unable to load statistics for file %s", path ); 
 
-	fseek( f, 0, SEEK_END );
-	len = ftell( f );
-	// rewind( f );
-
-	fclose( f );
-
-	return len;
+	return sb.st_size;
 }
+
 #define FILE_READ( dst, size, file )	fread( dst, sizeof(int), size, file ) // reads size items (integers!)
 #define FILE_WRITE( src, size, file )	fwrite( src, sizeof(int), size, file ) // writes size items (integers!)
 
@@ -170,7 +169,7 @@ void DAL_initialize( int *argc, char ***argv )
 	MPI_Init( argc, argv );
 
 	DAL_init( & DAL_buffer );
-	DAL_allocBuffer( & DAL_buffer, 1024*10 ); // TODO: find a better size... 10 MB for now
+	DAL_allocBuffer( & DAL_buffer, 1024*1024*10 ); // TODO: find a better size... 10 MB for now
 }
 void DAL_finalize( )
 {
@@ -243,7 +242,7 @@ bool DAL_allocData( Data *data, dal_size_t size )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
 
-	if( 0 && DAL_allocArray(data, size) ) {
+	if( DAL_allocArray(data, size) ) {
 		return 1;
 	}
 
@@ -289,7 +288,7 @@ dal_size_t DAL_dataCopyOS( Data *src, dal_size_t srcOffset, Data *dst, dal_size_
 			// allocating a buffer
 			Data buffer;
 			DAL_init( &buffer );
-			SPD_ASSERT( DAL_allocBuffer( &buffer, size ), "memory completely over..." );
+			SPD_ASSERT( DAL_allocBuffer( &buffer, 1024*1024 ), "memory completely over..." );
 
 			// moving cursors to offsets
 			fseek( srcHandle, srcOffset*sizeof(int), SEEK_SET );
@@ -391,8 +390,11 @@ bool DAL_allocArray( Data *data, dal_size_t size )
 		return 1;
 	}
 
+	// TODO: threshold must be parametric
+	const dal_size_t threshold = DAL_allowedBufSize();
+
 	// TODO: maybe add a threshold on max size
-	// if( size > threshold ) { return 0; }
+	if( size > threshold ) { return 0; }
 
 	data->array.data = (int*) malloc( size * sizeof(int) );
 	if( ! data->array.data ) {
@@ -415,6 +417,11 @@ bool DAL_reallocArray ( Data *data, dal_size_t size )
 		data->array.size = 0;
 		return 1;
 	}
+	// TODO: threshold must be parametric
+	const dal_size_t threshold = DAL_allowedBufSize();
+
+	// TODO: maybe add a threshold on max size
+	if( size > threshold ) { return 0; }
 
 	data->array.data = (int*) realloc( data->array.data, size * sizeof(int) );
 	if( ! data->array.data ) {
@@ -437,7 +444,7 @@ bool DAL_reallocAsArray( Data *data )
 
 	Data arrayData;
 	DAL_init( &arrayData );
-	if( ! DAL_allocArray( &arrayData, data->array.size ) ) {
+	if( ! DAL_allocArray( &arrayData, data->file.size ) ) {
 		return 0;
 	}
 
@@ -460,7 +467,10 @@ bool DAL_allocBuffer( Data *data, dal_size_t size )
 
 	// TODO: implement a better logic:
 	//       start from DAL_allocArray's threshold
-	//       (or a well-chosen value) and shrinks according to some heuristic...
+	//       (or a well-chosen value) and shrinks according to some heuristic...  
+	const dal_size_t threshold = DAL_allowedBufSize();
+	if ( size > threshold ) 
+		size = threshold;
 
 	bool r =  DAL_allocArray( data, size );
 	while( size > 0 && ! r ) {

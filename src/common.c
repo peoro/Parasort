@@ -207,7 +207,7 @@ void fileSort( Data *data )
 	/* Memory buffer */
 	Data buffer;
 	DAL_init( &buffer );
- 	SPD_ASSERT( DAL_allocBuffer( &buffer, dataSize / 2.0 ), "not enough memory..." );
+ 	SPD_ASSERT( DAL_allocBuffer( &buffer, dataSize ), "not enough memory..." );
 
 	const dal_size_t runSize = DAL_dataSize( &buffer );				//Single run size
 	const int k = dataSize / runSize + (dataSize % runSize > 0);	//Number of runs_
