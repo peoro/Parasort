@@ -21,11 +21,11 @@
 /**
 * @brief Gets the number of element to be inserted in each small bucket
 *
-* @param[in] data       	The data object containing data to be distributed
-* @param[in] n     			The number of buckets
-* @param[out] lengths    	The array that will contain the small bucket lengths
+* @param[in] 	data       		The data object containing data to be distributed
+* @param[in] 	n     			The number of buckets
+* @param[out] 	lengths    		The array that will contain the small bucket lengths
 */
-void getSendCounts( Data *data, const int n, long *lengths )
+void getSendCounts( Data *data, const int n, dal_size_t *lengths )
 {
 	/* TODO: Implement it the right way!! */
 
@@ -41,13 +41,14 @@ void getSendCounts( Data *data, const int n, long *lengths )
 			SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_dataSize(data) ), "not enough memory..." );
 
 			int blocks = DAL_BLOCK_COUNT(data, &buffer);
-			long readCount = 0;
+			dal_size_t r, readCount = 0;
 			int i;
-			/* Sorting single runs */
-			for( i=0; i<blocks; i++ ) {
-				readCount += DAL_dataCopyOS( data, i*DAL_dataSize(&buffer), &buffer, 0, MIN(DAL_dataSize(&buffer), DAL_dataSize(data)-readCount) );
 
-				for ( k=0; k<buffer.array.size; k++ ) {
+			for( i=0; i<blocks; i++ ) {
+				r = DAL_dataCopyOS( data, i*DAL_dataSize(&buffer), &buffer, 0, MIN(DAL_dataSize(&buffer), DAL_dataSize(data)-readCount) );
+				readCount += r;
+
+				for ( k=0; k<r; k++ ) {
 					j = ((double) buffer.array.data[k]) / range;
 					lengths[j]++;
 				}
@@ -75,17 +76,17 @@ void getSendCounts( Data *data, const int n, long *lengths )
 */
 void bucketSort( const TestInfo *ti, Data *data )
 {
-	const int		root = 0;                           //Rank (ID) of the root process
-	const int		id = GET_ID( ti );                  //Rank (ID) of the process
-	const int		n = GET_N( ti );                    //Number of processes
-	const long		M = GET_M( ti );                    //Number of data elements
-	const long		local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
+	const int			root = 0;                           //Rank (ID) of the root process
+	const int			id = GET_ID( ti );                  //Rank (ID) of the process
+	const int			n = GET_N( ti );                    //Number of processes
+	const dal_size_t	M = GET_M( ti );                    //Number of data elements
+	const dal_size_t	local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
 
-	long 			sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
-	long			sdispls[n], rdispls[n];				//Send/receive buffer displacements
-	long			i, j, k;
+	dal_size_t 			sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
+	dal_size_t			sdispls[n], rdispls[n];				//Send/receive buffer displacements
+	dal_size_t			i, j, k;
 
-	PhaseHandle 	scatterP, localP, bucketsP, gatherP;
+	PhaseHandle 		scatterP, localP, bucketsP, gatherP;
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
@@ -125,13 +126,13 @@ void bucketSort( const TestInfo *ti, Data *data )
 	bucketsP = startPhase( ti, "buckets construction" );
 
 	/* Initializing the sendCounts array */
-	memset( sendCounts, 0, n*sizeof(long) );
+	memset( sendCounts, 0, n*sizeof(dal_size_t) );
 
 	/* Computing the number of integers to be sent to each process */
 	getSendCounts( data, n, sendCounts );
 
 	/* Informing all processes on the number of elements that will receive */
-	MPI_Alltoall( sendCounts, 1, MPI_LONG, recvCounts, 1, MPI_LONG, MPI_COMM_WORLD );
+	MPI_Alltoall( sendCounts, 1, MPI_LONG_LONG, recvCounts, 1, MPI_LONG_LONG, MPI_COMM_WORLD );
 
 	/* Computing the displacements */
 	for ( j=0, k=0, i=0; i<n; i++ ) {
@@ -159,7 +160,7 @@ void bucketSort( const TestInfo *ti, Data *data )
 	gatherP = startPhase( ti, "gathering" );
 
 	/* Gathering the lengths of the all buckets */
-	MPI_Gather( &j, 1, MPI_LONG, recvCounts, 1, MPI_LONG, root, MPI_COMM_WORLD );
+	MPI_Gather( &j, 1, MPI_LONG_LONG, recvCounts, 1, MPI_LONG_LONG, root, MPI_COMM_WORLD );
 
 	/* Computing displacements relative to the output array at which to place the incoming data from each process  */
 	if ( id == root ) {

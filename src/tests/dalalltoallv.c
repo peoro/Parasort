@@ -18,7 +18,7 @@
 void TEST_DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
 {
 	DAL_ASSERT( buf->medium == Array, buf, "Data should be of type Array" );
-	DAL_ASSERT( buf->array.size % parts == 0, buf, "Data size should be a multiple of %d, but it's %ld", parts, buf->array.size );
+	DAL_ASSERT( buf->array.size % parts == 0, buf, "Data size should be a multiple of %d, but it's "DST"", parts, buf->array.size );
 	int i;
 	for ( i=0; i<parts; i++ ) {
 		bufs[i] = *buf;
@@ -36,14 +36,14 @@ void TEST_DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
 * @param[in] 		rcounts  	Array containing the number of elements to be received from each process
 * @param[in] 		rdispls     Array of displacements
 */
-void TEST_DAL_alltoallv( Data *data, long *scounts, long *sdispls, long *rcounts, long *rdispls )
+void TEST_DAL_alltoallv( Data *data, dal_size_t *scounts, dal_size_t *sdispls, dal_size_t *rcounts, dal_size_t *rdispls )
 {
 	int i, j;
 	int sc[GET_N()];
 	int sd[GET_N()];
 	int rc[GET_N()];
 	int rd[GET_N()];
-	long rcount = 0;
+	dal_size_t rcount = 0;
 
 	//Computing the total number of elements to be received
 	for ( i=0; i<GET_N(); i++ )
@@ -58,7 +58,7 @@ void TEST_DAL_alltoallv( Data *data, long *scounts, long *sdispls, long *rcounts
 		Data globalBuf;
 		DAL_acquireGlobalBuffer( &globalBuf );
 
-		DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is %ld, but there are %d processes)", globalBuf.array.size, GET_N() );
+		DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
 		Data bufs[2];
 		TEST_DAL_splitBuffer( &globalBuf, 2, bufs );
@@ -73,7 +73,7 @@ void TEST_DAL_alltoallv( Data *data, long *scounts, long *sdispls, long *rcounts
 		int blockSize = DAL_dataSize(sendBuf) / GET_N();
 
 		//Retrieving the number of iterations
-		long max_count;
+		dal_size_t max_count;
 		MPI_Allreduce( &rcount, &max_count, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
 		int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 		int s, r, tmp;
@@ -137,15 +137,15 @@ int main( int argc, char **argv )
 		TESTS_ERROR( 1, "Use this with at least 2 processes!" );
 	}
 
-	long scounts[n];
-	long sdispls[n];
-	long rcounts[n];
-	long rdispls[n];
+	dal_size_t scounts[n];
+	dal_size_t sdispls[n];
+	dal_size_t rcounts[n];
+	dal_size_t rdispls[n];
 	int size = n*25;	//size of data d
 	int s, r;
 
 	//Initializing send counts randomly
-	memset( scounts, 0, n*sizeof(long) );
+	memset( scounts, 0, n*sizeof(dal_size_t) );
 	for ( s=0; s<size; s++ )
 		scounts[rand()%n]++;
 

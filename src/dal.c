@@ -31,7 +31,7 @@ void DAL_releaseGlobalBuffer( Data *data )
 	DAL_bufferAcquired = 0;
 }
 
-dal_size_t DAL_allowedBufSize( ) 
+dal_size_t DAL_allowedBufSize( )
 {
 	//TODO: find the optimal value
 	return 256*1024*1024;
@@ -49,19 +49,51 @@ static inline int GET_N ( ) {
     return x;
 }
 
-
-
-dal_size_t GET_FILE_SIZE( const char *path )
+static dal_size_t GET_FILE_SIZE( const char *path )
 {
 	struct stat sb;
 
-	SPD_ASSERT( stat(path, &sb) != -1, "Unable to load statistics for file %s", path ); 
+	SPD_ASSERT( stat(path, &sb) != -1, "Unable to load statistics for file %s", path );
 
 	return sb.st_size;
 }
 
-#define FILE_READ( dst, size, file )	fread( dst, sizeof(int), size, file ) // reads size items (integers!)
-#define FILE_WRITE( src, size, file )	fwrite( src, sizeof(int), size, file ) // writes size items (integers!)
+dal_size_t DAL_getFileCursor( Data *d )
+{
+	DAL_ASSERT( d->medium == File, d, "Data should be of type File" );
+
+	return ftello( d->file.handle ) / sizeof(int);
+}
+void DAL_setFileCursor( Data *d, dal_size_t offset )
+{
+	DAL_ASSERT( d->medium == File, d, "Data should be of type File" );
+
+	fseeko( d->file.handle, offset*sizeof(int), SEEK_SET );
+
+	DAL_ASSERT( DAL_getFileCursor( d ) == offset, d, "DAL_setFileCursor error" );
+}
+static void READ_FILE( FILE *f, int *buf, dal_size_t size )
+{
+	dal_size_t r;
+	dal_size_t current = 0;
+
+	while( current != size ) {
+		r = fread( buf, sizeof(int), size-current, f );
+		SPD_ASSERT( r != 0, "Error on fread(): %s", strerror(errno)  );
+		current += r;
+	}
+}
+static void WRITE_FILE( FILE *f, int *buf, dal_size_t size )
+{
+	dal_size_t w;
+	dal_size_t current = 0;
+
+	while( current != size ) {
+		w = fwrite( buf, sizeof(int), size, f );
+		SPD_ASSERT( w != 0, "Error on fwrite(): %s", strerror(errno) );
+		current += w;
+	}
+}
 
 const char *DAL_mediumName( DataMedium m )
 {
@@ -218,15 +250,7 @@ dal_size_t DAL_dataSize( Data *data )
 {
 	switch( data->medium ) {
 		case File: {
-			/*
-			dal_size_t len;
-			dal_size_t cursor;
-			cursor = ftell( data->file.handle );          // getting current position
-			fseek( data->file.handle, 0, SEEK_END );      // going to end
-			len = ftell( data->file.handle );             // getting current position
-			fseek( data->file.handle, cursor, SEEK_SET ); // getting back to where I was
-			return len / sizeof(int);
-			*/
+			//GET_FILE_SIZE( data->file.name );
 			return data->file.size;
 			break;
 		}
@@ -242,7 +266,7 @@ bool DAL_allocData( Data *data, dal_size_t size )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
 
-	if( DAL_allocArray(data, size) ) {
+	if( 0 && DAL_allocArray(data, size) ) {
 		return 1;
 	}
 
@@ -282,56 +306,32 @@ dal_size_t DAL_dataCopyOS( Data *src, dal_size_t srcOffset, Data *dst, dal_size_
 			// file -> file
 			SPD_DEBUG( "Copying data from file to file" );
 
-			FILE *srcHandle = fopen( src->file.name, "rb" );
-			FILE *dstHandle = fopen( dst->file.name, "wb" );
-
 			// allocating a buffer
 			Data buffer;
 			DAL_init( &buffer );
 			SPD_ASSERT( DAL_allocBuffer( &buffer, 1024*1024 ), "memory completely over..." );
 
 			// moving cursors to offsets
-			fseek( srcHandle, srcOffset*sizeof(int), SEEK_SET );
-			DAL_ASSERT( ftell( srcHandle ) == srcOffset*(dal_size_t)sizeof(int), src, "Error on fseek("DST")!", srcOffset*sizeof(int) );
-			fseek( dstHandle, dstOffset*sizeof(int), SEEK_SET );
-			DAL_ASSERT( ftell( dstHandle ) == dstOffset*(dal_size_t)sizeof(int), dst, "Error on fseek("DST")!", dstOffset*sizeof(int) );
+ 			DAL_setFileCursor( src, srcOffset );
+			DAL_setFileCursor( dst, dstOffset );
 
-			dal_size_t r1, r2;
+			dal_size_t toReadSize;
 			dal_size_t current = 0;
 
 			while( current != size ) {
-				r1 = fread( buffer.array.data, sizeof(int), MIN( size-current, DAL_dataSize(&buffer) ), srcHandle );
-				SPD_ASSERT( r1 != 0, "Error on fread()!" );
-				r2 = fwrite( buffer.array.data, sizeof(int), r1, dstHandle );
-				SPD_ASSERT( r1 == r2, "fwrite() couldn't write as much as fread() got..." );
+				toReadSize = MIN( size-current, DAL_dataSize(&buffer) );
+				READ_FILE( src->file.handle, buffer.array.data, toReadSize );
+				WRITE_FILE( dst->file.handle, buffer.array.data, toReadSize );
 
-				current += r1;
+				current += toReadSize;
 			}
-
-			fclose( srcHandle );
-			fclose( dstHandle );
-
 			return current;
 		}
 		else if( dst->medium == Array ) {
 			// file -> array
-			dal_size_t r;
-			dal_size_t current = 0;
-
-			FILE *srcHandle = fopen( src->file.name, "rb" );
-
-			fseek( srcHandle, srcOffset*sizeof(int), SEEK_SET );
-			DAL_ASSERT( ftell( srcHandle ) == srcOffset*(dal_size_t)sizeof(int), src, "Error on fseek("DST")!", srcOffset*sizeof(int) );
-
-			while( current != size ) {
-				r = fread( dst->array.data + dstOffset + current, sizeof(int), size-current, srcHandle );
-				SPD_ASSERT( r != 0, "Error on fread()!" );
-				current += r;
-			}
-
-			fclose( srcHandle );
-
-			return current;
+			DAL_setFileCursor( src, srcOffset );
+			READ_FILE( src->file.handle, dst->array.data+dstOffset, size );
+			return size;
 		}
 		else {
 			DAL_UNIMPLEMENTED( dst );
@@ -340,28 +340,13 @@ dal_size_t DAL_dataCopyOS( Data *src, dal_size_t srcOffset, Data *dst, dal_size_
 	else if( src->medium == Array ) {
 		if( dst->medium == File ) {
 			// array -> file
-			dal_size_t r;
-			dal_size_t current = 0;
-
-			FILE *dstHandle = fopen( dst->file.name, "wb" );
-
-			fseek( dstHandle, dstOffset*sizeof(int), SEEK_SET );
-			DAL_ASSERT( ftell( dstHandle ) == dstOffset*(dal_size_t)sizeof(int), dst, "Error on fseek("DST")!", dstOffset*sizeof(int) );
-
-			while( current != size ) {
-				r = fwrite( src->array.data + srcOffset, sizeof(int), size, dstHandle );
-				SPD_ASSERT( r != 0, "Error on fwrite()!" );
-				current += r;
-			}
-
-			fclose( dstHandle );
-
-			return current;
+			DAL_setFileCursor( dst, dstOffset );
+			WRITE_FILE( dst->file.handle, src->array.data+srcOffset, size );
+			return size;
 		}
 		else if( dst->medium == Array ) {
 			// array -> array
 			SPD_DEBUG( "Copying data from array to array" );
-
 			memcpy( dst->array.data + dstOffset, src->array.data + srcOffset, size*sizeof(int) );
 			return size;
 		}
@@ -467,9 +452,9 @@ bool DAL_allocBuffer( Data *data, dal_size_t size )
 
 	// TODO: implement a better logic:
 	//       start from DAL_allocArray's threshold
-	//       (or a well-chosen value) and shrinks according to some heuristic...  
+	//       (or a well-chosen value) and shrinks according to some heuristic...
 	const dal_size_t threshold = DAL_allowedBufSize();
-	if ( size > threshold ) 
+	if ( size > threshold )
 		size = threshold;
 
 	bool r =  DAL_allocArray( data, size );

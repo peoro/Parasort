@@ -8,7 +8,7 @@
 #define MIN(a,b) ( (a)<(b) ? (a) : (b) )
 #define MAX(a,b) ( (a)>(b) ? (a) : (b) )
 
-void TEST_DAL_scattervSend( Data *data, long *counts, long *displs )
+void TEST_DAL_scattervSend( Data *data, dal_size_t *counts, dal_size_t *displs )
 {
 	int sc[GET_N()];
 	int sd[GET_N()];
@@ -17,7 +17,7 @@ void TEST_DAL_scattervSend( Data *data, long *counts, long *displs )
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
-	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a scatter communication (its size is %ld, but there are %d processes)", globalBuf.array.size, GET_N() );
+	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a scatter communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
 	//VALID ONLY FOR THIS TEST//
 	globalBuf.array.size = GET_N();
@@ -26,7 +26,7 @@ void TEST_DAL_scattervSend( Data *data, long *counts, long *displs )
 	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
 	//Retrieving the number of iterations
-	long max_count = 0;
+	dal_size_t max_count = 0;
 	for ( i=0; i<GET_N(); i++ )
 		if ( counts[i] > max_count )
 			max_count = counts[i];
@@ -75,7 +75,7 @@ void TEST_DAL_scattervSend( Data *data, long *counts, long *displs )
 
 	DAL_releaseGlobalBuffer( &globalBuf );
 }
-void TEST_DAL_scattervReceive( Data *data, long size, int root )
+void TEST_DAL_scattervReceive( Data *data, dal_size_t size, int root )
 {
 	int i, j;
 
@@ -92,7 +92,7 @@ void TEST_DAL_scattervReceive( Data *data, long size, int root )
 	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
 	//Retrieving the number of iterations
-	long max_count;
+	dal_size_t max_count;
 	MPI_Bcast( &max_count, 1, MPI_LONG, GET_ID(), MPI_COMM_WORLD );
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int recvCount, tmp;
@@ -135,7 +135,7 @@ void TEST_DAL_scattervReceive( Data *data, long size, int root )
 * @param[in] 		displs     	Array of displacements
 * @param[in] 		root     	Rank of the root process
 */
-void TEST_DAL_scatterv( Data *data, long *counts, long *displs, int root )
+void TEST_DAL_scatterv( Data *data, dal_size_t *counts, dal_size_t *displs, int root )
 {
 	if( GET_ID() == root ) {
 		return TEST_DAL_scattervSend( data, counts, displs );
@@ -158,13 +158,13 @@ int main( int argc, char **argv )
 		TESTS_ERROR( 1, "Use this with at least 2 processes!" );
 	}
 
-	long scounts[n];
-	long sdispls[n];
+	dal_size_t scounts[n];
+	dal_size_t sdispls[n];
 	int size = n*5;	//size of data d
 	int s;
 
 	//Initializing send counts randomly
-	memset( scounts, 0, n*sizeof(long) );
+	memset( scounts, 0, n*sizeof(dal_size_t) );
 	for ( s=0; s<size; s++ )
 		scounts[rand()%n]++;
 

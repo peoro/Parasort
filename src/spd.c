@@ -1,4 +1,6 @@
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <getopt.h>
 #include <string.h>
@@ -86,7 +88,14 @@ dal_size_t strToInt( const char *str, bool *err )
 	return r;
 }
 
+static dal_size_t GET_FILE_SIZE( const char *path )
+{
+	struct stat sb;
 
+	SPD_ASSERT( stat(path, &sb) != -1, "Unable to load statistics for file %s", path );
+
+	return sb.st_size;
+}
 
 // reads an already existing file (will copy it, if data is a File)
 bool DAL_s_readFile( Data *data, const char *path )

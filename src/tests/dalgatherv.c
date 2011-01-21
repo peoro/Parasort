@@ -22,8 +22,8 @@ void TEST_DAL_gathervSend( Data *data, int root )
 	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
 	//Retrieving the number of iterations
-	long max_count;
-	long size = DAL_dataSize(data);
+	dal_size_t max_count;
+	dal_size_t size = DAL_dataSize(data);
 	MPI_Allreduce( &size, &max_count, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int sendCount, tmp;
@@ -60,7 +60,7 @@ void TEST_DAL_gathervSend( Data *data, int root )
 
 	DAL_releaseGlobalBuffer( &globalBuf );
 }
-void TEST_DAL_gathervReceive( Data *data, long *counts, long *displs )
+void TEST_DAL_gathervReceive( Data *data, dal_size_t *counts, dal_size_t *displs )
 {
 	int rc[GET_N()];
 	int rd[GET_N()];
@@ -69,7 +69,7 @@ void TEST_DAL_gathervReceive( Data *data, long *counts, long *displs )
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
-	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a gather communication (its size is %ld, but there are %d processes)", globalBuf.array.size, GET_N() );
+	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a gather communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
 	//VALID ONLY FOR THIS TEST//
 	globalBuf.array.size = GET_N();
@@ -78,13 +78,13 @@ void TEST_DAL_gathervReceive( Data *data, long *counts, long *displs )
 	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
 	//Retrieving the number of iterations
-	long max_count = 0;
+	dal_size_t max_count = 0;
 	MPI_Allreduce( &counts[GET_ID()], &max_count, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int r, tmp;
 
 	//Computing the total number of elements to be received
-	long rcount = 0;
+	dal_size_t rcount = 0;
 	for ( i=0; i<GET_N(); i++ ) {
 		rcount += counts[i];
 	}
@@ -141,7 +141,7 @@ void TEST_DAL_gathervReceive( Data *data, long *counts, long *displs )
 * @param[in] 		displs     	Array of displacements
 * @param[in] 		root     	Rank of the root process
 */
-void TEST_DAL_gatherv( Data *data, long *counts, long *displs, int root )
+void TEST_DAL_gatherv( Data *data, dal_size_t *counts, dal_size_t *displs, int root )
 {
 	if( GET_ID() == root ) {
 		return TEST_DAL_gathervReceive( data, counts, displs );
@@ -163,13 +163,13 @@ int main( int argc, char **argv )
 		TESTS_ERROR( 1, "Use this with at least 2 processes!" );
 	}
 
-	long rcounts[n];
-	long rdispls[n];
+	dal_size_t rcounts[n];
+	dal_size_t rdispls[n];
 	int size = n*25;	//size of data to collect
 	int r;
 
 	//Initializing send counts randomly
-	memset( rcounts, 0, n*sizeof(long) );
+	memset( rcounts, 0, n*sizeof(dal_size_t) );
 	for ( r=0; r<size; r++ )
 		rcounts[rand()%n]++;
 

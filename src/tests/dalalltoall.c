@@ -18,7 +18,7 @@
 void TEST_DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
 {
 	DAL_ASSERT( buf->medium == Array, buf, "Data should be of type Array" );
-	DAL_ASSERT( buf->array.size % parts == 0, buf, "Data size should be a multiple of %d, but it's %ld", parts, buf->array.size );
+	DAL_ASSERT( buf->array.size % parts == 0, buf, "Data size should be a multiple of %d, but it's "DST, parts, buf->array.size );
 	int i;
 	for ( i=0; i<parts; i++ ) {
 		bufs[i] = *buf;
@@ -33,14 +33,14 @@ void TEST_DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
 * @param[in,out] 	data  		Data to be sent and in which receive
 * @param[in] 		count  		Number of elements to be sent/received to/from each process
 */
-void TEST_DAL_alltoall( Data *data, long count )
+void TEST_DAL_alltoall( Data *data, dal_size_t count )
 {
 	switch( data->medium ) {
 		case File: {
 			Data globalBuf;
 			DAL_acquireGlobalBuffer( &globalBuf );
 
-			DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is %ld, but there are %d processes)", globalBuf.array.size, GET_N() );
+			DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
 			Data bufs[2];
 			TEST_DAL_splitBuffer( &globalBuf, 2, bufs );
@@ -76,7 +76,7 @@ void TEST_DAL_alltoall( Data *data, long count )
 
 			//TODO: Is it possible to avoid a double copy!?!?
 
-			SPD_ASSERT( count > 0, "You are sending %ld elements to each process", count );
+			SPD_ASSERT( count > 0, "You are sending "DST" elements to each process", count );
 			int i;
 
 			Data recvData;
