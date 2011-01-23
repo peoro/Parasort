@@ -50,7 +50,7 @@ void TEST_DAL_scatterSend( Data *data )
 		}
 		case Array: {
 
-			for ( i=0; i<num_iterations; i++ ) {ke
+			for ( i=0; i<num_iterations; i++ ) {
 
 				for ( j=0; j<GET_N(); j++ ) {
 					tmp = MIN( blockSize, (count-i*blockSize) );
