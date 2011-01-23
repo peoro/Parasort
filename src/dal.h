@@ -149,11 +149,11 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 
 // scatter
 void DAL_scatterSend( Data *data );
-void DAL_scatterReceive( Data *data, dal_size_t size, int root );
-void DAL_scatter( Data *data, dal_size_t size, int root );
+void DAL_scatterReceive( Data *data, dal_size_t count, int root );
+void DAL_scatter( Data *data, dal_size_t count, int root );
 
 void DAL_scattervSend( Data *data, dal_size_t *sizes, dal_size_t *displs );
-void DAL_scattervReceive( Data *data, dal_size_t size, int root );
+void DAL_scattervReceive( Data *data, dal_size_t count, int root );
 void DAL_scatterv( Data *data, dal_size_t *sizes, dal_size_t *displs, int root );
 
 // gather
@@ -166,7 +166,7 @@ void DAL_gathervReceive( Data *data, dal_size_t *sizes, dal_size_t *displs );
 void DAL_gatherv( Data *data, dal_size_t *sizes, dal_size_t *displs, int root );
 
 // all to all
-void DAL_alltoall( Data *data, dal_size_t size );
+void DAL_alltoall( Data *data, dal_size_t count );
 
 void DAL_alltoallv( Data *data, dal_size_t *sendSizes, dal_size_t *sdispls, dal_size_t *recvSizes, dal_size_t *rdispls );
 

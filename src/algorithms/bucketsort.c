@@ -27,10 +27,11 @@
 */
 void getSendCounts( Data *data, const int n, dal_size_t *lengths )
 {
-	/* TODO: Implement it the right way!! */
-
 	int i, j, k;
-	const double 	range = INT_MAX / n;	//Range of elements in each bucket
+	const int range = ((dal_size_t)INT_MAX+1) / n;	//Range of elements in each bucket
+
+	/* Initializing the lengths array */
+	memset( lengths, 0, n*sizeof(dal_size_t) );
 
 	/* Computing the number of integers to be sent to each process */
 	switch( data->medium ) {
@@ -49,16 +50,19 @@ void getSendCounts( Data *data, const int n, dal_size_t *lengths )
 				readCount += r;
 
 				for ( k=0; k<r; k++ ) {
-					j = ((double) buffer.array.data[k]) / range;
+					j = buffer.array.data[k] / range;
+					SPD_ASSERT( j >= 0 && j < n, "Something went wrong: j should be within [0,%d], but it's %d", n-1, j );
 					lengths[j]++;
 				}
 			}
+			SPD_ASSERT( readCount == DAL_dataSize(data), DST" elements have been read, while Data size is "DST, readCount, DAL_dataSize(data) );
+
 			DAL_destroy( &buffer );
 			break;
 		}
 		case Array: {
 			for ( i=0; i<data->array.size; i++ ) {
-				j = ((double) data->array.data[i]) / range;
+				j = data->array.data[i] / range;
 				lengths[j]++;
 			}
 			break;
@@ -124,9 +128,6 @@ void bucketSort( const TestInfo *ti, Data *data )
 /***************************************************************************************************************/
 
 	bucketsP = startPhase( ti, "buckets construction" );
-
-	/* Initializing the sendCounts array */
-	memset( sendCounts, 0, n*sizeof(dal_size_t) );
 
 	/* Computing the number of integers to be sent to each process */
 	getSendCounts( data, n, sendCounts );
