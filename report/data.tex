@@ -8,11 +8,11 @@ At this purpose we decided to add a further abstraction layer below the actual S
 We needed to write some kind of run-time support for the Sorting levels, which is logically placed just below the Sorting Framework: since we want to save the algorithm from actually care about how Data is allocated, Sorting Algorithm needs to use some functions that will take care of it exposing a data-independent signature. Our rule of thumb is that all and only the functions logically placed at this abstraction level are the only ones actually working with a \texttt{Data} object (ie: accessing its field directly or indirectly) and vice-versa.
 Functions at the DAL level will one (or more) \texttt{Data} object, will see whether it's allocated on primary or secondary memory, and according to this they'll run some data-dependent codes, optimized for the medium where the \texttt{Data} object is allocated. \\
 
-Notice a fundamental aspect: the Data Abstraction Layer comes from the necessity of sorting large data sets. However, \textit{it is not related to the problem of sorting a data set in any way}. In other words, the DAL can be considered to all intent and purposes a new \textit{parallel programming library for handling large data sets}. 
+Notice an interesting aspect: it is true that the Data Abstraction Layer comes from the specific necessity of sorting data sets that cannot fit the primary memory. However, \textit{the DAL is not related to the problem of sorting itself}, but rather it represents an abstraction that could be used in many different scenarios. In other words, the DAL can be considered to all intent and purposes a new \textit{parallel programming library for handling large data sets}. 
 
 In section~\ref{DAL-int} we will explain what is possible to do \textit{using} the DAL, while in section~\ref{DAL-impl} we will detail its implementation. 
 
-\subsection{Data Abstraction Layer - Interface}
+\subsubsection{Data Abstraction Layer - Interface}
 \label{DAL-int}
 The DAL environment must be initialized before any other call to a DAL primitive can take place. Two functions address respectively the initialization and termination of the environment:
 \begin{lstlisting}
@@ -48,7 +48,7 @@ The semantic of these functions follows the one given by MPI for those primitive
 
 \paragraph{The ''Sorting DAL'' sublayer} There are also a set of functions that are closely related to the Sorting Algorithms but need to have direct access to the content of a \texttt{Data}.  Just as example, think to a function $merge()$, that takes in input at least two \texttt{Data} and returns another \texttt{Data} which represents the sorted concatenation of the input sequences. This function has to be implemented only for specific algorithms (like \textit{mergesort} an \textit{k-way mergesort}), but on the other hand it needs to access the fields of \texttt{Data} to be implemented. We look at these type of functions as they would belong to the run-time support of Sorting Algorithms: that is, they are logically placed at the DAL level even if they are implemented outside the DAL library. It is like we had an additional level between the DAL and Sorting Framework, eventually called ''Sorting DAL'', where all the functions that are related to the support of the algorithms, but need to access the DAL, should be logically placed. 
 
-\paragraph{How to use the DAL layer}. Using the DAL layer is very simple and even straightforward if we know how to program with MPI. Here, we show an example on how to setup a computation built on top of the DAL layer. We are in the case in which a process owns a set of data and want to scatter it to all other processes of the parallel application (like what happens in a Sorting Algorithm, where a ''root'' process initially owns the whole data set) . A very simple way to split and distribute the initial data set, perform some kind of computation and then terminate, is the following:
+\paragraph{How to use the DAL layer} Using the DAL layer is very simple and even straightforward if we know how to program with MPI. Here, we show an example on how to setup a computation built on top of the DAL layer. We are in the case in which a process owns a set of data and want to scatter it to all other processes of the parallel application (like what happens in a Sorting Algorithm, where a ''root'' process initially owns the whole data set) . A very simple way to split and distribute the initial data set, perform some kind of computation and then terminate, is the following:
 \begin{lstlisting}
 DAL_initialize ( arcg, argv );
 
@@ -68,8 +68,11 @@ DAL_terminate ( );
 \end{lstlisting}
 
 
-\subsection{Data Abstraction Layer - Implementation}
+\subsubsection{Data Abstraction Layer - Implementation}
 \label{DAL-impl}
+In this section we detail the implementation of the DAL. By first describing its most important functions, we will be able to focus on the implementation of a specific communication primitive. This section does not want to be neither an ''How to'' nor a technical manual, but rather deeply explain the structure of the DAL because, apart from being the basis of our Sorting Algorithms, we really consider it a new parallel programming tool.
+
+\paragraph{Structuring the Data Abstraction Layer}
 The type \texttt{Data} is implemented as follows:
 \begin{lstlisting}
 typedef struct
@@ -101,46 +104,45 @@ Depending on the value of $medium$, a \texttt{Data} represents a sequence of ele
 bool DAL_allocArray( Data *data, dal_size_t size )
 bool DAL_allocFile ( Data *data, dal_size_t size )
 bool DAL_reallocArray ( Data *data, dal_size_t size )
-bool DAL_reallocAsArray ( Data *data );
+bool DAL_reallocAsArray ( Data *data )
+bool DAL_allocBuffer( Data *data, dal_size_t size )
 \end{lstlisting}
-The semantic of these functions come directly from their signature. The $DAL\_allocArray$ tries to allocate a block of $size$ integers in primary memory, while its dual counterpart, namely $DAL\_allocFile$, force the allocation on a file on disk. The $DAL\_reallocArray$ simply resize a \texttt{Data} preserving its contents; notice that a call to this function may cause the change of the medium. Finally, we get to the function that we consider to be fundamental both for its semantic and its ease to use. Three versions of the same function are provided.
+The $DAL\_allocArray$ tries to allocate a block of $size$ integers in primary memory, while its dual counterpart, namely $DAL\_allocFile$, force the allocation on a file on disk. The $DAL\_reallocArray$ simply resize a \texttt{Data} preserving its contents; notice that a call to this function may cause the change of the medium. The $DAL\_allocBuffer$ function forces the allocation of \textit{at most} $size$ elements in primary memory; if $size$ elements are too many to be allocated in memory, than some strategies can be adopted to find a new $size$, which should be as close as possible to the one passed as argument, such that the returned \texttt{Data} will contain a set of elements stored in primary memory.
+Another important function is the $DAL\_dataCopy$ of which we defined three versions:
 \begin{lstlisting}
-dal_size_t DAL_dataCopy ( Data *src, Data *dst ); // src.size must be equal to dst.size
+dal_size_t DAL_dataCopy ( Data *src, Data *dst ); 
 dal_size_t DAL_dataCopyO ( Data *src, dal_size_t srcOffset, Data *dst, dal_size_t dstOffset ); 
 dal_size_t DAL_dataCopyOS ( Data *src, dal_size_t srcOffset, Data *dst, dal_size_t dstOffset, dal_size_t size );
 \end{lstlisting}
-To give an idea of the importance of these functions, we show how we have used them to implement the $DAL\_send$ primitive. We will see that thanks to the structure of the DAL layer, the implementation of such function becomes really simple. However, if we look at the implementation of the collective communications primitives (file \textit{dal.c}, at least two things are evident: first, thanks to the DAL internal functions, we are able to write a clean, easily understandable and extensible code; second, the logic of functions like $Scatter$ and $AllToAll$ is really more complicated than $DAL\_send$. 
-\begin{lstlisting}
-void DAL_send( ..., Data *data, int dest )
-{
-	switch( data->medium ) {
-		case File: {
-			Data *buf;
-			while ( buf = DAL_readNextBlock( data ):
-				DAL_send( buf )
-			break;
-		}
-		case Array: {
-			MPI_Send( data->array.data, data->array.size, MPI_INT, dest, 0, MPI_COMM_WORLD );
-			break;
-		}
-		default:
-			UNSUPPORTED_DATA( data );
-	}
-}
-\end{lstlisting}
-Depending on the medium where the block of data is stored, different actions are performed. If the medium is the main memory (''Array''), than a simple call to a primitive of the lower level is enaugh (ie MPI$\_$Send). On the other hand, the case ''File'', that is elements are allocated on disk, is a little bit trickier and subject of potential optimizations that we will discuss in~\ref{conclusion}. Here we present a simple possible implementation. Let's first introduce two essential functions: 
-\begin{lstlisting}
-Data* DAL_readNextBlock(  Data* )
-Data* DAL_allocBuffer( int size )
-\end{lstlisting}
-$DAL\_readNextBlock( Data* )$ takes a \texttt{Data} whose medium is of type ''File'' and returns a new \texttt{Data} which contains a sequence of elements buffered in main memory. The cursor of the file from which elements have been taken is obviously shifted, so a subsequent call to the function with the same argument will return the following block of data that fits the memory. $DAL\_allocBuffer( int\ size )$ is called internally by $DAL\_readNextBlock( Data* )$. It aims at allocating in main memory a block of \textit{at most} $size$ elements; if $size$ elements are too many to be allocated in memory, than some strategies can be adopted to find a new $size$, which is as close as possible to the one passed as argument, such that the returned \texttt{Data} will contain a set of elements stored in main memory. 
-By looping on $DAL\_readNextBlock( Data* )$ we can split the initial \texttt{Data}, that could not fit the main memory, into two or more blocks that instead fits it; then, each of this block will be sent in succession.
-This was the macroscopic behaviour of a simple function like $DAL\_send$. Unfortunately, things get even more complicated if we go into the details of the implementation. Indeed, a subtle issue arises for implementing $DAL\_readNextBlock( )$. Let's think to the fact that after a call to $DAL\_allocBuffer( int\ size )$, sender and receiver may end up with buffers of different $size$ in their main memory. In this case, the $MPI\_Send$ and the corresponding $MPI\_Recv$ get in some sense decoupled, since the sender may be able to send $X$ elements at a time, while the receiver may be able to receive $Y$ elements at a time, with $X \neq Y$ in general. In particular, the real issue arises once the receiver allocates a buffer smaller than the one allocated by the sender (that is $Y < X$): in MPI a $MPI\_Send$ matches exactly one $MPI\_Recv$ (see the MPI standard~\cite{MPI}), thereby the asymmetry between the size of the two buffers will cause unacceptable loss of data. As if that were not enough, another potential probelm regarding the memory usage would arise: because of the ''buffer-asymmetry problem'' stated above, a process may allocate a lot of potentially useless memory, subtracting it to the other processes that are being executed on the same machine. We propose two possible solutions for this problem: 
+The $DAL\_dataCopy$ function copies a source \texttt{Data} into a destination \texttt{Data} that must be already initialized. No matter whether elements are allocated in primary memory or on a file since $DAL\_dataCopy$ abstracts from the effective location of the elements. The second and third versions (tagged with the suffix ''O'' and ''OS'', meaning ''Offset'' and ''Size'') allow also to specify an offset (from which start to copy) and a maximum number of copied elements. Despite its ease of usage, the implementation of  the $DAL\_dataCopy$ function is not so simple because it forces us to consider all the possible combinations between the actual allocation of both the source and destionation \texttt{Data}. 
+
+\paragraph{The communication buffer}
+Consider a process $A$ that wants to send a \texttt{Data} to a process $B$. We know that this \texttt{Data} could represent a sequence of elements allocated on a file $f$. In this case, a simple way to send the whole \texttt{Data} to $B$, is forcing $A$ to load blocks of $f$ in primary memory and then sends them, one by one, through a call to $MPI\_Send$.  Unfortunately, things get really complicated if we go into the details of the implementation of this (apparently simple) behavior. 
+
+Let's think to the fact that both $A$ and $B$ have to allocate a buffer in primary memory for sending and receiving blocks of elements. Without loss of generality, we can think that both processes allocate this buffer through a call to the $DAL\_allocBuffer$ function. The problem is that after a call to $DAL\_allocBuffer( int\ size )$, even if the value of $size$ was pre-established, sender and receiver may end up with buffers of different $size$ in their primary memory. This is not so unlikely in a system where the consume of memory is a matter of fact. In this case, the $MPI\_Send$ and the corresponding $MPI\_Recv$ get in some sense decoupled, since the sender may be able to send $X$ elements at a time, while the receiver may be able to receive $Y$ elements at a time, with $X \neq Y$ in general. In particular, the real issue arises once the receiver allocates a buffer smaller than the one allocated by the sender (that is $Y < X$): in MPI a $MPI\_Send$ matches exactly one $MPI\_Recv$ (see the MPI standard~\cite{MPI}), thereby the asymmetry between the size of the two buffers will cause unacceptable loss of data. As if that were not enough, another potential problem regarding the memory consume would arise: because of the ''buffer-asymmetry problem'' stated above, a process may allocate a lot of potentially useless memory (e.g. $X >>> Y$), subtracting it to other processes that are being executed on the same machine. We propose two possible solutions for this problem: 
 \begin{itemize}
 \item \textbf{Static buffer size.} The size $X$ of the buffer is \textit{pre-established} and a communication-buffer is \textit{pre-allocated} to all the processes. The hypothetical optimal value of $X$ can be determined by applying some heuristics regarding the average available memory of a node, the number of cores, the size of the data set and so on. Hence, a part of the main memory of a node get waste in favour of the communication run-time support, in sense that it can not be used for performing the sorting. 
 \item \textbf{Dynamic buffer size.} Another possibility is to let sender and receiver accord to the size of the buffer by exchanging some preliminary messages before starting the real communication. For instance, sender may ask receiver to allocate a buffer of $X$ size. Receiver may answer ''Yes, I can'' or ''No, I can't''. Receiving a negative answer, sender may try with proposing a different size, leading to a potential ''ping-pong'' effect. This undesirable effect is in some sense stochastic, and we do not know a-priori the whole overhead that may cause. However, we can avoide this problem by letting the receiver to answer with a message like this: ''No, i can't, but i was able to allocate space for $Y$ elements. So, send me $Y$ elements''. In this case, only two preliminary messages have been exchanged between sender and receiver; then, the real send can be performed by sending a block of $Y$ elements at a time. Notice that with this solution some overhead comes from the dynamic memory allocation. 
 \end{itemize}
-We chose the static approach. On the one hand, we avoid the overhead due to both the preliminary phase of ''handshaking'' and the dynamic memory allocation (that could be very significative in case of high values of the size) which characterize the dynamic solution. On the other hand, it is simpler to be implemented with respect to the dynamic approach, which should be specifically designed for each communication primitive ($DAL\_\lbrace$send, scatter, alltoall, ...$\rbrace$). However, as future work, we propose to implement also the dynamic solution in order to have a practical comparison between these two approaches. Finally, notice that both solutions require $DAL\_send$ to be implemented with a loop of $MPI\_Send$ when working on files. We think that \textit{in general}, with the static solution, being the buffer size pre-established, we need a greater number of $MPI\_Send$ with respect to the dynamic solution in order to perform the same $DAL\_send$. Anyway, we think also that for sending megabytes (or greater) of data, the overhead due to the setup of more than one communication is negligible with respect to the time taken by the transfer of the data. We will investigate these aspects in chapter~\ref{MPI-cost-model}, where we will conclude that our assumptions actually hold.
+We chose the static approach. On the one hand, we avoid the overhead due to both the preliminary phase of ''handshaking'' and the dynamic memory allocation (that could be very significative in case of high values of the size) which characterize the dynamic solution. On the other hand, it is simpler to implement with respect to the dynamic approach, which should be specifically designed for each communication primitive ($DAL\_\lbrace$send, scatter, alltoall, ...$\rbrace$). However, as future work, we propose to implement also the dynamic solution in order to have a practical comparison between these two approaches. The problem of the determining the \textit{optimum size} of the static buffer will be investigated in chapter~\ref{MPI-cost-model}.
 
-TODO: enfatizzare il tempo speso a progettare il dal.
+\paragraph{The DAL$\_$send function}
+In this context, we would give an idea of how we can use the DAL internal functions for implementing the $DAL\_send$ communication primitive. While the $DAL\_send$ function is rather simple to implement, the logic of the collective communications primitives, like $Scatter$ and $AllToAll$, is a little bit more trickier, but, thanks to the structure of the DAL, still fairly understandable (see \textit{dal.c} for more details). The most simple way to implement the $DAL\_send$ is the following:
+\begin{lstlisting}
+void DAL_send( Data *data, int dest )
+{
+	Data buffer;
+	DAL_acquireGlobalBuffer( &buffer );
+
+	dal_size_t i = 0;
+	dal_size_t r;
+	while( i < DAL_BLOCK_COUNT(data, &buffer) ) {
+		r = DAL_dataCopyO( data, i * DAL_dataSize(&buffer), &buffer, 0 );
+		DAL_MPI_SEND( buffer.array.data, r, MPI_INT, dest );
+		++ i;
+	}
+
+	DAL_releaseGlobalBuffer( &buffer );
+}
+\end{lstlisting}
+First of all, notice that thanks to a function like $DAL\_dataCopyO$ the implementation of $DAL\_send$ can abstract from the actual location of the elements contained in \texttt{data}. This feature is also shared with all other communication primitives. For sending a \texttt{Data} we adopt a very simple strategy: we logically split the original data into more blocks that can fit the communication buffer; then, we perform an $MPI\_Send$ by sending the communication buffer.
