@@ -124,6 +124,7 @@ void DAL_init( Data *data ); // gets Data redy to be worked on - without allocat
 void DAL_destroy( Data *data ); // destroys and re-initialize data
 
 bool DAL_allocData( Data *data, dal_size_t size ); // allocates a Data in an Array, or, if it fails, in a File
+bool DAL_reallocData ( Data *data, dal_size_t size );
 
 dal_size_t DAL_allowedBufSize( );
 

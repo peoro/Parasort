@@ -179,8 +179,8 @@ int main( int argc, char **argv )
 	DAL_init( &d );
 
 	if ( GET_ID() == root ) {
-		SPD_ASSERT( DAL_allocArray( &d, size ), "error allocating data..." );
-// 		SPD_ASSERT( DAL_allocData( &d, size ), "error allocating data..." );
+// 		SPD_ASSERT( DAL_allocArray( &d, size ), "error allocating data..." );
+		SPD_ASSERT( DAL_allocData( &d, size ), "error allocating data..." );
 
 		//tmp buffer to init data
 		Data buffer;

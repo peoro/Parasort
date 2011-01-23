@@ -30,6 +30,7 @@ void TEST_DAL_scatterSend( Data *data )
 	dal_size_t count = DAL_dataSize(data) / GET_N();
 	int num_iterations = count / blockSize + (count % blockSize > 0);
 	int tmp;
+	int sc[GET_N()], sd[GET_N()];
 
 	switch( data->medium ) {
 		case File: {
@@ -37,20 +38,19 @@ void TEST_DAL_scatterSend( Data *data )
 			for ( i=0; i<num_iterations; i++ ) {
 				tmp = MIN( blockSize, (count-i*blockSize) );
 
-				for ( j=0; j<GET_N(); j++ )
+				for ( j=0; j<GET_N(); j++ ) {
+					sc[j] = tmp;
+					sd[j] = j*tmp;
 					DAL_dataCopyOS( data, j*count + i*blockSize, &globalBuf, j*blockSize, tmp );
+				}
 
-				MPI_Scatter( globalBuf.array.data, tmp, MPI_INT, MPI_IN_PLACE, tmp, MPI_INT, GET_ID(), MPI_COMM_WORLD );
+				MPI_Scatterv( globalBuf.array.data, sc, sd, MPI_INT, MPI_IN_PLACE, sc[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
 			}
-
-			//TODO: resize root data (maybe a DAL_reallocData function would be useful)
-			data->file.size = count;
 			break;
 		}
 		case Array: {
-			int sc[GET_N()], sd[GET_N()];
 
-			for ( i=0; i<num_iterations; i++ ) {
+			for ( i=0; i<num_iterations; i++ ) {ke
 
 				for ( j=0; j<GET_N(); j++ ) {
 					tmp = MIN( blockSize, (count-i*blockSize) );
@@ -59,13 +59,13 @@ void TEST_DAL_scatterSend( Data *data )
 				}
 				MPI_Scatterv( data->array.data, sc, sd, MPI_INT, MPI_IN_PLACE, sc[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
 			}
-			SPD_ASSERT( DAL_reallocArray( data, count ), "not enough memory to allocate data" );
 			break;
 		}
 		default:
 			DAL_UNSUPPORTED( data );
 	}
 
+	SPD_ASSERT( DAL_reallocData( data, count ), "not enough space to reallocate data" );
 	DAL_releaseGlobalBuffer( &globalBuf );
 }
 void TEST_DAL_scatterReceive( Data *data, dal_size_t count, int root )
@@ -93,7 +93,7 @@ void TEST_DAL_scatterReceive( Data *data, dal_size_t count, int root )
 
 			for ( i=0; i<num_iterations; i++ ) {
 				tmp = MIN( blockSize, count-i*blockSize );
-				MPI_Scatter( NULL, 0, MPI_INT, globalBuf.array.data, tmp, MPI_INT, root, MPI_COMM_WORLD );
+				MPI_Scatterv( NULL, NULL, NULL, MPI_INT, globalBuf.array.data, tmp, MPI_INT, root, MPI_COMM_WORLD );
 
 				DAL_dataCopyOS( &globalBuf, 0, data, i*blockSize, tmp );
 			}

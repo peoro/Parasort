@@ -31,6 +31,25 @@ void DAL_releaseGlobalBuffer( Data *data )
 	DAL_bufferAcquired = 0;
 }
 
+/**
+* @brief Split a Data into several parts
+*
+* @param[in] 	buf  		Data buffer to be split
+* @param[in] 	parts  		Number of parts to split buf
+* @param[out] 	bufs  		Array of Data as result of splitting
+*/
+void DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
+{
+	DAL_ASSERT( buf->medium == Array, buf, "Data should be of type Array" );
+	DAL_ASSERT( buf->array.size % parts == 0, buf, "Data size should be a multiple of %d, but it's "DST"", parts, buf->array.size );
+	int i;
+	for ( i=0; i<parts; i++ ) {
+		bufs[i] = *buf;
+		bufs[i].array.data = buf->array.data+(buf->array.size/parts)*i;
+		bufs[i].array.size /= parts;
+	}
+}
+
 dal_size_t DAL_allowedBufSize( )
 {
 	//TODO: find the optimal value
@@ -276,6 +295,38 @@ bool DAL_allocData( Data *data, dal_size_t size )
 
 	return 0;
 }
+bool DAL_reallocData( Data *data, dal_size_t size )
+{
+	switch ( data->medium ) {
+		case File: {
+			//TODO: resize the file is size < data->file.size
+			data->file.size = size;
+			return 1;
+		}
+
+		case Array: {
+			if( DAL_reallocArray(data, size) ) {
+				return 1;
+			}
+			Data tmp;
+			DAL_init( &tmp );
+
+			if( DAL_allocFile(&tmp, size) ) {
+				DAL_destroy( data );
+				*data = tmp;
+				return 1;
+			}
+			break;
+		}
+
+		default: {
+			DAL_UNSUPPORTED( data );
+			break;
+		}
+	}
+	return 0;
+}
+
 
 
 // functions to work with any find of block device (ie: Files)
@@ -730,26 +781,49 @@ void DAL_receiveAU( Data *data, int source )
 */
 dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data* rdata, dal_size_t rcount, dal_size_t rdispl, int partner )
 {
-	int recvCount = rcount;
-	int sendCount = scount;
-	int recvDispl = rdispl;
-	int sendDispl = sdispl;
+	int i, sc, rc, tmp;
+	dal_size_t recvCount = 0;
+	MPI_Status 	status;
 
 	if( rdata->medium == NoMedium ) {
-		SPD_ASSERT( DAL_allocArray( rdata, recvDispl+recvCount ), "not enough memory to allocate data" );
+		SPD_ASSERT( DAL_allocData( rdata, rdispl+rcount ), "not enough space to allocate data" );
 	}
 	else {
-		SPD_ASSERT( DAL_reallocArray( rdata, recvDispl+recvCount ), "not enough memory to allocate data" );
+		SPD_ASSERT( DAL_reallocData( rdata, rdispl+rcount ), "not enough space to allocate data" );
 	}
+	Data globalBuf;
+	DAL_acquireGlobalBuffer( &globalBuf );
+	Data bufs[2];
+	DAL_splitBuffer( &globalBuf, 2, bufs );
+	Data *sendBuf = &bufs[0];
+	Data *recvBuf = &bufs[1];
 
-	MPI_Status 	status;
-	MPI_Sendrecv( sdata->array.data+sendDispl, sendCount, MPI_INT, partner, 100, rdata->array.data+recvDispl, recvCount, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
+	//Retrieving the number of iterations
+	int blockSize = DAL_dataSize(sendBuf);
+	int num_iterations = rcount / blockSize + (rcount % blockSize > 0);
 
-	MPI_Get_count( &status, MPI_INT, &recvCount );
-	SPD_ASSERT( DAL_reallocArray( rdata, recvDispl+recvCount ), "not enough memory to allocate data" );
+	for ( i=0; i<num_iterations; i++ ) {
+		tmp = MIN( blockSize, (scount-i*blockSize) );		//Number of elements to be sent to the partner process by MPI_Sendrecv
+		sc = tmp > 0 ? tmp : 0;
+		tmp = MIN( blockSize, (rcount-i*blockSize) );		//Number of elements to be received from the partner process by MPI_Sendrecv
+		rc = tmp > 0 ? tmp : 0;
 
-	rcount = recvCount;
-	return rcount;
+		if ( sc )
+			DAL_dataCopyOS( sdata, sdispl + i*blockSize, sendBuf, 0, sc );
+
+		MPI_Sendrecv( sendBuf->array.data, sc, MPI_INT, partner, 100, recvBuf->array.data, rc, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
+		MPI_Get_count( &status, MPI_INT, &rc );
+
+		if ( rc ) {
+			DAL_dataCopyOS( recvBuf, 0, rdata, rdispl + recvCount, rc );
+			recvCount += rc;
+		}
+	}
+	SPD_ASSERT( DAL_reallocData( rdata, rdispl+recvCount ), "not enough space to allocate data" );
+
+	DAL_releaseGlobalBuffer( &globalBuf );
+
+	return recvCount;
 }
 
 
@@ -774,6 +848,7 @@ void DAL_scatterSend( Data *data )
 	dal_size_t count = DAL_dataSize(data) / GET_N();
 	int num_iterations = count / blockSize + (count % blockSize > 0);
 	int tmp;
+	int sc[GET_N()], sd[GET_N()];
 
 	switch( data->medium ) {
 		case File: {
@@ -781,18 +856,17 @@ void DAL_scatterSend( Data *data )
 			for ( i=0; i<num_iterations; i++ ) {
 				tmp = MIN( blockSize, (count-i*blockSize) );
 
-				for ( j=0; j<GET_N(); j++ )
+				for ( j=0; j<GET_N(); j++ ) {
+					sc[j] = tmp;
+					sd[j] = j*tmp;
 					DAL_dataCopyOS( data, j*count + i*blockSize, &globalBuf, j*blockSize, tmp );
+				}
 
-				MPI_Scatter( globalBuf.array.data, tmp, MPI_INT, MPI_IN_PLACE, tmp, MPI_INT, GET_ID(), MPI_COMM_WORLD );
+				MPI_Scatterv( globalBuf.array.data, sc, sd, MPI_INT, MPI_IN_PLACE, sc[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
 			}
-
-			//TODO: resize root data (maybe a DAL_reallocData function would be useful)
-			data->file.size = count;
 			break;
 		}
 		case Array: {
-			int sc[GET_N()], sd[GET_N()];
 
 			for ( i=0; i<num_iterations; i++ ) {
 
@@ -803,13 +877,13 @@ void DAL_scatterSend( Data *data )
 				}
 				MPI_Scatterv( data->array.data, sc, sd, MPI_INT, MPI_IN_PLACE, sc[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
 			}
-			SPD_ASSERT( DAL_reallocArray( data, count ), "not enough memory to allocate data" );
 			break;
 		}
 		default:
 			DAL_UNSUPPORTED( data );
 	}
 
+	SPD_ASSERT( DAL_reallocData( data, count ), "not enough space to reallocate data" );
 	DAL_releaseGlobalBuffer( &globalBuf );
 }
 void DAL_scatterReceive( Data *data, dal_size_t count, int root )
@@ -832,7 +906,7 @@ void DAL_scatterReceive( Data *data, dal_size_t count, int root )
 
 			for ( i=0; i<num_iterations; i++ ) {
 				tmp = MIN( blockSize, count-i*blockSize );
-				MPI_Scatter( NULL, 0, MPI_INT, globalBuf.array.data, tmp, MPI_INT, root, MPI_COMM_WORLD );
+				MPI_Scatterv( NULL, NULL, NULL, MPI_INT, globalBuf.array.data, tmp, MPI_INT, root, MPI_COMM_WORLD );
 
 				DAL_dataCopyOS( &globalBuf, 0, data, i*blockSize, tmp );
 			}
@@ -957,9 +1031,6 @@ void DAL_scattervSend( Data *data, dal_size_t *counts, dal_size_t *displs )
 				}
 				MPI_Scatterv( globalBuf.array.data, sc, sd, MPI_INT, MPI_IN_PLACE, sc[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
 			}
-
-			//TODO: resize root data (maybe a DAL_reallocData function would be useful)
-			data->file.size = counts[GET_ID()];
 			break;
 		}
 		case Array: {
@@ -973,13 +1044,13 @@ void DAL_scattervSend( Data *data, dal_size_t *counts, dal_size_t *displs )
 				}
 				MPI_Scatterv( data->array.data, sc, sd, MPI_INT, MPI_IN_PLACE, sc[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
 			}
-			SPD_ASSERT( DAL_reallocArray( data, counts[GET_ID()] ), "not enough memory to allocate data" );
 			break;
 		}
 		default:
 			DAL_UNSUPPORTED( data );
 	}
 
+	SPD_ASSERT( DAL_reallocData( data, counts[GET_ID()] ), "not enough space to reallocate data" );
 	DAL_releaseGlobalBuffer( &globalBuf );
 }
 void DAL_scattervReceive( Data *data, dal_size_t count, int root )
@@ -1192,24 +1263,6 @@ void DAL_gatherv( Data *data, dal_size_t *counts, dal_size_t *displs, int root )
 
 
 
-/**
-* @brief Split a Data into several parts
-*
-* @param[in] 	buf  		Data buffer to be split
-* @param[in] 	parts  		Number of parts to split buf
-* @param[out] 	bufs  		Array of Data as result of splitting
-*/
-void DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
-{
-	DAL_ASSERT( buf->medium == Array, buf, "Data should be of type Array" );
-	DAL_ASSERT( buf->array.size % parts == 0, buf, "Data size should be a multiple of %d, but it's "DST"", parts, buf->array.size );
-	int i;
-	for ( i=0; i<parts; i++ ) {
-		bufs[i] = *buf;
-		bufs[i].array.data = buf->array.data+(buf->array.size/parts)*i;
-		bufs[i].array.size /= parts;
-	}
-}
 
 /**
 * @brief Sends data from all to all processes
