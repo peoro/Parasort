@@ -347,20 +347,25 @@ void chooseSplitters( int *array, const dal_size_t length, const int n, int *new
 */
 void chooseSplittersFromData( Data *data, const int n, int *newSplitters )
 {
-	/* TODO: Implement it the right way!! */
+	Data stub;
+	DAL_init( &stub );
+	stub.medium = Array;
+	stub.array.size = n-1;
+	stub.array.data = newSplitters;
 
-	switch( data->medium ) {
-		case File: {
-			DAL_UNIMPLEMENTED( data );
-			break;
-		}
-		case Array: {
-			chooseSplitters( data->array.data, DAL_dataSize(data), n, newSplitters );
-			break;
-		}
-		default:
-			DAL_UNSUPPORTED( data );
+	dal_size_t i, j, k;
+
+	if ( DAL_dataSize(data) >= n )
+		/* Choosing splitters (n-1 equidistant elements of the data array) */
+		for ( i=0, k=j=DAL_dataSize(data)/n; i<n-1; i++, k+=j )
+			DAL_dataCopyO( data, k, &stub, i );
+	else {
+		/* Choosing n-1 random splitters */
+		for ( i=0; i<n-1; i++ )
+			DAL_dataCopyO( data, rand()%DAL_dataSize(data), &stub, i );
+		qsort( newSplitters, n-1, sizeof(int), compare );
 	}
+
 }
 
 /* Keep C++ compilers from getting confused */
