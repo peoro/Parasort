@@ -35,63 +35,39 @@ void TEST_DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
 */
 void TEST_DAL_alltoall( Data *data, dal_size_t count )
 {
-	switch( data->medium ) {
-		case File: {
-			Data globalBuf;
-			DAL_acquireGlobalBuffer( &globalBuf );
+	Data globalBuf;
+	DAL_acquireGlobalBuffer( &globalBuf );
 
-			DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
+	DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
-			Data bufs[2];
-			TEST_DAL_splitBuffer( &globalBuf, 2, bufs );
-			Data *sendBuf = &bufs[0];
-			Data *recvBuf = &bufs[1];
+	Data bufs[2];
+	TEST_DAL_splitBuffer( &globalBuf, 2, bufs );
+	Data *sendBuf = &bufs[0];
+	Data *recvBuf = &bufs[1];
 
-			//VALID ONLY FOR THIS TEST//
-			sendBuf->array.size = GET_N();
-			recvBuf->array.size = GET_N();
-			////////////////////////////
+	//VALID ONLY FOR THIS TEST//
+	sendBuf->array.size = GET_N();
+	recvBuf->array.size = GET_N();
+	////////////////////////////
 
-			DAL_ASSERT( data->file.size >= sendBuf->array.size, data, "Data to be sent is too small, should be of type Array, but it's of type File" );
+	DAL_ASSERT( data->file.size >= sendBuf->array.size, data, "Data to be sent is too small, should be of type Array, but it's of type File" );
 
-			int i, j;
-			int blockSize = DAL_dataSize(sendBuf) / GET_N();
+	int i, j;
+	int blockSize = DAL_dataSize(sendBuf) / GET_N();
 
-			for ( i=0; i<DAL_BLOCK_COUNT(data, sendBuf); i++ ) {
-				int currCount = MIN( blockSize, (count-i*blockSize) );		//Number of elements to be sent to each process by MPI_Alltoall
+	for ( i=0; i<DAL_BLOCK_COUNT(data, sendBuf); i++ ) {
+		int currCount = MIN( blockSize, (count-i*blockSize) );		//Number of elements to be sent to each process by MPI_Alltoall
 
-				for ( j=0; j<GET_N(); j++ )
-					DAL_dataCopyOS( data, j*count + i*blockSize, sendBuf, j*currCount, currCount );
+		for ( j=0; j<GET_N(); j++ )
+			DAL_dataCopyOS( data, j*count + i*blockSize, sendBuf, j*currCount, currCount );
 
-				MPI_Alltoall( sendBuf->array.data, currCount, MPI_INT, recvBuf->array.data, currCount, MPI_INT, MPI_COMM_WORLD );
+		MPI_Alltoall( sendBuf->array.data, currCount, MPI_INT, recvBuf->array.data, currCount, MPI_INT, MPI_COMM_WORLD );
 
-				for ( j=0; j<GET_N(); j++ )
-					DAL_dataCopyOS( recvBuf, j*currCount, data, j*count + i*blockSize, currCount );
-			}
-
-			DAL_releaseGlobalBuffer( &globalBuf );
-			break;
-		}
-		case Array: {
-
-			//TODO: Is it possible to avoid a double copy!?!?
-
-			SPD_ASSERT( count > 0, "You are sending "DST" elements to each process", count );
-			int i;
-
-			Data recvData;
-			DAL_init( &recvData );
-			SPD_ASSERT( DAL_allocArray(&recvData, data->array.size), "not enough memory to allocate data" );
-
-			MPI_Alltoall( data->array.data, count, MPI_INT, recvData.array.data, count, MPI_INT, MPI_COMM_WORLD );
-
-			DAL_destroy( data );
-			*data = recvData;
-			break;
-		}
-		default:
-			DAL_UNSUPPORTED( data );
+		for ( j=0; j<GET_N(); j++ )
+			DAL_dataCopyOS( recvBuf, j*currCount, data, j*count + i*blockSize, currCount );
 	}
+
+	DAL_releaseGlobalBuffer( &globalBuf );
 }
 
 

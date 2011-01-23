@@ -54,73 +54,55 @@ void TEST_DAL_alltoallv( Data *data, dal_size_t *scounts, dal_size_t *sdispls, d
 	DAL_init( &recvData );
 	SPD_ASSERT( DAL_allocData(&recvData, rcount), "not enough space to allocate data" );
 
-	if ( data->medium == File || recvData.medium == File ) {
-		Data globalBuf;
-		DAL_acquireGlobalBuffer( &globalBuf );
+	Data globalBuf;
+	DAL_acquireGlobalBuffer( &globalBuf );
 
-		DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
+	DAL_ASSERT( globalBuf.array.size >= GET_N()*2, &globalBuf, "The global-buffer is too small for an alltoall communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
-		Data bufs[2];
-		TEST_DAL_splitBuffer( &globalBuf, 2, bufs );
-		Data *sendBuf = &bufs[0];
-		Data *recvBuf = &bufs[1];
+	Data bufs[2];
+	TEST_DAL_splitBuffer( &globalBuf, 2, bufs );
+	Data *sendBuf = &bufs[0];
+	Data *recvBuf = &bufs[1];
 
-		//VALID ONLY FOR THIS TEST//
-		sendBuf->array.size = GET_N();
-		recvBuf->array.size = GET_N();
-		////////////////////////////
+	//VALID ONLY FOR THIS TEST//
+	sendBuf->array.size = GET_N();
+	recvBuf->array.size = GET_N();
+	////////////////////////////
 
-		int blockSize = DAL_dataSize(sendBuf) / GET_N();
+	int blockSize = DAL_dataSize(sendBuf) / GET_N();
 
-		//Retrieving the number of iterations
-		dal_size_t max_count;
-		MPI_Allreduce( &rcount, &max_count, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
-		int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
-		int s, r, tmp;
+	//Retrieving the number of iterations
+	dal_size_t max_count;
+	MPI_Allreduce( &rcount, &max_count, 1, MPI_LONG_LONG, MPI_MAX, MPI_COMM_WORLD );
+	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
+	int s, r, tmp;
 
-		for ( i=0; i<num_iterations; i++ ) {
+	for ( i=0; i<num_iterations; i++ ) {
 
-			for ( s=0, r=0, j=0; j<GET_N(); j++ ) {
-				tmp = MIN( blockSize, (scounts[j]-i*blockSize) );
-				sc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
-				sd[j] = s;
-				s += sc[j];
+		for ( s=0, r=0, j=0; j<GET_N(); j++ ) {
+			tmp = MIN( blockSize, (scounts[j]-i*blockSize) );
+			sc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
+			sd[j] = s;
+			s += sc[j];
 
-				if( sc[j] )
-					DAL_dataCopyOS( data, sdispls[j] + i*blockSize, sendBuf, sd[j], sc[j] );
+			if( sc[j] )
+				DAL_dataCopyOS( data, sdispls[j] + i*blockSize, sendBuf, sd[j], sc[j] );
 
-				tmp = MIN( blockSize, (rcounts[j]-i*blockSize) );
-				rc[j] =	tmp > 0 ? tmp : 0; 	//Number of elements to be received from process j by MPI_Alltoallv
-				rd[j] = r;
-				r += rc[j];
-			}
-
-			MPI_Alltoallv( sendBuf->array.data, sc, sd, MPI_INT, recvBuf->array.data, rc, rd, MPI_INT, MPI_COMM_WORLD );
-
-			for ( j=0; j<GET_N(); j++ )
-				if( rc[j] )
-					DAL_dataCopyOS( recvBuf, rd[j], &recvData, rdispls[j] + i*blockSize, rc[j] );
-
+			tmp = MIN( blockSize, (rcounts[j]-i*blockSize) );
+			rc[j] =	tmp > 0 ? tmp : 0; 	//Number of elements to be received from process j by MPI_Alltoallv
+			rd[j] = r;
+			r += rc[j];
 		}
 
-		DAL_releaseGlobalBuffer( &globalBuf );
+		MPI_Alltoallv( sendBuf->array.data, sc, sd, MPI_INT, recvBuf->array.data, rc, rd, MPI_INT, MPI_COMM_WORLD );
+
+		for ( j=0; j<GET_N(); j++ )
+			if( rc[j] )
+				DAL_dataCopyOS( recvBuf, rd[j], &recvData, rdispls[j] + i*blockSize, rc[j] );
+
 	}
-	else if (data->medium == Array && recvData.medium == Array ) {
 
-		//TODO: Is it possible to avoid a double copy!?!?
-
-		for ( i=0; i<GET_N(); i++ ) {
-			sc[i] = scounts[i];
-			sd[i] = sdispls[i];
-
-			rc[i] = rcounts[i];
-			rd[i] = rdispls[i];
-		}
-
-		MPI_Alltoallv( data->array.data, sc, sd, MPI_INT, recvData.array.data, rc, rd, MPI_INT, MPI_COMM_WORLD );
-	}
-	else
-		DAL_UNSUPPORTED( data );
+	DAL_releaseGlobalBuffer( &globalBuf );
 
 	DAL_destroy( data );
 	*data = recvData;
@@ -141,7 +123,7 @@ int main( int argc, char **argv )
 	dal_size_t sdispls[n];
 	dal_size_t rcounts[n];
 	dal_size_t rdispls[n];
-	int size = n*25;	//size of data d
+	int size = n*3;	//size of data d
 	int s, r;
 
 	//Initializing send counts randomly
@@ -150,7 +132,7 @@ int main( int argc, char **argv )
 		scounts[rand()%n]++;
 
 	// Informing all processes on the number of elements that will receive
-	MPI_Alltoall( scounts, 1, MPI_LONG, rcounts, 1, MPI_LONG, MPI_COMM_WORLD );
+	MPI_Alltoall( scounts, 1, MPI_LONG_LONG, rcounts, 1, MPI_LONG_LONG, MPI_COMM_WORLD );
 
 	//Computing displacements
 	for ( s=0, r=0, i=0; i<n; i++ ) {

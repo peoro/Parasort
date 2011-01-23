@@ -996,7 +996,7 @@ void DAL_scattervReceive( Data *data, dal_size_t count, int root )
 
 	//Retrieving the number of iterations
 	dal_size_t max_count;
-	MPI_Bcast( &max_count, 1, MPI_LONG_LONG, GET_ID(), MPI_COMM_WORLD );
+	MPI_Bcast( &max_count, 1, MPI_LONG_LONG, root, MPI_COMM_WORLD );
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int recvCount, tmp;
 
@@ -1134,7 +1134,7 @@ void DAL_gathervReceive( Data *data, dal_size_t *counts, dal_size_t *displs )
 
 			for ( r=0, j=0; j<GET_N(); j++ ) {
 				tmp = MIN( blockSize, (counts[j]-i*blockSize) );
-				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
+				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_toallv
 				rd[j] = r;
 				r += rc[j];
 			}

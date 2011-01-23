@@ -16,12 +16,12 @@
 /**
 * @brief Compare and Exchange operation on the low part of two sequences sorted in ascending order
 *
-* @param[in]    length                  The length of the sequences
-* @param[in]    firstSeq                The first sequence
+* @param[in]    length          The length of the sequences
+* @param[in]    firstSeq        The first sequence
 * @param[in]    secondSeq       The second sequence
-* @param[out]   mergedSeq               The merged sequence
+* @param[out]   mergedSeq       The merged sequence
 */
-void compareLow( const long length, int *firstSeq, int *secondSeq, int* mergedSeq )
+void compareLow( const dal_size_t length, int *firstSeq, int *secondSeq, int* mergedSeq )
 {
     int i, j, k;
 
@@ -36,12 +36,12 @@ void compareLow( const long length, int *firstSeq, int *secondSeq, int* mergedSe
 /**
 * @brief Compare and Exchange operation on the high part of two sequences sorted in ascending order
 *
-* @param[in]    length                  The length of the sequences
-* @param[in]    firstSeq                The first sequence
+* @param[in]    length          The length of the sequences
+* @param[in]    firstSeq        The first sequence
 * @param[in]    secondSeq       The second sequence
-* @param[out]   mergedSeq               The merged sequence
+* @param[out]   mergedSeq       The merged sequence
 */
-void compareHigh( const long length, int *firstSeq, int *secondSeq, int* mergedSeq )
+void compareHigh( const dal_size_t length, int *firstSeq, int *secondSeq, int* mergedSeq )
 {
     int i, j, k;
 
@@ -62,8 +62,8 @@ void compareHigh( const long length, int *firstSeq, int *secondSeq, int* mergedS
 void compareLowData( Data *d1, Data *d2 )
 {
 	/* TODO: Implement it the right way!! */
-	Data buffer;
-	DAL_init( &buffer );
+	Data merged;
+	DAL_init( &merged );
 
 	switch( d1->medium ) {
 		case File: {
@@ -71,15 +71,15 @@ void compareLowData( Data *d1, Data *d2 )
 			break;
 		}
 		case Array: {
-			SPD_ASSERT( DAL_allocArray( &buffer, d1->array.size ), "not enough memory..." );
-			compareLow( d1->array.size, d1->array.data, d2->array.data, buffer.array.data );
+			SPD_ASSERT( DAL_allocArray( &merged, d1->array.size ), "not enough memory..." );
+			compareLow( d1->array.size, d1->array.data, d2->array.data, merged.array.data );
 			break;
 		}
 		default:
 			DAL_UNSUPPORTED( d1 );
 	}
 	DAL_destroy( d2 );
-	*d2 = buffer;
+	*d2 = merged;
 }
 
 
@@ -94,8 +94,8 @@ void compareHighData( Data *d1, Data *d2 )
 	/* TODO: Implement it the right way!! */
 
 	int i, j, k;
-	Data buffer;
-	DAL_init( &buffer );
+	Data merged;
+	DAL_init( &merged );
 
 	switch( d1->medium ) {
 		case File: {
@@ -103,15 +103,15 @@ void compareHighData( Data *d1, Data *d2 )
 			break;
 		}
 		case Array: {
-			SPD_ASSERT( DAL_allocArray( &buffer, d1->array.size ), "not enough memory..." );
-			compareHigh( d1->array.size, d1->array.data, d2->array.data, buffer.array.data );
+			SPD_ASSERT( DAL_allocArray( &merged, d1->array.size ), "not enough memory..." );
+			compareHigh( d1->array.size, d1->array.data, d2->array.data, merged.array.data );
 			break;
 		}
 		default:
 			DAL_UNSUPPORTED( d1 );
 	}
 	DAL_destroy( d2 );
-	*d2 = buffer;
+	*d2 = merged;
 }
 
 /**
@@ -122,19 +122,19 @@ void compareHighData( Data *d1, Data *d2 )
 */
 void bitonicSort( const TestInfo *ti, Data *data )
 {
-	const int		root = 0;                           //Rank (ID) of the root process
-	const int		id = GET_ID( ti );                  //Rank (ID) of the process
-	const int		n = GET_N( ti );                    //Number of processes
-	const long		M = GET_M( ti );                    //Number of data elements
-	const long		local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
+	const int			root = 0;                           //Rank (ID) of the root process
+	const int			id = GET_ID( ti );                  //Rank (ID) of the process
+	const int			n = GET_N( ti );                    //Number of processes
+	const dal_size_t	M = GET_M( ti );                    //Number of data elements
+	const dal_size_t	local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
 
-	Data			recvData;
-	long 			recvCount = local_M;				//Number of elements that will be received from partner
+	Data				recvData;
+	dal_size_t 			recvCount = local_M;				//Number of elements that will be received from partner
 
-	int				mask, mask2, partner;
-	long			i, j, k, z, flag;
+	int					mask, mask2, partner;
+	dal_size_t			i, j, k, z, flag;
 
-	PhaseHandle 	scatterP, localP, mergeP, gatherP;
+	PhaseHandle 		scatterP, localP, mergeP, gatherP;
 
 	SPD_ASSERT( isPowerOfTwo( n ), "n should be a power of two (but it's %d)", n );
 

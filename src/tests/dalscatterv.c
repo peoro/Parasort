@@ -30,7 +30,7 @@ void TEST_DAL_scattervSend( Data *data, dal_size_t *counts, dal_size_t *displs )
 	for ( i=0; i<GET_N(); i++ )
 		if ( counts[i] > max_count )
 			max_count = counts[i];
-	MPI_Bcast( &max_count, 1, MPI_LONG, GET_ID(), MPI_COMM_WORLD );
+	MPI_Bcast( &max_count, 1, MPI_LONG_LONG, GET_ID(), MPI_COMM_WORLD );
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int s, tmp;
 
@@ -93,7 +93,7 @@ void TEST_DAL_scattervReceive( Data *data, dal_size_t size, int root )
 
 	//Retrieving the number of iterations
 	dal_size_t max_count;
-	MPI_Bcast( &max_count, 1, MPI_LONG, GET_ID(), MPI_COMM_WORLD );
+	MPI_Bcast( &max_count, 1, MPI_LONG_LONG, root, MPI_COMM_WORLD );
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int recvCount, tmp;
 
