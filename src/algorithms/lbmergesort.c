@@ -110,13 +110,10 @@ void fileMerge( const dal_size_t flength, const dal_size_t fdispl, Data *d1, con
 			k = 0;
 		}
 	}
-// 	SPD_ASSERT( 0, "d1Count = %lld, d2Count = %lld, mergedCount = %lld", d1Count, d2Count, mergedCount );
 	if ( d1Count < flength )
 		DAL_dataCopyOS( d1, fdispl+d1Count+k, merged, mergedCount, DAL_dataSize(merged)-mergedCount );
 	else
 		DAL_dataCopyOS( d2, sdispl+d2Count+j, merged, mergedCount, DAL_dataSize(merged)-mergedCount );
-
-	DAL_PRINT_DATA( merged, "Merged Data" );
 	DAL_destroy( &buffer );
 }
 
@@ -140,11 +137,11 @@ void mergeData( dal_size_t flength, dal_size_t fdispl, Data *d1, dal_size_t slen
 	if( d1->medium == File || d2->medium == File || merged.medium == File ) {
 		fileMerge( flength, fdispl, d1, slength, sdispl, d2, &merged );
 	}
-	else if ( d1->medium == Array && d2->medium == Array ) {
+	else if ( d1->medium == Array && d2->medium == Array && merged.medium == Array ) {
 		merge( flength, d1->array.data+fdispl, slength, d2->array.data+sdispl, merged.array.data );
 	}
 	else {
-		Data *tmp = d1->medium == File ? d1 : d2;
+		Data *tmp = d1->medium != Array ? d1 : d2->medium != Array ? d2 : &merged;
 		DAL_UNSUPPORTED( tmp );
 	}
 	DAL_destroy( d2 );
@@ -166,9 +163,6 @@ void mergeData( dal_size_t flength, dal_size_t fdispl, Data *d1, dal_size_t slen
 void getSendCounts( Data *data, const int *splitters, const int n, const int start, dal_size_t *lengths )
 {
 	int i, j, k;
-
-	/* Initializing the lengths array */
-	memset( lengths, 0, n*sizeof(dal_size_t) );
 
 	/* Computing the number of integers to be sent to each process */
 	switch( data->medium ) {
@@ -326,6 +320,9 @@ void lbmergesort( const TestInfo *ti, Data *data )
 		k = groupRoot < pairedGroupRoot ? groupRoot : pairedGroupRoot;
 		for ( j=0; j<splittersCount; j++ )
 			splitters[j] = globalSplitters[k++];
+
+		/* Initializing the sendCounts array */
+		memset( sendCounts, 0, n*sizeof(dal_size_t) );
 
 		/* Computing the number of integers to be sent to each process of the paired group */
 		h = id < partner ? groupRoot : pairedGroupRoot;
