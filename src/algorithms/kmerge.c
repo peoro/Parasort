@@ -150,6 +150,8 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 	Data				*data_owned = (Data*) malloc ( sizeof(Data) * k );
 	PhaseHandle 		scatterP, localP, gatherP;
 
+	SPD_ASSERT ( active_proc % k == 0, "For K-way mergesort, it must be parallelism degree mod K == 0; now is %d mod %d = %d", active_proc, k, active_proc % k );
+
 	//initializing datas
 	data_owned[0] = *data_local;
 	for ( int i = 1; i < k; i ++ )
