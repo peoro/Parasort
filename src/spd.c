@@ -78,10 +78,20 @@ void printVersion( )
 	printf( "Released under the terms of GPL version 3 or higher\n" );
 }
 
-dal_size_t strToInt( const char *str, bool *err )
+int strToInt( const char *str, bool *err )
 {
 	char *end;
 	dal_size_t r = strtol( str, &end, 10 );
+
+	*err = ! ( *str != '\0' && *end == '\0' );
+
+	return r;
+}
+
+dal_size_t strToDST( const char *str, bool *err )
+{
+	char *end;
+	dal_size_t r = strtoll( str, &end, 10 );
 
 	*err = ! ( *str != '\0' && *end == '\0' );
 
@@ -201,7 +211,7 @@ int parseArgs( int argc, char **argv, TestInfo *ti )
 			*/
 
 			case 'M':
-				ti->M = strToInt( optarg, &err );
+				ti->M = strToDST( optarg, &err );
 				MGiven = 1;
 				if( err ) {
 					printf( "M is not a valid number.\n" );
@@ -210,7 +220,7 @@ int parseArgs( int argc, char **argv, TestInfo *ti )
 				break;
 
 			case 's':
-				ti->seed = strToInt( optarg, &err );
+				ti->seed = strToDST( optarg, &err );
 				seedGiven = 1;
 				if( err ) {
 					printf( "seed is not a valid number.\n" );
@@ -498,7 +508,9 @@ int main( int argc, char **argv )
 			MPI_Finalize( );
 			return 1;
 		}
-
+#ifdef DEBUG
+		SPD_DEBUG( "M = "DST" -> "DST" bytes", GET_M( &ti ), GET_M( &ti )*4 );
+#endif
 		// broadcasting ti
 		MPI_Bcast( &ti, sizeof(TestInfo), MPI_CHAR, 0, MPI_COMM_WORLD );
 
