@@ -13,45 +13,8 @@
 #include "../common.h"
 #include "../dal_internals.h"
 
-/**
-* @brief Compare and Exchange operation on the low part of two sequences sorted in ascending order
-*
-* @param[in]    length          The length of the sequences
-* @param[in]    firstSeq        The first sequence
-* @param[in]    secondSeq       The second sequence
-* @param[out]   mergedSeq       The merged sequence
-*/
-void compareLow( const dal_size_t length, int *firstSeq, int *secondSeq, int* mergedSeq )
-{
-    int i, j, k;
-
-    for ( i=j=k=0; i<length; i++ )
-        if ( secondSeq[j] <= firstSeq[k] )
-            mergedSeq[i] = secondSeq[j++];
-        else
-            mergedSeq[i] = firstSeq[k++];
-}
-
-
-/**
-* @brief Compare and Exchange operation on the high part of two sequences sorted in ascending order
-*
-* @param[in]    length          The length of the sequences
-* @param[in]    firstSeq        The first sequence
-* @param[in]    secondSeq       The second sequence
-* @param[out]   mergedSeq       The merged sequence
-*/
-void compareHigh( const dal_size_t length, int *firstSeq, int *secondSeq, int* mergedSeq )
-{
-    int i, j, k;
-
-    for ( i=j=k=length-1; i>=0; i-- )
-        if ( secondSeq[j] >= firstSeq[k] )
-            mergedSeq[i] = secondSeq[j--];
-        else
-            mergedSeq[i] = firstSeq[k--];
-}
-
+#define MIN(a,b) ( (a)<(b) ? (a) : (b) )
+#define MAX(a,b) ( (a)>(b) ? (a) : (b) )
 
 /**
 * @brief Compare and Exchange operation on the low part of two data objects with integers sorted in ascending order
@@ -61,23 +24,61 @@ void compareHigh( const dal_size_t length, int *firstSeq, int *secondSeq, int* m
 */
 void compareLowData( Data *d1, Data *d2 )
 {
-	/* TODO: Implement it the right way!! */
 	Data merged;
 	DAL_init( &merged );
+	SPD_ASSERT( DAL_allocData( &merged, DAL_dataSize(d1) ), "not enough memory..." );
 
-	switch( d1->medium ) {
-		case File: {
-			DAL_UNIMPLEMENTED( d1 );
-			break;
+	/* Memory buffer */
+	Data buffer;
+	DAL_init( &buffer );
+	SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_allowedBufSize() ), "not enough memory..." );
+
+	int bufSize = DAL_dataSize( &buffer ) / 3;
+	dal_size_t d1Count, d2Count, mergedCount;
+	dal_size_t d1c, d2c, mc;
+
+	d1c = d2c = mc = MIN(bufSize, DAL_dataSize(d1));
+	mergedCount = 0;
+
+	d1Count = DAL_dataCopyOS( d1, 0, &buffer, 0, d1c );
+	d2Count = DAL_dataCopyOS( d2, 0, &buffer, bufSize, d2c );
+
+	int* d1Array = buffer.array.data;
+	int* d2Array = buffer.array.data+bufSize;
+	int* mergedArray = buffer.array.data+2*bufSize;
+	int i, j, k;
+	k = 0; j = 0; i = 0;
+
+	while ( mergedCount < DAL_dataSize(d1) ) {
+		while ( i < mc && j < d2c && k < d1c )
+			if ( d2Array[j] <= d1Array[k] )
+				mergedArray[i++] = d2Array[j++];
+			else
+				mergedArray[i++] = d1Array[k++];
+
+		if ( i == mc ) {
+			mergedCount += DAL_dataCopyOS( &buffer, 2*bufSize, &merged, mergedCount, mc );
+			mc = MIN(bufSize, DAL_dataSize(&merged)-mergedCount);
+			i = 0;
 		}
-		case Array: {
-			SPD_ASSERT( DAL_allocArray( &merged, d1->array.size ), "not enough memory..." );
-			compareLow( d1->array.size, d1->array.data, d2->array.data, merged.array.data );
-			break;
+
+		if ( j == d2c ) {
+			d2c = MIN(bufSize, DAL_dataSize(d2)-d2Count);
+
+			if ( d2c )
+				d2Count += DAL_dataCopyOS( d2, d2Count, &buffer, bufSize, d2c );
+			j = 0;
 		}
-		default:
-			DAL_UNSUPPORTED( d1 );
+
+		if ( k == d1c ) {
+			d1c = MIN(bufSize, DAL_dataSize(d1)-d1Count);
+
+			if ( d1c )
+				d1Count += DAL_dataCopyOS( d1, d1Count, &buffer, 0, d1c );
+			k = 0;
+		}
 	}
+	DAL_destroy( &buffer );
 	DAL_destroy( d2 );
 	*d2 = merged;
 }
@@ -91,25 +92,68 @@ void compareLowData( Data *d1, Data *d2 )
 */
 void compareHighData( Data *d1, Data *d2 )
 {
-	/* TODO: Implement it the right way!! */
-
-	int i, j, k;
 	Data merged;
 	DAL_init( &merged );
 
-	switch( d1->medium ) {
-		case File: {
-			DAL_UNIMPLEMENTED( d1 );
-			break;
+	SPD_ASSERT( DAL_allocData( &merged, DAL_dataSize(d1) ), "not enough memory..." );
+
+	/* Memory buffer */
+	Data buffer;
+	DAL_init( &buffer );
+	SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_allowedBufSize() ), "not enough memory..." );
+
+	int bufSize = DAL_dataSize( &buffer ) / 3;
+	dal_size_t d1Count, d2Count, mergedCount;
+	dal_size_t d1Displ, d2Displ, mergedDispl;
+	dal_size_t d1c, d2c, mc;
+
+	d1c = d2c = mc = MIN(bufSize, DAL_dataSize(d1));
+	mergedDispl = d1Displ = d2Displ = DAL_dataSize(d1)-d1c;
+	mergedCount = d1Count = d2Count = 0;
+
+	d1Count = DAL_dataCopyOS( d1, d1Displ, &buffer, 0, d1c );
+	d2Count = DAL_dataCopyOS( d2, d2Displ, &buffer, bufSize, d2c );
+
+	int* d1Array = buffer.array.data;
+	int* d2Array = buffer.array.data+bufSize;
+	int* mergedArray = buffer.array.data+2*bufSize;
+	int i, j, k;
+	k = j = i = d1c-1;
+
+	while ( mergedCount < DAL_dataSize(d1) ) {
+		while ( i >= 0 && j >= 0 && k >= 0 ) {
+			if ( d2Array[j] >= d1Array[k] )
+				mergedArray[i--] = d2Array[j--];
+			else
+				mergedArray[i--] = d1Array[k--];
 		}
-		case Array: {
-			SPD_ASSERT( DAL_allocArray( &merged, d1->array.size ), "not enough memory..." );
-			compareHigh( d1->array.size, d1->array.data, d2->array.data, merged.array.data );
-			break;
+
+		if ( i < 0 ) {
+			mergedCount += DAL_dataCopyOS( &buffer, 2*bufSize, &merged, mergedDispl, mc );
+			mc = MIN(bufSize, DAL_dataSize(&merged)-mergedCount);
+			mergedDispl -= mc;
+			i = mc-1;
 		}
-		default:
-			DAL_UNSUPPORTED( d1 );
+
+		if ( j < 0 ) {
+			d2c = MIN(bufSize, DAL_dataSize(d2)-d2Count);
+			d2Displ -= d2c;
+
+			if ( d2c )
+				d2Count += DAL_dataCopyOS( d2, d2Displ, &buffer, bufSize, d2c );
+			j = d2c-1;
+		}
+
+		if ( k < 0 ) {
+			d1c = MIN(bufSize, DAL_dataSize(d1)-d1Count);
+			d1Displ -= d1c;
+
+			if ( d1c )
+				d1Count += DAL_dataCopyOS( d1, d1Displ, &buffer, 0, d1c );
+			k = d1c-1;
+		}
 	}
+	DAL_destroy( &buffer );
 	DAL_destroy( d2 );
 	*d2 = merged;
 }
@@ -202,7 +246,7 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	gatherP = startPhase( ti, "gathering" );
 
 	/* Gathering sorted data */
-	DAL_gather( data, M, root );
+	DAL_gather( data, local_M, root );
 
 	stopPhase( ti, gatherP );
 /*--------------------------------------------------------------------------------------------------------------*/

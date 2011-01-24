@@ -41,7 +41,7 @@ void TEST_DAL_scatterSend( Data *data )
 				for ( j=0; j<GET_N(); j++ ) {
 					sc[j] = tmp;
 					sd[j] = j*tmp;
-					DAL_dataCopyOS( data, j*count + i*blockSize, &globalBuf, j*blockSize, tmp );
+					DAL_dataCopyOS( data, j*count + i*blockSize, &globalBuf, sd[j], sc[j] );
 				}
 
 				MPI_Scatterv( globalBuf.array.data, sc, sd, MPI_INT, MPI_IN_PLACE, sc[GET_ID()], MPI_INT, GET_ID(), MPI_COMM_WORLD );
@@ -145,7 +145,7 @@ int main( int argc, char **argv )
 	}
 
 
-	int size = n*2;	//size of data to collect
+	int size = n*3;	//size of data to collect
 
 	//Data
 	Data d;

@@ -145,24 +145,29 @@ int main( int argc, char **argv )
 		TESTS_ERROR( 1, "Use this with at least 2 processes!" );
 	}
 
+	int count = 10;
+
 	Data sendData;
 	DAL_init( &sendData );
 
 	Data recvData;
 	DAL_init( &recvData );
 
-	SPD_ASSERT( DAL_allocData( &sendData, 1 ), "error allocating data..." );
+	SPD_ASSERT( DAL_allocData( &sendData, count ), "error allocating data..." );
 
 	Data tmp;
 	DAL_init( &tmp );
-	SPD_ASSERT( DAL_allocArray( &tmp, 1 ), "error allocating array..." );
-	tmp.array.data[0] = GET_ID();
+	SPD_ASSERT( DAL_allocArray( &tmp, count ), "error allocating array..." );
+
+	for ( i=0; i<count; i++ )
+		tmp.array.data[i] = (GET_ID()+1)*i;
 
 	DAL_dataCopy( &tmp, &sendData );
 
 	DAL_PRINT_DATA( &sendData, "This is what I had" );
 
-	TEST_DAL_sendrecv( &sendData, 1, 0, &recvData, 1, 0, (GET_ID() + 1)%n );
+	TEST_DAL_sendrecv( &sendData, count/2, 0, &recvData, count/2, 0, (GET_ID() + 1)%n );
+	TEST_DAL_sendrecv( &sendData, count/2, count/2, &recvData, count/2, count/2, (GET_ID() + 1)%n );
 
 	DAL_PRINT_DATA( &recvData, "This is what I got" );
 

@@ -7,7 +7,7 @@ INSTALLDIR = $(HOME)/.spd
 DATADIR = $(INSTALLDIR)/data
 LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
-ALGOS = sequential mergesort bucketsort samplesort bitonicsort # lbmergesort sequential1 # nosort quicksort
+ALGOS = sequential mergesort bucketsort samplesort bitonicsort lbmergesort sequential1 # nosort quicksort
 ALGOSPP = kmerge # lbkmergesort
 OBJECTS = dal.o debug.o sorting.o common.o
 
