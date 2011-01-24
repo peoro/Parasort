@@ -12,7 +12,11 @@ of the MPI-implementation, the performance of the network and devices. Most inte
 We used the latter technique to measure the performance of MPI on our test environments, and a combination of both benchmarking and profiling techniques to measure the performance of the different sorting algorithms.
 
 \subsection{Test environment}
+In this section we briefly discuss the architecture of our test environments. 
+
 \paragraph{Pianosa}
+Pianosa is an old cluster of 30 nodes at the Department of Computer Science. Each node is an Intel Pentium III 800 Mhz with a L1 cache of 512k. The primary memory is of size 1 GB. On average, the available space on disk in each machine is roughly 15 GB; this capacity obviously limits our tests to data sets of relatively small size. The interconnection network between nodes is a Fast Ethernet, so the MPI support is built on top of the stack TCP/IP. The main weakness of the whole architecture is that the interconnection network is based on a hub: the conflicts at network level becomes not negligible, specially for messages of significative size. This is not just an hyphotesis, but something concrete which has been experienced by the group of Parallel Architectures when attempting to define a cost model of MPI. Anyway, even if the architecture has a lot of limitations that can \textit{significantly} affect the performance, Pianosa is a good starting point for testing our algorithms (even from a functional point of view) and to conjecture which architectual characteristics could impair the performance of a Parallel Sorting Algorithm.
+
 \paragraph{''Physics cluster''}
 
 \subsection{Cost Model of MPI}
