@@ -299,7 +299,7 @@ bool DAL_reallocData( Data *data, dal_size_t size )
 {
 	switch ( data->medium ) {
 		case File: {
-			//TODO: resize the file is size < data->file.size
+			//TODO: resize the file if size < data->file.size
 			data->file.size = size;
 			return 1;
 		}

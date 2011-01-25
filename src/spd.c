@@ -425,7 +425,7 @@ int storeData( const TestInfo *ti, Data *data )
 			break;
 		}
 		case Array: {
-			checkSorted( data->array.data, data->array.size );
+			SPD_ASSERT( checkSorted( data->array.data, data->array.size ), "Sorting Failed!" );
 			break;
 		}
 		default:

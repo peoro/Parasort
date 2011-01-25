@@ -15,6 +15,9 @@
 #include "../common.h"
 #include "../dal_internals.h"
 
+#define MIN(a,b) ( (a)<(b) ? (a) : (b) )
+#define MAX(a,b) ( (a)>(b) ? (a) : (b) )
+
 struct Min_val {
 	Min_val( int val, int run_index ) {
 		this->val = val;
@@ -32,12 +35,9 @@ struct Min_val {
 *
 * @param[in]    runs			Sequences to be merged
 * @param[in]    k               Number of sequences
-* @param[in]    lengths         Array containing the length of each run
-* @param[in]    displs          Displacements of each run
-* @param[in]    mergedLength    Length of the final merged sequence
 * @param[out]   mergedSeq       The merged sequence
 */
-void kmerge( int *runs, int k, long* lengths, long* displs, int mergedLength, int *mergedSeq )
+void kmerge( Data *runs, int k, Data *mergedSeq )
 {
     int i;
     std::priority_queue<Min_val> heap;
@@ -46,17 +46,17 @@ void kmerge( int *runs, int k, long* lengths, long* displs, int mergedLength, in
 
     /* Initializing the heap */
     for ( i=0; i<k; i++ ) {
-        if ( lengths[i] )
-            heap.push( Min_val( runs[displs[i]], i ) );
+        if ( runs[i].array.size )
+            heap.push( Min_val( runs[i].array.data[0], i ) );
     }
     /* Merging the runs */
-    for ( i=0; i<mergedLength; i++ ) {
+    for ( i=0; i<mergedSeq->array.size; i++ ) {
         Min_val min = heap.top();
         heap.pop();
-        mergedSeq[i] = min.val;
+        mergedSeq->array.data[i] = min.val;
 
-        if ( ++(runs_indexes[min.run_index]) != lengths[min.run_index] )
-            heap.push( Min_val( runs[displs[min.run_index] + runs_indexes[min.run_index]], min.run_index ) );
+        if ( ++(runs_indexes[min.run_index]) != runs[min.run_index].array.size )
+            heap.push( Min_val( runs[min.run_index].array.data[runs_indexes[min.run_index]], min.run_index ) );
     }
     free( runs_indexes );
 }
@@ -67,27 +67,37 @@ void kmerge( int *runs, int k, long* lengths, long* displs, int mergedLength, in
 *
 * @param[in] 	runs			Sequences to be merged
 * @param[in] 	k				Number of sequences
-* @param[in] 	lengths			Array containing the length of each run
-* @param[in] 	displs			Displacements of each run
 * @param[in] 	mergedLength    Length of the final merged sequence
 * @param[out] 	mergedData		The merged sequence
 */
-void kmergeData( Data *runs, int k, long* lengths, long* displs, long mergedLength, Data *mergedData )
+void kmergeData( Data *runs, int k, dal_size_t mergedLength, Data *mergedData )
 {
-    /* TODO: Implement it the right way!! */
+	SPD_ASSERT( DAL_reallocData( mergedData, mergedLength ), "not enough memory..." );
 
-	switch( runs->medium ) {
+	int i, type = mergedData->medium;
+	for( i=0; i<k; i++ )
+		switch ( runs[i].medium ) {
+			case File: {
+				type = File;
+				break;
+			}
+			case Array: {
+				break;
+			}
+			default:
+				DAL_UNSUPPORTED( &runs[i] );
+				break;
+		}
+
+	switch( type ) {
 		case File: {
-			DAL_UNIMPLEMENTED( runs );
+			fileKMerge( runs, k, mergedData );
 			break;
 		}
 		case Array: {
-			SPD_ASSERT( DAL_reallocArray( mergedData, mergedLength ), "not enough memory..." );
-			kmerge( runs->array.data, k, lengths, displs, mergedLength, mergedData->array.data );
+			kmerge( runs, k, mergedData );
 			break;
 		}
-		default:
-			DAL_UNSUPPORTED( runs );
 	}
 }
 
@@ -100,16 +110,38 @@ void kmergeData( Data *runs, int k, long* lengths, long* displs, long mergedLeng
 * @param[in] n     			The number of buckets
 * @param[out] lengths    	The array that will contain the small bucket lengths
 */
-void getSendCounts( Data *data, const int *splitters, const int n, long *lengths )
+void getSendCounts( Data *data, const int *splitters, const int n, dal_size_t *lengths )
 {
-	/* TODO: Implement it the right way!! */
+	int i, j, k;
 
-	int i, j;
+	/* Initializing the lengths array */
+	memset( lengths, 0, n*sizeof(dal_size_t) );
 
 	/* Computing the number of integers to be sent to each process */
 	switch( data->medium ) {
 		case File: {
-			DAL_UNIMPLEMENTED( data );
+			/* Memory buffer */
+			Data buffer;
+			DAL_init( &buffer );
+			SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_dataSize(data) ), "not enough memory..." );
+
+			int blocks = DAL_BLOCK_COUNT(data, &buffer);
+			dal_size_t r, readCount = 0;
+			int i;
+
+			for( i=0; i<blocks; i++ ) {
+				r = DAL_dataCopyOS( data, i*DAL_dataSize(&buffer), &buffer, 0, MIN(DAL_dataSize(&buffer), DAL_dataSize(data)-readCount) );
+				readCount += r;
+
+				for ( k=0; k<r; k++ ) {
+					j = getBucketIndex( &buffer.array.data[k], splitters, n-1 );
+					SPD_ASSERT( j >= 0 && j < n, "Something went wrong: j should be within [0,%d], but it's %d", n-1, j );
+					lengths[j]++;
+				}
+			}
+			SPD_ASSERT( readCount == DAL_dataSize(data), DST" elements have been read, while Data size is "DST, readCount, DAL_dataSize(data) );
+
+			DAL_destroy( &buffer );
 			break;
 		}
 		case Array: {
@@ -132,33 +164,27 @@ void getSendCounts( Data *data, const int *splitters, const int n, long *lengths
 */
 void lbkmergesort( const TestInfo *ti, Data *data )
 {
-	const int	root = 0;                          	//Rank (ID) of the root process
-	const int	id = GET_ID( ti );                	//Rank (ID) of the process
-	const int	n = GET_N( ti );                   	//Number of processes
-	const long	M = GET_M( ti );                   	//Number of data elements
-	const long	maxLocal_M = M / n + (0 < M%n);    	//Max number of elements assigned to a process
-	const int	buffSize = 4*maxLocal_M;			//Max number of received elements (using the sampling technique, it is shown that each process will have, at the end, a maximum of 4*M/n elements to sort)
+	const int			root = 0;                          	//Rank (ID) of the root process
+	const int			id = GET_ID( ti );                	//Rank (ID) of the process
+	const int			n = GET_N( ti );                   	//Number of processes
+	const dal_size_t	M = GET_M( ti );                   	//Number of data elements
+	const dal_size_t	maxLocal_M = M / n + (0 < M%n);    	//Max number of elements assigned to a process
+	dal_size_t 			dataLength = GET_LOCAL_M( ti );     //Number of elements assigned to this process
 
-	Data		recvData;
-	long 		dataLength = GET_LOCAL_M( ti );     //Number of elements assigned to this process
+	dal_size_t 			sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
+	dal_size_t			sdispls[n], rdispls[n];				//Send/receive buffer displacements
 
-	long 		sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
-	long		sdispls[n], rdispls[n];				//Send/receive buffer displacements
+	MPI_Status 			status;
 
-	MPI_Status 	status;
+	int					localSplitters[n-1];               	//Local splitters (n-1 equidistant elements of the data array)
+	int					*allSplitters = 0;                 	//All splitters (will include all the local splitters)
+	int					*globalSplitters = 0;            	//Global splitters (will be selected from the allSplitters array)
 
-	int			localSplitters[n-1];               	//Local splitters (n-1 equidistant elements of the data array)
-	int			*allSplitters = 0;                 	//All splitters (will include all the local splitters)
-	int			*globalSplitters = 0;            	//Global splitters (will be selected from the allSplitters array)
-
-	long		i, j, k, h, z, flag;
-	PhaseHandle scatterP, localP, samplingP, multiwayMergeP, gatherP;
-	int 		groupSize, idInGroup, partner, pairedGroupRoot, groupRoot;
+	dal_size_t			i, j, k, h, z, flag;
+	PhaseHandle 		scatterP, localP, samplingP, multiwayMergeP, gatherP;
+	int 				groupSize, idInGroup, partner, pairedGroupRoot, groupRoot;
 
 	SPD_ASSERT( isPowerOfTwo( n ), "n should be a power of two (but it's %d)", n );
-
-	/* Initializing data objects */
-	DAL_init( &recvData );
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
@@ -227,16 +253,19 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 	multiwayMergeP = startPhase( ti, "parallel multiway merge" );
 
 	/* Initializing the sendCounts array */
-	memset( sendCounts, 0, n*sizeof(long) );
+	memset( sendCounts, 0, n*sizeof(dal_size_t) );
 
 	/* Computing the number of integers to be sent to each process */
 	getSendCounts( data, globalSplitters, n, sendCounts );
 
-	/* Computing the displacements */
+	/* Computing the displacements and initializing recvData */
+	Data recvData[n];
 	for ( k=0, j=0; j<n; j++ ) {
 		/* Computing the displacements relative to localData from which to take the outgoing data destined for each process */
 		sdispls[j] = k;
 		k += sendCounts[j];
+
+		DAL_init( &recvData[j] );
 	}
 
 	for ( dataLength=0, z=0, i=1, groupSize=1; i<=_log2( n ); i++, groupSize<<=1 ) {
@@ -251,24 +280,19 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 
 		/* Exchanging data with the paired group avoiding deadlocks */
 		for ( h=1, j=partner; h<=groupSize; h++ ) {
-			k = DAL_sendrecv( data, sendCounts[j], sdispls[j], &recvData, buffSize, dataLength, j );
+			k = DAL_sendrecv( data, sendCounts[j], sdispls[j], &recvData[j], maxLocal_M, 0, j );
 			dataLength += k;
 			recvCounts[z++] = k;
 
 			j = ((id + h*flag) % groupSize + groupRoot) ^ groupSize;		//Selects the next partner to avoid deadlocks
 		}
 	}
-	k = DAL_sendrecv( data, sendCounts[id], sdispls[id], &recvData, sendCounts[id], dataLength, id );
+	k = DAL_sendrecv( data, sendCounts[id], sdispls[id], &recvData[id], sendCounts[id], 0, id );
 	dataLength += k;
 	recvCounts[z] = k;
 
-	/* Computing the displacements */
-	for ( k=0, i=0; i<n; i++ ) {
-		rdispls[i] = k;
-		k += recvCounts[i];
-	}
 	/* Merging received data */
-	kmergeData( &recvData, n, recvCounts, rdispls, dataLength, data );
+	kmergeData( recvData, n, dataLength, data );
 
 	stopPhase( ti, multiwayMergeP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -280,7 +304,7 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 	gatherP = startPhase( ti, "gathering" );
 
 	/* Gathering the lengths of the all buckets */
-	MPI_Gather( &dataLength, 1, MPI_LONG, recvCounts, 1, MPI_LONG, root, MPI_COMM_WORLD );
+	MPI_Gather( &dataLength, 1, MPI_LONG_LONG, recvCounts, 1, MPI_LONG_LONG, root, MPI_COMM_WORLD );
 
 	/* Computing displacements relative to the output array at which to place the incoming data from each process  */
 	if ( id == root ) {
@@ -298,7 +322,8 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 /*--------------------------------------------------------------------------------------------------------------*/
 
 	/* Freeing memory */
-	DAL_destroy( &recvData );
+	for ( i=0; i<n; i++ )
+		DAL_destroy( &recvData[i] );
 }
 
 extern "C"
