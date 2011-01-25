@@ -20,6 +20,14 @@ static inline void TESTS_MPI_RECEIVE( void *array, long size, MPI_Datatype dataT
 	MPI_Recv( array, size, dataType, source, 0, MPI_COMM_WORLD, &stat );
 }
 
+static inline void TESTS_MPI_SCATTER ( void *send_array, long size_per_proc, MPI_Datatype dataType, void *recv_array, int root ) {
+	MPI_Scatter ( send_array, size_per_proc, dataType, recv_array, size_per_proc, dataType, root, MPI_COMM_WORLD ); 
+}
+
+static inline void TESTS_MPI_ALLTOALL ( void *send_array, long size_per_proc, MPI_Datatype dataType, void *recv_array ) {
+	MPI_Alltoall ( send_array, size_per_proc, dataType, recv_array, size_per_proc, dataType, MPI_COMM_WORLD ); 
+}
+
 static inline int GET_ID ( ) {
     int x;
     MPI_Comm_rank ( MPI_COMM_WORLD, &x );
