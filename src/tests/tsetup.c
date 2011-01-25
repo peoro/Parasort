@@ -58,7 +58,7 @@ int main( int argc, char **argv )
 	// MPI_SEND
 	{
 		if( GET_ID() == 0 ) {
-			SPD_DEBUG( "MPI_SEND: %ld blocks of %ld bytes", count, blockSize );
+			//SPD_DEBUG( "MPI_SEND: %ld blocks of %ld bytes", count, blockSize );
 			start = now( );
 			for( i = 0; i < count; ++ i ) {
 				TESTS_MPI_SEND( mem + current, blockSize, MPI_CHAR, 1 );
@@ -68,7 +68,7 @@ int main( int argc, char **argv )
 			res = timeDiff( start, end );
 			//SPD_DEBUG( "%ld.%.3ld secs (%7ld usecs) to send", res.time, res.mtime, res.utime );
 			//SPD_DEBUG( "%ld.%.3ld", res.time, res.mtime );
-			printf ( "%ld.%.3ld\n", res.time, res.mtime );
+			printf ( "%ld.%.3ld\t", res.time, res.mtime );
 		}
 		else if( GET_ID() == 1 ) {
 			//SPD_DEBUG( "Receiving %ld blocks of %ld bytes", count, blockSize );
@@ -86,8 +86,8 @@ int main( int argc, char **argv )
 	
 	//MPI_SCATTER
 	{	
-		if ( GET_ID() == 0 )
-			SPD_DEBUG( "MPI_SCATTER: %ld blocks of %ld bytes, %ld bytes to each process at a time", count, blockSize, block_disp );
+		//if ( GET_ID() == 0 )
+			//SPD_DEBUG( "MPI_SCATTER: %ld blocks of %ld bytes, %ld bytes to each process at a time", count, blockSize, block_disp );
 		
 		SPD_ASSERT ( blockSize % GET_N() == 0, "Scattered block must be of equal size, now blockSize mod N = %ld", blockSize % GET_N() );
 		
@@ -102,13 +102,13 @@ int main( int argc, char **argv )
 		res = timeDiff( start, end );
 		
 		if ( GET_ID() == 0 )
-			printf ( "%ld.%.3ld\n", res.time, res.mtime );
+			printf ( "%ld.%.3ld\t", res.time, res.mtime );
 	}
 	
 	//MPI_ALLTOALL
 	{
-		if ( GET_ID() == 0 )
-			SPD_DEBUG( "MPI_ALLTOALL: %ld blocks of %ld bytes, %ld bytes to each process at a time", count, blockSize, block_disp );
+		//if ( GET_ID() == 0 )
+			//SPD_DEBUG( "MPI_ALLTOALL: %ld blocks of %ld bytes, %ld bytes to each process at a time", count, blockSize, block_disp );
 		
 		SPD_ASSERT ( blockSize % GET_N() == 0, "Scattered block must be of equal size, now blockSize mod N = %ld", blockSize % GET_N() );
 		

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DATA_SIZE_MB=( 24 29 )
+DATA_SIZE_MB=( 25 )
 path=nsends_logs
 
 mkdir -p $path
@@ -9,7 +9,7 @@ mkdir -p $path
 for MB in ${DATA_SIZE_MB[*]}; do
     M=$(( 2 ** $MB ))
 
-    filename=$path/"M"$((2**$MB))"MB"
+    filename=$path/"M"$((2**$MB))"BYTES"
     rm -f $filename
     touch $filename
 
@@ -20,9 +20,9 @@ for MB in ${DATA_SIZE_MB[*]}; do
         echo "Starting test for M="$M "MB, #sends="$n_sends
         echo -n $((2**$s))" & "$(($M / $n_sends))" & " >> $filename
 
-        mpiexec -machinefile ../machinefile_pianosa -n 2 ../tsetup $M $n_sends >> $filename
+        mpiexec -n 2 ./tsetup $M $n_sends | awk '{print $1 " & " $2 " & " $3}' >> $filename
 
-        echo " \\\hline" >> $filename
+        echo " \\\\\\hline" >> $filename
 
         #clog2TOslog2 spdlog.clog2 -o $filename".slog2" &> /dev/null
     done
