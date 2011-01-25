@@ -20,7 +20,7 @@ for MB in ${DATA_SIZE_MB[*]}; do
         echo "Starting test for M="$M "MB, #sends="$n_sends
         echo -n $((2**$s))" & "$(($M / $n_sends))" & " >> $filename
 
-        mpiexec -n 2 ./tsetup $M $n_sends | awk '{print $1 " & " $2 " & " $3}' >> $filename
+        mpiexec -n 8 ./tsetup $M $n_sends | awk '{printf $1 " & " $2 " & " $3}' >> $filename
 
         echo " \\\\\\hline" >> $filename
 
