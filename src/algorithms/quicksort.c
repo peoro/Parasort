@@ -21,6 +21,7 @@
 #include "sorting.h"
 #include "common.h"
 #include "string.h"
+#include "dal_internals.h"
 
 #include <time.h> // srand( time(0) )
 #include <assert.h>
@@ -121,46 +122,68 @@ long _partition( int *a, long size, int p )
 }
 */
 
-// pi is pivot index
-// final pivot index (ie: border line) is also returned
-long _partition( int *a, long size, int p, int pi )
+// \smaller contain the first partition (the one with smaller numbers than pivot)
+// while \bigger will contain the second one (with bigger numbers)
+void partition( Data *data, Data *smaller, Data *bigger )
 {
-    int lo = 0, hi = size-1;
-
-    // putting pivot at the end
-    SWAP( a, size-1, pi );
-    pi = size-1;
-
-    while( true ) {
-        while( lo < size && a[lo] <  a[pi] ) { ++lo; }
-        while( hi >= 0   && a[hi] >= a[pi] ) { --hi; }
-
-        if( lo > hi ) {
-        	break;
-        }
-		SWAP( a, lo, hi );
-    }
-
-    // putting pivot back in the middle ...
-	SWAP( a, lo, pi );
-
-    return lo;
-}
-// \data parameter will contain the first partition (the one with smaller numbers)
-// while the returned data will contain the second one (with bigger numbers)
-Data partition( Data *data )
-{
+	SPD_ASSERT( DAL_isInitialized( smaller ), "smaller Data should be initialized" );
+	SPD_ASSERT( DAL_isInitialized( bigger ), "bigger Data should be initialized" );
+	SPD_ASSERT( ! DAL_isInitialized( data ), "data to be partitioned should already contain some data!")
+	
 	switch( data->medium ) {
-		case File: {
-			DAL_UNIMPLEMENTED( data );
-			break;
-		}
+		case File:
 		case Array: {
+			int pivot;
+			
+			// reading pivot
+			{
+				// using a 1-item buffer to load pivot from data
+				Data buf;
+				DAL_init( &buf );
+				SPD_ASSERT( DAL_allocArray( &buf, 1 ), "not enough memory..." );
+			
+				int pivotIndex = rand() % DAL_dataSize(data);
+				DAL_dataCopyOS( data, pivotIndex, &buf, 0, 1 ); // reading only pivot
+				pivot = buf.array.data[ 0 ];
+				
+				DAL_destroy( &buf );
+			}
+			
+			DAL_allocData( smaller, DAL_dataSize(data) );
+			DAL_allocData( bigger, DAL_dataSize(data) );
+			dal_size_t smallIdx = 0, bigIdx = 0; // items copied into \smaller and \bigger
+			
+			dal_size_t i;
+			for( i = 0; i < DAL_dataSize(data); ++ i ) {
+				// using a 1-item buffer to load data one item by one item
+				Data buf;
+				DAL_init( &buf );
+				SPD_ASSERT( DAL_allocArray( &buf, 1 ), "not enough memory..." );
+				
+				DAL_dataCopyOS( data, i, &buf, 0, 1 ); // reading i-th item
+				if( buf.array.data[0] <= pivot ) {
+					// copying it to smaller
+					DAL_dataCopyOS( &buf, 0, smaller, smallIdx, 1 );
+					smallIdx ++;
+				}
+				else {
+					// copying it to bigger
+					DAL_dataCopyOS( &buf, 0, bigger, bigIdx, 1 );
+					bigIdx ++;
+				}
+				
+				DAL_destroy( &buf );
+			}
+			
+			DAL_reallocData( smaller, smallIdx );
+			DAL_reallocData( bigger, bigIdx );
+			
+#if 0
 			int pivotIndex = rand() % data->array.size;
 			int pivot = data->array.data[ pivotIndex ];
 			long lim = _partition( data->array.data, data->array.size, pivot, pivotIndex );
 
-				char buf[128];
+				//char buf[128];
 				//SPD_DEBUG( "partitioned(%d):%s, lim:%ld", pivot, DAL_dataItemsToString(data, buf, sizeof(buf)), lim );
 			/*
 			// FIXME
@@ -179,14 +202,15 @@ Data partition( Data *data )
 			data->array.size = lim;
 			*/
 
-			Data r;
-			DAL_init( &r );
-			SPD_ASSERT( DAL_allocArray( &r, data->array.size - lim ), "not enough memory..." );
-			memcpy( r.array.data, data->array.data + lim, (data->array.size-lim)*sizeof(int) );
+			SPD_ASSERT( DAL_allocArray( bigger, data->array.size - lim ), "not enough memory..." );
+			memcpy( bigger->array.data, data->array.data + lim, (data->array.size-lim)*sizeof(int) );
 
 			SPD_ASSERT( DAL_reallocArray( data, lim ), "wtf, I'm not even growing it here..." );
-
-			return r;
+			
+			// moving data from smaller to data
+			DAL_dataSwap( data, smaller );
+#endif
+			break;
 		}
 		default:
 			DAL_UNSUPPORTED( data );
@@ -198,18 +222,22 @@ void scatter( const TestInfo *ti, Data *data )
 	int step = 0;
 
 	for( step = 0; step < GET_STEP_COUNT(ti); ++ step ) {
-
 		if( do_i_send(ti,step) ) {
 			//SPD_DEBUG( "partitioning..." );
-			Data data2 = partition( data ); // data: "smaller" partition, data2: "bigger" partition
+			Data smaller, bigger;
+			DAL_init( &smaller );
+			DAL_init( &bigger );
+			partition( data, &smaller, &bigger );
+			DAL_destroy( data );
 
-			char buf1[128], buf2[128];
-				//SPD_DEBUG( "partition1:%s, partition2:%s", DAL_dataItemsToString(data, buf1, sizeof(buf1)), DAL_dataItemsToString(&data2, buf2, sizeof(buf2)) );
+				//char buf1[128], buf2[128];
+				//SPD_DEBUG( "partition1:%s, partition2:%s", DAL_dataItemsToString(&smaller, buf1, sizeof(buf1)), DAL_dataItemsToString(&bigger, buf2, sizeof(buf2)) );
 
 			//SPD_DEBUG( "need to send data to %d", to_who(ti, step) );
-			DAL_sendU( &data2, to_who(ti, step) ); // ok, now second partition is no longer required
+			DAL_sendU( &bigger, to_who(ti, step) );
 			//SPD_DEBUG( "data sent" );
-			DAL_destroy( &data2 );
+			DAL_dataSwap( data, &smaller ); // putting my partition back into \data
+			DAL_destroy( &bigger );
 		}
 		if( do_i_receive(ti,step) ) {
 			//SPD_DEBUG( "need to receive data from %d", from_who(ti, step) );
@@ -289,10 +317,12 @@ void sort( const TestInfo *ti )
 
 void mainSort( const TestInfo *ti, Data *data )
 {
-	char buf[128];
-	//SPD_DEBUG( "data to sort:%s", DAL_dataItemsToString(data, buf, sizeof(buf)) );
-
+	//char buf[128];
+	//SPD_DEBUG( "data to sort: %s", DAL_dataItemsToString(data, buf, sizeof(buf)) );
+	
 	actualSort( ti, data );
+	
+	//SPD_DEBUG( "sorted data: %s", DAL_dataToString(data, buf, sizeof(buf)) );
 
 	DAL_ASSERT( DAL_dataSize(data) == GET_M(ti), data, "data isn't as big as it was originally..." );
 }

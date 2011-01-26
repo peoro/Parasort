@@ -510,6 +510,14 @@ int main( int argc, char **argv )
 		}
 #ifdef DEBUG
 		SPD_DEBUG( "M = "DST" -> "DST" bytes", GET_M( &ti ), GET_M( &ti )*4 );
+		
+		SPD_DEBUG( "TestInfo (%d):", (int) sizeof(ti) )
+		SPD_DEBUG( "  %s", ti.verbose ? "verbose" : "non verbose" );
+		SPD_DEBUG( "  %s", ti.threaded ? "threaded" : "non threaded" );
+		SPD_DEBUG( "  M:       "DST, ti.M );
+		SPD_DEBUG( "  seed:    "DST, ti.seed );
+		SPD_DEBUG( "  algo:    %s", ti.algo );
+		SPD_DEBUG( "  algoVar: [%d,%d,%d]", ti.algoVar[0], ti.algoVar[1], ti.algoVar[2] );
 #endif
 		// broadcasting ti
 		MPI_Bcast( &ti, sizeof(TestInfo), MPI_CHAR, 0, MPI_COMM_WORLD );

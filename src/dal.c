@@ -144,6 +144,15 @@ char * DAL_dataToString( Data *d, char *s, int size )
 	}
 	return s;
 }
+char *peoros_strncat( const char *src, size_t srcSize, char *dst, size_t dstSize )
+{
+	size_t n = MIN( srcSize, dstSize - strlen(dst) - 1 );
+	return strncat( dst, src, n );
+}
+char *peoros_strncat2( const char *src, char *dst, size_t dstSize )
+{
+	return peoros_strncat( src, strlen(src), dst, dstSize );
+}
 char * DAL_dataItemsToString( Data *data, char *s, int size )
 {
 	if( data->medium == File ) {
@@ -166,16 +175,17 @@ char * DAL_dataItemsToString( Data *data, char *s, int size )
 	int i;
 
 	s[0] = '\0';
+	s[ size-1 ] = '\0';
 
 	if( ! size ) {
 		return s;
 	}
 	if( ! DAL_dataSize(data) ) {
-		strncat( s, "{}", size );
+		peoros_strncat2( "{}", s, size );
 		return s;
 	}
 
-	strncat( s, "{", size );
+	peoros_strncat2( "{", s, size );
 
 
 	switch( data->medium ) {
@@ -188,11 +198,11 @@ char * DAL_dataItemsToString( Data *data, char *s, int size )
 		case Array: {
 			for( i = 0; i < DAL_dataSize(data)-1; ++ i ) {
 				snprintf( buf, sizeof(buf), "%d,", data->array.data[i] );
-				strncat( s, buf, size );
+				peoros_strncat2( buf, s, size );
 			}
 
 			snprintf( buf, sizeof(buf), "%d", data->array.data[i] );
-			strncat( s, buf, size );
+			peoros_strncat2( buf, s, size );
 			break;
 		}
 		default:
@@ -200,11 +210,11 @@ char * DAL_dataItemsToString( Data *data, char *s, int size )
 	}
 
 
-	strncat( s, "}", size );
+	peoros_strncat2( "}", s, size );
 
 	if( strlen(s) == (unsigned) size-1 ) {
-		s[size-4] = s[size-3] = s[size-2] = '.';
-		s[size-1] = '}';
+		s[size-5] = s[size-4] = s[size-3] = '.';
+		s[size-2] = '}';
 	}
 
 	return s;
@@ -297,6 +307,7 @@ bool DAL_allocData( Data *data, dal_size_t size )
 }
 bool DAL_reallocData( Data *data, dal_size_t size )
 {
+	// DAL_DEBUG( data, "reallocing to "DST, size );
 	switch ( data->medium ) {
 		case File: {
 			//TODO: resize the file if size < data->file.size
@@ -351,11 +362,19 @@ dal_size_t DAL_dataCopyOS( Data *src, dal_size_t srcOffset, Data *dst, dal_size_
 {
 	DAL_ASSERT( DAL_dataSize(src)-srcOffset >= size, src, "not enough data to copy" );
 	DAL_ASSERT( DAL_dataSize(dst)-dstOffset >= size, dst, "not enough space to copy data into" );
+	
+	/*
+	char buf1[128], buf2[128];
+	SPD_DEBUG( "DAL_dataCopyOS( %s, "DST", %s, "DST", "DST" );",
+	           DAL_dataToString( src, buf1, sizeof(buf1) ), srcOffset,
+	           DAL_dataToString( dst, buf2, sizeof(buf2) ), dstOffset,
+	           size );
+	*/
 
 	if( src->medium == File ) {
 		if( dst->medium == File ) {
 			// file -> file
-// 			SPD_DEBUG( "Copying data from file to file" );
+ 			//SPD_DEBUG( "Copying data from file to file" );
 
 			// allocating a buffer
 			Data buffer;
@@ -383,7 +402,7 @@ dal_size_t DAL_dataCopyOS( Data *src, dal_size_t srcOffset, Data *dst, dal_size_
 		}
 		else if( dst->medium == Array ) {
 			// file -> array
-// 			SPD_DEBUG( "Copying data from file to array" );
+ 			//SPD_DEBUG( "Copying data from file to array" );
 
 			DAL_setFileCursor( src, srcOffset );
 			READ_FILE( src->file.handle, dst->array.data+dstOffset, size );
@@ -566,6 +585,12 @@ bool DAL_allocFile( Data *data, dal_size_t size )
 }
 
 
+void DAL_dataSwap( Data *a, Data *b )
+{
+	Data tmp = *a;
+	*a = *b;
+	*b = tmp;
+}
 
 
 /***************************************************************************************************************/
@@ -753,8 +778,16 @@ void DAL_receiveA( Data *data, dal_size_t size, int source )
 {
 	dal_size_t oldDataSize = DAL_dataSize(data);
 		//SPD_DEBUG( "appending "DST" items to the "DST" I've already got: %s", size, oldDataSize, DAL_dataItemsToString(data,buf,sizeof(buf)) );
-	SPD_ASSERT( DAL_reallocArray( data, DAL_dataSize(data) + size ), "not enough memory to allocate data" );
-	DAL_MPI_RECEIVE( data->array.data + oldDataSize, size, MPI_INT, source );
+	SPD_ASSERT( DAL_reallocData( data, DAL_dataSize(data) + size ), "not enough memory to allocate data" );
+	
+	//DAL_MPI_RECEIVE( data->array.data + oldDataSize, size, MPI_INT, source );
+	Data tmp;
+	DAL_init( &tmp );
+	DAL_receive( &tmp, size, source );
+	
+	DAL_dataCopyOS( &tmp, 0, data, oldDataSize, size );
+	
+	DAL_destroy( &tmp );
 		//SPD_DEBUG( "post-appending items: %s", DAL_dataItemsToString(data,buf,sizeof(buf)) );
 }
 void DAL_receiveAU( Data *data, int source )

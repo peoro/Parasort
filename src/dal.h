@@ -128,6 +128,9 @@ bool DAL_reallocData ( Data *data, dal_size_t size );
 
 dal_size_t DAL_allowedBufSize( );
 
+// swaps two datas: \post a == \b, \post b == \a
+void DAL_dataSwap( Data *a, Data *b );
+
 /*--------------------------------------------------------------------------------------------------------------*/
 
 
