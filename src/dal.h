@@ -18,8 +18,13 @@
 extern "C" {
 #endif
 
+#ifndef SPD_PIANOSA
+#define DST "%ld"
+typedef long dal_size_t;
+#else
 #define DST "%lld"
 typedef long long dal_size_t;
+#endif
 
 typedef enum DataMedium {
 	NoMedium,

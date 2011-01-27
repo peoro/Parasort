@@ -81,15 +81,21 @@ dal_size_t DAL_getFileCursor( Data *d )
 {
 	DAL_ASSERT( d->medium == File, d, "Data should be of type File" );
 
-	return ftello( d->file.handle ) / sizeof(int);
+#ifndef SPD_PIANOSA
+	return ftello64( d->file.handle ) / sizeof(int);
+#else
+	dal_size_t returnValue;
+	SPD_ASSERT( fgetpos64( d->file.handle, &returnValue ) == 0, "fgetpos64 error: %s", strerror(errno) );
+	return returnValue / sizeof(int);
+#endif
 }
 void DAL_setFileCursor( Data *d, dal_size_t offset )
 {
 	DAL_ASSERT( d->medium == File, d, "Data should be of type File" );
 
-	fseeko( d->file.handle, offset*sizeof(int), SEEK_SET );
+	fseeko64( d->file.handle, offset*sizeof(int), SEEK_SET );
 
-	DAL_ASSERT( DAL_getFileCursor( d ) == offset, d, "DAL_setFileCursor error" );
+	DAL_ASSERT( DAL_getFileCursor( d ) == offset, d, "DAL_setFileCursor error: file cursor = "DST" while offset = "DST, DAL_getFileCursor( d ), offset );
 }
 static void READ_FILE( FILE *f, int *buf, dal_size_t size )
 {
@@ -362,7 +368,7 @@ dal_size_t DAL_dataCopyOS( Data *src, dal_size_t srcOffset, Data *dst, dal_size_
 {
 	DAL_ASSERT( DAL_dataSize(src)-srcOffset >= size, src, "not enough data to copy" );
 	DAL_ASSERT( DAL_dataSize(dst)-dstOffset >= size, dst, "not enough space to copy data into" );
-	
+
 	/*
 	char buf1[128], buf2[128];
 	SPD_DEBUG( "DAL_dataCopyOS( %s, "DST", %s, "DST", "DST" );",
@@ -779,14 +785,14 @@ void DAL_receiveA( Data *data, dal_size_t size, int source )
 	dal_size_t oldDataSize = DAL_dataSize(data);
 		//SPD_DEBUG( "appending "DST" items to the "DST" I've already got: %s", size, oldDataSize, DAL_dataItemsToString(data,buf,sizeof(buf)) );
 	SPD_ASSERT( DAL_reallocData( data, DAL_dataSize(data) + size ), "not enough memory to allocate data" );
-	
+
 	//DAL_MPI_RECEIVE( data->array.data + oldDataSize, size, MPI_INT, source );
 	Data tmp;
 	DAL_init( &tmp );
 	DAL_receive( &tmp, size, source );
-	
+
 	DAL_dataCopyOS( &tmp, 0, data, oldDataSize, size );
-	
+
 	DAL_destroy( &tmp );
 		//SPD_DEBUG( "post-appending items: %s", DAL_dataItemsToString(data,buf,sizeof(buf)) );
 }

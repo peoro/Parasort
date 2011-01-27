@@ -8,7 +8,7 @@ INSTALLDIR = $(HOME)/.spd
 DATADIR = $(INSTALLDIR)/data
 LIBDIR = $(INSTALLDIR)/algorithms
 ALGODIR = algorithms
-ALGOS = sequential mergesort bucketsort samplesort bitonicsort lbmergesort sequential1 # nosort quicksort
+ALGOS = sequential mergesort bucketsort samplesort bitonicsort lbmergesort sequential1 quicksort # nosort
 ALGOSPP = kmerge lbkmergesort
 TESTS = sendrecv probe tsetup
 OBJECTS = dal.o debug.o sorting.o common.o
@@ -24,7 +24,7 @@ $(ALGOSPP): $(OBJECTS)
 	$(MPICPP) $(ALGOCFLAGS) -DMPICH_IGNORE_CXX_SEEK -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
 
 $(OBJECTS):
-	$(MPICC) $(ALGOCFLAGS) -c $$( echo $@ | sed -rs "s/\.o/.c/" )
+	$(MPICC) $(ALGOCFLAGS) -c $$( echo $@ | sed -rs "s/\.o/.c/" ) -DSPD_PIANOSA
 
 install:
 	mkdir -p $(LIBDIR) $(DATADIR)

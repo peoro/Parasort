@@ -510,7 +510,7 @@ int main( int argc, char **argv )
 		}
 #ifdef DEBUG
 		SPD_DEBUG( "M = "DST" -> "DST" bytes", GET_M( &ti ), GET_M( &ti )*4 );
-		
+
 		SPD_DEBUG( "TestInfo (%d):", (int) sizeof(ti) )
 		SPD_DEBUG( "  %s", ti.verbose ? "verbose" : "non verbose" );
 		SPD_DEBUG( "  %s", ti.threaded ? "threaded" : "non threaded" );
@@ -628,9 +628,42 @@ int main( int argc, char **argv )
 					mtime = (secs*1000 + usecs/1000.0) + 0.5;
 					time = secs + usecs/1000000.0 + 0.5;
 
-					printf( "   node %2d: %7lld microsecs :: %4lld millisecs :: "DST" secs\n", j, utime, mtime, time );
+					printf( "   node %2d: "DST" microsecs :: "DST" millisecs :: "DST" secs\n", j, utime, mtime, time );
 				}
 			}
+
+
+
+//			//saving times for gnuplot
+// 			char path[1024];
+// 			sprintf( path, "%s_M"DST"_s"DST"_%s.data", ti.algo, ti.M, ti.seed, phaseNames[0] );
+// 			FILE *output = GET_N(&ti) <= 2 ? fopen( path, "w+" ) : fopen( path, "r+" );
+// 			fseek( output, 0, SEEK_END );
+// 			if( ftell( output ) == 0 ) {
+// 				fprintf( output, "#M\t\t\tn" );
+// 				for( i = 0; i < phaseCount; ++ i )
+// 					fprintf( output, "\t\t\t%s", phaseNames[i] );
+// 				fprintf( output, "\n" );
+// 			}
+// 			fprintf( output, DST"\t\t\t%d",  ti.M, GET_N(&ti) );
+// 			for( j = 0; j < phaseCount; ++ j ) {
+// 				Phase *p = & ( allPhases[0][j] );
+// 				struct timeval t1 = p->start, t2 = p->end;
+// 				dal_size_t utime, secs, usecs;
+//
+// 				secs  = t2.tv_sec  - t1.tv_sec;
+// 				usecs = t2.tv_usec - t1.tv_usec;
+//
+// 				utime = secs*1000000 + usecs;
+// 				fprintf( output, "\t\t\t"DST, utime );
+// 			}
+// 			fprintf( output, "\n" );
+// 			fclose( output );
+
+
+
+
+
 
 			// freeing phase data
 			for( i = 0; i < GET_N(&ti); ++ i ) {
