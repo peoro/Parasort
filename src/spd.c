@@ -405,7 +405,7 @@ int storeData( const TestInfo *ti, Data *data )
 	GET_SORTED_DATA_PATH( ti, path, sizeof(path) );
 	DAL_s_writeFile( data, path );
 
-#ifdef DEBUG
+	/* Checking sorting errors */
 	switch( data->medium ) {
 		case NoMedium: {
 			break;
@@ -431,7 +431,6 @@ int storeData( const TestInfo *ti, Data *data )
 		default:
 			DAL_UNSUPPORTED( data );
 	}
-#endif
 
 	return 1;
 }
@@ -631,39 +630,6 @@ int main( int argc, char **argv )
 					printf( "   node %2d: "DST" microsecs :: "DST" millisecs :: "DST" secs\n", j, utime, mtime, time );
 				}
 			}
-
-
-
-//			//saving times for gnuplot
-// 			char path[1024];
-// 			sprintf( path, "%s_M"DST"_s"DST"_%s.data", ti.algo, ti.M, ti.seed, phaseNames[0] );
-// 			FILE *output = GET_N(&ti) <= 2 ? fopen( path, "w+" ) : fopen( path, "r+" );
-// 			fseek( output, 0, SEEK_END );
-// 			if( ftell( output ) == 0 ) {
-// 				fprintf( output, "#M\t\t\tn" );
-// 				for( i = 0; i < phaseCount; ++ i )
-// 					fprintf( output, "\t\t\t%s", phaseNames[i] );
-// 				fprintf( output, "\n" );
-// 			}
-// 			fprintf( output, DST"\t\t\t%d",  ti.M, GET_N(&ti) );
-// 			for( j = 0; j < phaseCount; ++ j ) {
-// 				Phase *p = & ( allPhases[0][j] );
-// 				struct timeval t1 = p->start, t2 = p->end;
-// 				dal_size_t utime, secs, usecs;
-//
-// 				secs  = t2.tv_sec  - t1.tv_sec;
-// 				usecs = t2.tv_usec - t1.tv_usec;
-//
-// 				utime = secs*1000000 + usecs;
-// 				fprintf( output, "\t\t\t"DST, utime );
-// 			}
-// 			fprintf( output, "\n" );
-// 			fclose( output );
-
-
-
-
-
 
 			// freeing phase data
 			for( i = 0; i < GET_N(&ti); ++ i ) {
