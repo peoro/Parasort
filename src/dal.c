@@ -301,7 +301,7 @@ bool DAL_allocData( Data *data, dal_size_t size )
 {
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
 
-	if( 0 && DAL_allocArray(data, size) ) {
+	if( DAL_allocArray(data, size) ) {
 		return 1;
 	}
 

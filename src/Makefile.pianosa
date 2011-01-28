@@ -1,7 +1,7 @@
 MPICC = mpicc
 MPICPP = mpicxx
 CFLAGS = -D_FILE_OFFSET_BITS=64 -Wall -W -Wno-unused -O2 -g
-ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC
+ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC -DSPD_PIANOSA
 SPDFLAGS = -ldl -rdynamic
 
 INSTALLDIR = $(HOME)/.spd
@@ -24,7 +24,7 @@ $(ALGOSPP): $(OBJECTS)
 	$(MPICPP) $(ALGOCFLAGS) -DMPICH_IGNORE_CXX_SEEK -shared -Wl,-soname,$@ -o $(ALGODIR)/lib$@.so $(ALGODIR)/$@.c $(OBJECTS)
 
 $(OBJECTS):
-	$(MPICC) $(ALGOCFLAGS) -c $$( echo $@ | sed -rs "s/\.o/.c/" ) -DSPD_PIANOSA
+	$(MPICC) $(ALGOCFLAGS) -c $$( echo $@ | sed -rs "s/\.o/.c/" )
 
 install:
 	mkdir -p $(LIBDIR) $(DATADIR)
@@ -34,15 +34,15 @@ main: spd spddbg spdlog
 
 spd: spd.c  $(OBJECTS)
 	@echo "Compiling spd..."
-	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -o spd
+	$(MPICC) -DSPD_PIANOSA $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -o spd
 
 spddbg: spd.c $(OBJECTS)
 	@echo "Compiling spddbg (debug mode)..."
-	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -DDEBUG -o spddbg
+	$(MPICC) -DSPD_PIANOSA $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -DDEBUG -o spddbg
 
 spdlog: spd.c
 	@echo "Compiling spdlog (profiling mode)..."
-	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -mpe=mpilog -o spdlog
+	$(MPICC) -DSPD_PIANOSA $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -mpe=mpilog -o spdlog
 
 tests:  $(TESTS)
 
