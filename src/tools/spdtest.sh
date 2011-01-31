@@ -16,7 +16,7 @@ let MEGA=KILO*KILO
 let GIGA=MEGA*KILO
 
 let size=MEGA
-for i in `seq 0 10`; do
+for i in `seq 0 $NUM_TEST`; do
 	let DATA_SIZE[$i]=size
 	let size=2*size
 done
@@ -59,6 +59,7 @@ for t in `seq 1 $NUM_TEST`; do
 							filename=$path/"result""_n"$n"_M"$M"_"$algo"_""s"$s"_t"$t
 							touch $filename
 							mpiexec -np $n ~/spd-project/src/spd -M $M -s $s -a $algo -1 0 -2 4 &> $filename
+							for machine in $(mpdtrace); do ssh $machine "rm /l/disc1/spd/tmp*" &> /dev/null; done
 
 							#clog2TOslog2 spdlog.clog2 -o $filename".slog2" &> /dev/null
 						fi
@@ -70,6 +71,7 @@ for t in `seq 1 $NUM_TEST`; do
 					filename=$path/"result""_n"$n"_M"$M"_"$algo"_""s"$s"_t"$t
 					touch $filename
 					mpiexec -np $n ~/spd-project/src/spd -M $M -s $s -a $algo -1 0 -2 4 &> $filename
+					for machine in $(mpdtrace); do ssh $machine "rm /l/disc1/spd/tmp*" &> /dev/null; done
 
 					#clog2TOslog2 spdlog.clog2 -o $filename".slog2" &> /dev/null
 				fi

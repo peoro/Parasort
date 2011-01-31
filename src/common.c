@@ -118,25 +118,21 @@ void HeapPop( Heap *h ) {
 void fileKMerge( Data *run_devices, const int k, Data *output_device )
 {
 	SPD_ASSERT( output_device->medium == File || output_device->medium == Array, "output_device must be pre-allocated!" );
-	const dal_size_t dataSize = DAL_dataSize( output_device );
-	const dal_size_t bufferedRunSize = DAL_allowedBufSize() / (k + 1); //Size of a single buffered run (+1 because of the output buffer)
 
-	if ( k > DAL_allowedBufSize() ) {
-		/* TODO: Handle this case */
-		SPD_ASSERT( 0, "fileKMerge function doesn't allow a number of runs greater than memory buffer size" );
-	}
+	/* Memory buffer */
+	Data buffer;
+	DAL_init( &buffer );
+	DAL_allocBuffer( &buffer, DAL_allowedBufSize() );
+	const dal_size_t bufferedRunSize = DAL_dataSize(&buffer) / (k + 1); //Size of a single buffered run (+1 because of the output buffer)
+
+	/* TODO: Handle this case */
+	SPD_ASSERT( bufferedRunSize > 0 , "fileKMerge function doesn't allow a number of runs greater than memory buffer size" );
 
 	/* Runs Buffer */
-	Data run_buffer;
-	DAL_init( &run_buffer );
-	DAL_allocBuffer( &run_buffer, bufferedRunSize * k );
-	int* runs = run_buffer.array.data;
+	int* runs = buffer.array.data;
 
 	/* Output buffer */
-	Data output_buffer;
-	DAL_init( &output_buffer );
-	DAL_allocBuffer( &output_buffer, bufferedRunSize );
-	int* output = output_buffer.array.data;
+	int* output = buffer.array.data+k*bufferedRunSize;
 
 	/* Indexes and Offsets for the k buffered runs */
 	dal_size_t *run_indexes = (dal_size_t*) calloc( sizeof(dal_size_t), k );
@@ -148,21 +144,19 @@ void fileKMerge( Data *run_devices, const int k, Data *output_device )
 	HeapInit( &heap, k );
 
 	int j;
-	/* Initializing the buffered runs */
+	/* Initializing the buffered runs and the heap */
 	for ( j=0; j < k; j++ ) {
-		run_buf_sizes[j] = DAL_dataCopyOS( &run_devices[j], 0, &run_buffer, j*bufferedRunSize, MIN(bufferedRunSize, DAL_dataSize(&run_devices[j])) );
+		run_buf_sizes[j] = DAL_dataCopyOS( &run_devices[j], 0, &buffer, j*bufferedRunSize, MIN(bufferedRunSize, DAL_dataSize(&run_devices[j])) );
 		run_offsets[j] = run_buf_sizes[j];
-	}
 
-	/* Initializing the heap */
-    for ( j=0; j<k; j++ )
 		HeapPush( &heap, runs[j*bufferedRunSize], j );
+	}
 
 	/* Merging the runs */
 	int outputSize = 0;
 	dal_size_t outputOffset = 0;
 	dal_size_t i;
-    for ( i=0; i<dataSize; i++ ) {
+    for ( i=0; i<DAL_dataSize(output_device); i++ ) {
         Min_val min = HeapTop( &heap );
         HeapPop( &heap );
 
@@ -172,8 +166,8 @@ void fileKMerge( Data *run_devices, const int k, Data *output_device )
 
         if ( ++(run_indexes[j]) <  run_buf_sizes[j] )							//If there are others elements in the buffered run
 			HeapPush( &heap, runs[j*bufferedRunSize+run_indexes[j]], j );		//pushes a new element in the heap
-		else if ( remainingSize ) {												//else, if the run has not been read completely
-			run_buf_sizes[j] = DAL_dataCopyOS( &run_devices[j], run_offsets[j], &run_buffer, j*bufferedRunSize, MIN(remainingSize,bufferedRunSize) );
+		else if ( remainingSize > 0 ) {											//else, if the run has not been read completely
+			run_buf_sizes[j] = DAL_dataCopyOS( &run_devices[j], run_offsets[j], &buffer, j*bufferedRunSize, MIN(remainingSize, bufferedRunSize) );
 			run_offsets[j] += run_buf_sizes[j];
 			run_indexes[j] = 0;
 			HeapPush( &heap, runs[j*bufferedRunSize], j );
@@ -181,15 +175,14 @@ void fileKMerge( Data *run_devices, const int k, Data *output_device )
 
         output[outputSize++] = min.val;
 
-		if ( outputSize == bufferedRunSize || i==dataSize-1 ) {					//If the output buffer is full
-			outputOffset += DAL_dataCopyOS( &output_buffer, 0, output_device, outputOffset, outputSize );
+		if ( outputSize == bufferedRunSize || i==DAL_dataSize(output_device)-1 ) {					//If the output buffer is full
+			outputOffset += DAL_dataCopyOS( &buffer, k*bufferedRunSize, output_device, outputOffset, outputSize );
 			outputSize = 0;
 		}
     }
 	/* Freeing memory */
 	HeapDestroy( &heap );
-    DAL_destroy( &run_buffer );
-	DAL_destroy( &output_buffer );
+    DAL_destroy( &buffer );
 	free( run_indexes );
 	free( run_offsets );
 	free( run_buf_sizes );
