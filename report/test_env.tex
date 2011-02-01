@@ -73,7 +73,7 @@ Now we focus on the size of the communication buffer. Table~\ref{tsetup-impact} 
 \begin{center}
 \begin{tabular}{|c|c|c|c|c|}\hline
 \hline
-$\sharp$ MPI calls          & MPI size ($\frac{L}{\sharp Sends}$ bytes)          & $T\_send$   & $T\_scatter$  & $T\_alltoall$      \\\hline\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$ bytes)  & $T\_send$   & $T\_scatter$  & $T\_alltoall$      \\\hline\hline
 1 & 33554432 & 3.2890 & 3.2557 & 5.4890 \\\hline
 2 & 16777216 & 3.2845 & 3.2548 & 5.4769 \\\hline
 4 & 8388608 & 3.2847 & 3.2542 & 5.5114 \\\hline
@@ -105,7 +105,7 @@ $\sharp$ MPI calls          & MPI size ($\frac{L}{\sharp Sends}$ bytes)         
 \input{performance}
 
 \subsection{Algorithms Efficiency}
-In this section, we are going to analyze the theoretical Algorithm Efficiency already defined in~\ref{terminology}. For the sake of commodity, we report here the definition. Given
+In this section, we are going to analyze the theoretical Algorithm Efficiency defined in~\ref{terminology}. For the sake of commodity, we report here the definition. Given
 \begin{itemize}
 \item $P$, the number of real processors of our machine; 
 \item $m$, the number of steps of the algorithm;

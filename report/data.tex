@@ -10,6 +10,11 @@ Functions at the DAL level will one (or more) \texttt{Data} object, will see whe
 
 Notice an interesting aspect: it is true that the Data Abstraction Layer comes from the specific necessity of sorting data sets that cannot fit the primary memory. However, \textit{the DAL is not related to the problem of sorting itself}, but rather it represents an abstraction that could be used in many different scenarios. In other words, the DAL can be considered to all intent and purposes a new \textit{parallel programming library for handling large data sets}. 
 
+%1. perche' parlava di fare test sotto uindo, quindi preferivamo cercare di tenere la cosa portabile, se possibile
+%2. perche' mmap nasconde completamente il file, mentre averne una visione torna comunque utile per cercare di ottimizzare le scritture su file contro le scritture su memoria
+%3. perche' il DAL ci permette anche di lavorare con dati su altri medium, tipo dati compressi
+%4. perche' il DAL ci da un'astrazione piu' forte di mmap: ci offre degli insiemi di dati atomici, cosa che mmap non fa -- mmap potrebbe essere usato per implementare un nuovo tipo di medium del DAL, ecco
+
 In section~\ref{DAL-int} we will explain what is possible to do \textit{using} the DAL, while in section~\ref{DAL-impl} we will detail its implementation. 
 
 \subsubsection{Data Abstraction Layer - Interface}
@@ -115,6 +120,9 @@ dal_size_t DAL_dataCopyO ( Data *src, dal_size_t srcOffset, Data *dst, dal_size_
 dal_size_t DAL_dataCopyOS ( Data *src, dal_size_t srcOffset, Data *dst, dal_size_t dstOffset, dal_size_t size );
 \end{lstlisting}
 The $DAL\_dataCopy$ function copies a source \texttt{Data} into a destination \texttt{Data} that must be already initialized. No matter whether elements are allocated in primary memory or on a file since $DAL\_dataCopy$ abstracts from the effective location of the elements. The second and third versions (tagged with the suffix ''O'' and ''OS'', meaning ''Offset'' and ''Size'') allow also to specify an offset (from which start to copy) and a maximum number of copied elements. Despite its ease of usage, the implementation of  the $DAL\_dataCopy$ function is not so simple because it forces us to consider all the possible combinations between the actual allocation of both the source and destionation \texttt{Data}. 
+
+\paragraph{From primary memory to disk and viceversa}
+TODO
 
 \paragraph{The communication buffer}
 Consider a process $A$ that wants to send a \texttt{Data} to a process $B$. We know that this \texttt{Data} could represent a sequence of elements allocated on a file $f$. In this case, a simple way to send the whole \texttt{Data} to $B$, is forcing $A$ to load blocks of $f$ in primary memory and then sends them, one by one, through a call to $MPI\_Send$.  Unfortunately, things get really complicated if we go into the details of the implementation of this (apparently simple) behavior. 

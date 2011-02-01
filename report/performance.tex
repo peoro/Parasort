@@ -1,16 +1,24 @@
 \subsection{Performance analysis of the algorithms}
-In this first version of the report we focus on studying the completion time as function of the parallelism degree. For each algorithm, we run single-shot computations (that is, the ones that do not work on streams of data sets to sort), each of them varies from the others for the parallelism degree (it doubles at each execution). Another degree of freedom is represented by the size of the data set: we refer to ''small'', ''large'' or ''huge'' data sets for sizes that are respectively of the order of KBs, MBs and (at least) GBs. At the present moment, in order to keep limited the complexity of this first performance study, we decide to fix the seed needed to generate the data set.
+We said in~\ref{sort-fram} that sorting a data set is a computation described by a \textit{5-tuple} $\langle n$, $M$, $s$, $\Lambda$, $\sigma \rangle$, with $n$ the parallelism degree, $M$ the size of the data set, $s$ a seed for generating the data set, $\Lambda$ the algorithm and $\sigma$ a set of parameters depending on $\Lambda$. In reality, $\sigma$ is significative just for some algorithms; for instance, it can specify the \textit{stencil} (communication pattern) for the processes of a parallel algorithm or the value of ''\textit{K}'' in algorithms like \textit{K-way mergesort}. For each $\Lambda$, we will run single-shot computations (that is, there are not streams of data sets to sort) by varying $n$, $M$, $s$. Initially, $\sigma$ will be fixed for every computations. It is a convention that we will refer to \textit{small}, \textit{large} or \textit{huge} data sets for sizes that are respectively of the order of KBs, MBs and (at least) GBs. 
 
-\subsection*{Pianosa}
-We analyze the behavior of our algorithms for large data sets, while the case of small data sets will be treated in the following section; huge data sets will be analyzed in the final version of the report (at the present moment the framework still needs some features to be implemented in order to manage huge data sets).
-
-\subsubsection*{Large data sets}
-In our test we run a lot of computations that differ each other for the following parameters:
+In order to analyze the performance of the algorithms from different perspective (e.g.: scalability of the specific algorithm, comparison of the time completion required by different algorithms to sort a specific data set and so on) we are going to show different types of graphics. Each graphic is defined by a 3-tuple $\langle x, y, plot \rangle $, where $x$ is the variable on the X axis, $y$ the variable on the Y axis and $plot$ a parameter that identifies a specific shape of that graphic. In particular, given $T$ the time completion of a computation, we will focus on the study of the following graphics:
 \begin{itemize}
-\item algorithm $\in \lbrace$ANSI qsort, Bitonicsort, Samplesort, Bucketsort, Mergesort, K-Way Mergesort, Load-Balanced Mergesort, Load-Balanced Multi-Way Mergesort$\rbrace$;
-\item parallelism degree $\in \lbrace 2,\ 4,\ 8,\ 16 \rbrace$;
-\item size of the data set $\in \lbrace 10,\ 50,\ 100,\ 200,\ 400 \rbrace \ MBs$.
+\item fixed $M$, a graphic $\langle n, T, \Lambda \rangle $ is necessary to see which is the best algorithm for sorting a data set of a certain size. 
+\item fixed $\Lambda$, a graphic $\langle n, T, M \rangle$ is useful to see the scalability of $\Lambda$ by varying the computational grain. 
+\item fixed $n$, a graphic $\langle \Lambda, T, M \rangle$ just for the sake  of curiosity to see, given a certain architecture with a fixed number of processors, which algorithm \textit{should} be used. (but not necessarily, due to the fact that architecture changes for a lot of factors) 
+\end{itemize}
+
+The parameters of the computations take the following values:
+\begin{itemize}
+\item $\Lambda \in \lbrace$Sequentialsort, Bitonicsort, Samplesort, Bucketsort, Mergesort, Quicksort, K-Way Mergesort, Load-Balanced Mergesort, Load-Balanced Multi-Way Mergesort$\rbrace$;
+\item $n \in \lbrace$1, 2, 4, 8, 16, 32, 64, 128$\rbrace$; notice that the maximum value that $n$ can take depends on the specific architecture. 
+\item $M \in \lbrace 2^{10 + i} : i = 0, ..., 25\rbrace$ elements (integers). So $M$ takes values from a few kilobytes to tens of gigabytes (recall that each integers is usually represented through 4 bytes).
 \end{itemize} 
+
+\subsubsection{Pianosa}
+First, we will analyze the behavior of our algorithms for large data sets, then we will focus on huge data sets, finally on small data sets. 
+
+\paragraph{Large data sets}
 Figure~\ref{large-tc} shows the completion time for sorting large data sets. One thing is clearly visible: for parallelism degrees up to 8, sequential $qsort$ even outperforms almost all the algorithms; for parallelism degree 16 some algorithms improve a little the completion time ($Samplesort$, $Bucketsort$, $Mergesort$, $Load$-$Balanced$ $Multi$-$Way$ $Mergesort$), but anyway it keeps to be very close (same order magnitude) to the one of $qsort$. However, this result is not really surprising. Indeed, as we told in advance, we must take care of the following features:
 \begin{itemize}
 \item the computation performed on each element of the data set has fine grain;
@@ -43,7 +51,7 @@ These consideration aims at justifying the non-ideal scalability of the algorith
 	\label{large-tc}
 \end{figure}
  
-\subsubsection*{Small data sets}
+\paragraph{Small data sets}
 All our algorithms do not scale on Pianosa when the data set to sort is small (i.e. its size is of the order of hundreds of kilobytes); even worse, increasing the parallelism degree of the algorithm causes an increase of the completion time too. Figure~\ref{small-samplesort} shows the specific case of Samplesort; all other algorithms behave like Samplesort. This behavior is mainly due to the cost of communications between processes. If we model the cost of a $send$ as we did in~\ref{test-env} and if we look at the result obtained in~\ref{test-env-pianosa}, we can clearly see that the cost of sending a few kilobytes is of the order of milliseconds. On the other hand, the cost of sorting a small data set is of the order of milliseconds too (see Figure~\ref{small-sequential}; scale is not logarithmic to a better comparison with the other figures). These characteristics leads us to say, from a qualitative point of view, that the higher the parallelism degree, the higher both the number of communications and the overall time spent in sending data, so higher is even the overhead introduced by the parallelization. 
 
 \begin{figure}[h]
@@ -55,3 +63,4 @@ All our algorithms do not scale on Pianosa when the data set to sort is small (i
   	\caption{Completion Time on Pianosa for small data sets.}
 \end{figure}
 
+\subsubsection{Physics}
