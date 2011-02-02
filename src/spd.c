@@ -565,7 +565,7 @@ int main( int argc, char **argv )
 					return 1;
 				}
 
-				mainSortPhase = startPhase( &ti, "sort" );
+				mainSortPhase = startPhase( &ti, "spd" );
 				mainSort( &ti, &data );
 				stopPhase( &ti, mainSortPhase );
 
@@ -677,7 +677,7 @@ int main( int argc, char **argv )
 				return 1;
 			}
 
-			sortPhase = startPhase( &ti, "sort" );
+			sortPhase = startPhase( &ti, "spd" );
 			sort( &ti );
 			stopPhase( &ti, sortPhase );
 
