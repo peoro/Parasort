@@ -67,6 +67,10 @@ typedef int PhaseHandle;
 */
 PhaseHandle startPhase( const TestInfo *ti, const char *phaseName );
 /*!
+* resumes a stopped phase which will need to be stopped again
+*/
+void resumePhase( const TestInfo *ti, PhaseHandle phase );
+/*!
 * stops a phase
 */
 void stopPhase( const TestInfo *ti, PhaseHandle phase );

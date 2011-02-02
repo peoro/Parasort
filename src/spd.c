@@ -440,9 +440,13 @@ int storeData( const TestInfo *ti, Data *data )
  *TIMING STUFF
  */
 
-typedef struct _Phase
+typedef struct Phase
 {
-	struct timeval start, end;
+#ifdef DEBUG
+	bool started;
+#endif
+	struct timeval start; // last time this phase was started
+	dal_size_t totalTime; // all the tame the phase took since the last time it got stopped
 } Phase;
 
 static Phase *phases = 0;
@@ -463,17 +467,50 @@ PhaseHandle startPhase( const TestInfo *ti, const char *phaseName )
 	}
 	phases = (Phase*) realloc( phases, sizeof(Phase)*phaseCount );
 	Phase *p = & phases[ phaseId ];
+	
+#ifdef DEBUG
+	p->started = true;
+#endif
+	p->totalTime = 0;
 
 	gettimeofday( & p->start, NULL );
 
 	return phaseId;
 }
-void stopPhase( const TestInfo *ti, PhaseHandle phase )
+void resumePhase( const TestInfo *ti, PhaseHandle phaseId )
 {
-	gettimeofday( & phases[ phase ].end, NULL );
+	Phase *p = & phases[ phaseId ];
+	
 #ifdef DEBUG
+	SPD_ASSERT( ! p->started, "Trying to resume an already active phase" );
+	phaseEndCount --;
+	p->started = true;
+#endif
+
+	gettimeofday( & p->start, NULL );
+}
+void stopPhase( const TestInfo *ti, PhaseHandle phaseId )
+{
+	Phase *p = & phases[ phaseId ];
+	
+#ifdef DEBUG
+	SPD_ASSERT( p->started, "Trying to stop a non active phase" );
+	p->started = false;
 	phaseEndCount ++;
 #endif
+	
+	struct timeval end;
+	gettimeofday( & end, NULL );
+	
+	{
+		struct timeval t1 = p->start, t2 = end;
+		dal_size_t secs, usecs;
+
+		secs  = t2.tv_sec  - t1.tv_sec;
+		usecs = t2.tv_usec - t1.tv_usec;
+
+		p->totalTime = secs*1000000 + usecs;
+	}
 }
 
 
@@ -617,15 +654,11 @@ int main( int argc, char **argv )
 				printf( "Phase \"%s\":\n", phaseNames[i] );
 				for( j = 0; j < GET_N(&ti); ++ j ) {
 					Phase *p = & ( allPhases[j][i] );
-					struct timeval t1 = p->start, t2 = p->end;
-					dal_size_t utime, mtime, time, secs, usecs;
+					dal_size_t utime, mtime, time;
 
-					secs  = t2.tv_sec  - t1.tv_sec;
-					usecs = t2.tv_usec - t1.tv_usec;
-
-					utime = secs*1000000 + usecs;
-					mtime = (secs*1000 + usecs/1000.0) + 0.5;
-					time = secs + usecs/1000000.0 + 0.5;
+					utime = p->totalTime;
+					mtime = utime / 1000.0 + 0.5;
+					time = utime / 1000000.0 + 0.5;
 
 					printf( "   node %2d: "DST" microsecs :: "DST" millisecs :: "DST" secs\n", j, utime, mtime, time );
 				}

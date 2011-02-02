@@ -122,6 +122,9 @@ long _partition( int *a, long size, int p )
 }
 */
 
+static PhaseHandle sequentialSortP; // time for sequentialSort()
+static PhaseHandle computationP; // time for local computation, but communication
+
 // \smaller contain the first partition (the one with smaller numbers than pivot)
 // while \bigger will contain the second one (with bigger numbers)
 void partition( Data *data, Data *smaller, Data *bigger )
@@ -227,7 +230,9 @@ void scatter( const TestInfo *ti, Data *data )
 			Data smaller, bigger;
 			DAL_init( &smaller );
 			DAL_init( &bigger );
-			partition( data, &smaller, &bigger );
+			resumePhase( ti, computationP );
+				partition( data, &smaller, &bigger );
+			stopPhase( ti, computationP );
 			DAL_destroy( data );
 
 				//char buf1[128], buf2[128];
@@ -289,20 +294,24 @@ void gather( const TestInfo *ti, Data *data )
 
 void actualSort( const TestInfo *ti, Data *data )
 {
-	PhaseHandle scatterP, localP, gatherP;
+	PhaseHandle sortingP, sequentialSortP;
 	srand( time(0) );
+	
+	// init phase "computation
+	computationP = startPhase( ti, "computation" );
+	stopPhase( ti, computationP );
 
-	scatterP = startPhase( ti, "scattering" );
-	scatter( ti, data );
-	stopPhase( ti, scatterP );
+	sortingP = startPhase( ti, "sorting" );
+		scatter( ti, data ); // scattering
 
-	localP = startPhase( ti, "local sorting" );
-	sequentialSort( ti, data );
-	stopPhase( ti, localP );
+		resumePhase( ti, computationP );
+			sequentialSortP = startPhase( ti, "sequential sort" );
+			sequentialSort( ti, data );
+			stopPhase( ti, sequentialSortP );
+		stopPhase( ti, computationP );
+	stopPhase( ti, sortingP );
 
-	gatherP = startPhase( ti, "gathering" );
-	gather( ti, data );
-	stopPhase( ti, gatherP );
+	gather( ti, data ); // gathering
 }
 
 void sort( const TestInfo *ti )
