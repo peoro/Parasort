@@ -68,7 +68,7 @@ Figures~\ref{pianosa-mpi-1},~\ref{pianosa-mpi-2},~\ref{pianosa-mpi-3} show the c
 	\label{pianosa-mpi-3}
 \end{figure}
 
-Now we focus on the size of the communication buffer. Table~\ref{tsetup-impact} shows the cost in seconds of DAL$\_\lbrace send, scatter, alltoall \rbrace$ for a message of size 32MB. The $X$ row of the table show the case in which the original message has been splitted in $X$ $MPI\_\lbrace send, scatter, alltoall \rbrace$, with $X \in \lbrace 2^i : i = 0...18 \rbrace$.
+Now we focus on the size of the communication buffer. Table~\ref{tsetup-impact} shows the cost in seconds of DAL$\_\lbrace send, scatter, alltoall \rbrace$ for a message of size 32MB. The $X$ row of the table show the case in which the original message has been splitted in $X$ $MPI\_\lbrace send, scatter, alltoall \rbrace$, with $X \in \lbrace 2^i : i = 0...18 \rbrace$. TODO: need comment
 \begin{table}[h]
 \begin{center}
 \begin{tabular}{|c|c|c|c|c|}\hline
