@@ -130,26 +130,40 @@ void mergesort ( const TestInfo *ti, Data *data_local )
 	int 				active_proc = GET_N ( ti );
 
 	Data 				data_received;
-	PhaseHandle			scatterP, localP;
-
+	PhaseHandle			scatterP, localP, sequentialSortP, computationP;
+	
+	//initializing the phaseHandle to measure ONLY the sequential part of the algorithm
+	computationP = startPhase( ti, "computation" );
+	stopPhase( ti, computationP );	
+	
+	//initialization of datas	
 	DAL_init ( &data_received );
 
 	//scattering data partitions
-	scatterP = startPhase( ti, "Scattering" );
+	scatterP = startPhase( ti, "scattering" );
 	DAL_scatter ( data_local, GET_LOCAL_M( ti ), 0 );
 	stopPhase( ti, scatterP );
 
-	//sorting
-	localP = startPhase( ti, "Sorting" );
+	//Sorting
+	
+	//local sorting
+	localP = startPhase( ti, "sorting" );
+	resumePhase( ti, computationP );
+	sequentialSortP = startPhase( ti, "sequential sort" );
 	sequentialSort ( ti, data_local );
-
+	stopPhase( ti, sequentialSortP );
+	stopPhase( ti, computationP );
+	
 	int step;
 	for ( step = 0; step < _log2(GET_N(ti)); step++ ) {
 		if ( do_i_receive( ti, step ) ) {
 			DAL_receive ( &data_received, total_size / (dal_size_t)active_proc, from_who( ti, step ) );
 
 			//merge phase
+			resumePhase( ti, computationP );
 			*data_local = fusion ( data_local, &data_received );
+			stopPhase( ti, computationP );
+			
 		}
 		if ( do_i_send ( ti, step ) )
 			DAL_send ( data_local, to_who( ti, step ) );

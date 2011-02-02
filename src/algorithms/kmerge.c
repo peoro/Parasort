@@ -148,26 +148,34 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 	int 				active_proc = GET_N ( ti );
 
 	Data				*data_owned = (Data*) malloc ( sizeof(Data) * k );
-	PhaseHandle 		scatterP, localP, gatherP;
+	PhaseHandle 		scatterP, localP, sequentialSortP, computationP;
 
 	SPD_ASSERT ( active_proc % k == 0, "For K-way mergesort, it must be parallelism degree mod K == 0; now is %d mod %d = %d", active_proc, k, active_proc % k );
+
+	//initializing the phaseHandle to measure ONLY the sequential part of the algorithm
+	computationP = startPhase( ti, "computation" );
+	stopPhase( ti, computationP );
 
 	//initializing datas
 	data_owned[0] = *data_local;
 	for ( int i = 1; i < k; i ++ )
 		DAL_init ( data_owned + i );
 
+	//for each merge-step, this array contains the ranks of the k processes from which partitions will be received.
+	int *dests = (int*) calloc ( sizeof(int), k-1 );
+
 	//scattering data partitions
-	scatterP = startPhase( ti, "Scattering" );
+	scatterP = startPhase( ti, "scattering" );
 	DAL_scatter ( data_owned, GET_LOCAL_M ( ti ), 0 );
 	stopPhase( ti, scatterP );
 
 	//sorting local partition
-	localP = startPhase( ti, "Sorting" );
+	localP = startPhase( ti, "sorting" );
+	resumePhase( ti, computationP );
+	sequentialSortP = startPhase( ti, "sequential sort" );
 	sequentialSort ( ti, data_owned );
-
-	//for each merge-step, this array contains the ranks of the k processes from which partitions will be received.
-	int *dests = (int*) calloc ( sizeof(int), k-1 );
+	stopPhase( ti, sequentialSortP ); 
+	stopPhase( ti, computationP );
 
 	while ( active_proc > 1 ) {
 		if ( do_i_receive( rank, k, active_proc ) ) {
@@ -179,11 +187,13 @@ void mk_mergesort ( const TestInfo *ti, Data *data_local )
 				DAL_receive ( data_owned + receiving + 1, total_size / (dal_size_t)active_proc, dests[receiving] );
 
 			//fusion phase
+			resumePhase( ti, computationP );
 			if ( active_proc >= k )
 				*data_owned = fusion ( data_owned, k );
 			else
 				*data_owned = fusion ( data_owned, active_proc ); //case of unbalanced tree, latest step
-
+			stopPhase( ti, computationP );
+			
 		}
 		else if ( do_i_send ( rank, k, active_proc ) )
 			DAL_send ( data_owned, to_who( rank, k, active_proc ));
