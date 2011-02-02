@@ -16,7 +16,7 @@ let MEGA=KILO*KILO
 let GIGA=MEGA*KILO
 
 let size=MEGA
-for i in `seq 0 $NUM_TEST`; do
+for i in `seq 0 10`; do
 	let DATA_SIZE[$i]=size
 	let size=2*size
 done
@@ -46,23 +46,30 @@ for t in `seq 1 $NUM_TEST`; do
 			fi
 		fi
 
-
+		algoVar[0]=0
+		algoVar[1]=4
 		for n in ${NUM_PROCESSORS[*]}; do
+
+			#setting algoVar[1] for kmerge
+			if [[ $n -eq 2 ]]; then
+				algoVar[1]=2
+			else
+				algoVar[1]=4
+			fi
+
 			#for each seed (s)
 			for s in ${SEEDS[*]}; do
 
 				if [ $n -ne 1 ]; then
 					for algo in ${ALGOS[*]}; do
-						if [[ $algo != "kmerge" || $n -ne 2 ]]; then
-							echo "Starting test "$t" for M="$M "integers (="$val $measure"), n="$n", seed="$s", a="$algo "> ""result""_n"$n"_M"$M"_"$algo"_""s"$s"_t"$t
+						echo "Starting test "$t" for M="$M "integers (="$val $measure"), n="$n", seed="$s", a="$algo "> ""result""_n"$n"_M"$M"_"$algo"_""s"$s"_t"$t
 
-							filename=$path/"result""_n"$n"_M"$M"_"$algo"_""s"$s"_t"$t
-							touch $filename
-							mpiexec -np $n ~/spd-project/src/spd -M $M -s $s -a $algo -1 0 -2 4 &> $filename
-							for machine in $(mpdtrace); do ssh $machine "rm /l/disc1/spd/tmp*" &> /dev/null; done
+						filename=$path/"result""_n"$n"_M"$M"_"$algo"_""s"$s"_t"$t
+						touch $filename
+						mpiexec -np $n ~/spd-project/src/spd -M $M -s $s -a $algo -1 ${algoVar[0]} -2 ${algoVar[1]} &> $filename
+						for machine in $(mpdtrace); do ssh $machine "rm /l/disc1/spd/tmp*" &> /dev/null; done
 
-							#clog2TOslog2 spdlog.clog2 -o $filename".slog2" &> /dev/null
-						fi
+						#clog2TOslog2 spdlog.clog2 -o $filename".slog2" &> /dev/null
 					done
 				else
 					algo=sequential
@@ -70,7 +77,7 @@ for t in `seq 1 $NUM_TEST`; do
 
 					filename=$path/"result""_n"$n"_M"$M"_"$algo"_""s"$s"_t"$t
 					touch $filename
-					mpiexec -np $n ~/spd-project/src/spd -M $M -s $s -a $algo -1 0 -2 4 &> $filename
+					mpiexec -np $n ~/spd-project/src/spd -M $M -s $s -a $algo &> $filename
 					for machine in $(mpdtrace); do ssh $machine "rm /l/disc1/spd/tmp*" &> /dev/null; done
 
 					#clog2TOslog2 spdlog.clog2 -o $filename".slog2" &> /dev/null
