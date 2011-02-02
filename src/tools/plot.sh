@@ -5,27 +5,30 @@
 path=$1
 platform="pianosa"
 
-ALGOS=( `ls $path | cut -d "_" -f4 | sort -u` )
+ALGOS=( `ls $path | grep result_ | cut -d "_" -f4 | sort -u` )
 # echo -e ${ALGOS[@]}
-DATA_SIZES=( `ls $path | cut -d "_" -f3 | cut -d "M" -f2 | sort -n -u` )
+DATA_SIZES=( `ls $path | grep result_ | cut -d "_" -f3 | cut -d "M" -f2 | sort -n -u` )
 # echo -e ${DATA_SIZES[@]}
 
 
 #Moving file related to sequential sort to obtain better plots
-NUM_PROCS=( `ls $path | grep "_samplesort_" | cut -d "_" -f2 | cut -d "n" -f2 | sort -n -u` )
+NUM_PROCS=( `ls $path | grep result_ | cut -d "_" -f2 | cut -d "n" -f2 | sort -n -u` )
+# echo -e ${NUM_PROCS[0]}
 if [ ${NUM_PROCS[0]} -eq 1 ]; then
 	for M in ${DATA_SIZES[*]}; do
 		for n in ${NUM_PROCS[*]}; do
-			cp $path"/result_n1_M"$M"_sequential_s1_t1" $path"result_n"$n"_M"$M"_sequential_s1_t1"
-			rm $path"/result_n1_M"$M"_sequential_s1_t1"
+			if [ $n -ne 1 ]; then
+				cp $path"/result_n1_M"$M"_sequential_s1_t1" $path"/result_n"$n"_M"$M"_sequential_s1_t1"
+			fi
 		done
+		rm $path"/result_n1_M"$M"_sequential_s1_t1"
 	done
 fi
 
 
 
 for algo in ${ALGOS[*]}; do
-	NUM_PROCS=( `ls $path | grep "_"$algo"_" | cut -d "_" -f2 | cut -d "n" -f2 | sort -n -u` )
+	NUM_PROCS=( `ls $path | grep result_ | grep "_"$algo"_" | cut -d "_" -f2 | cut -d "n" -f2 | sort -n -u` )
 	# echo -e ${NUM_PROCS[@]}
 
 	#init data files for this algo
@@ -124,7 +127,7 @@ done
 
 
 ##################################################### MxTxA plots ##########################################################
-NUM_PROCS=( `ls $path | grep -v _sequential_ | cut -d "_" -f2 | cut -d "n" -f2 | sort -n -u` )
+NUM_PROCS=( `ls $path | grep result_ | grep -v _sequential_ | cut -d "_" -f2 | cut -d "n" -f2 | sort -n -u` )
 for n in ${NUM_PROCS[*]}; do
 	terminal='set terminal postscript eps enhanced color\n'
 	terminal_name='set output "n'$n'_'$platform'_MxTxA.eps"\n'
