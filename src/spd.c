@@ -509,7 +509,7 @@ void stopPhase( const TestInfo *ti, PhaseHandle phaseId )
 		secs  = t2.tv_sec  - t1.tv_sec;
 		usecs = t2.tv_usec - t1.tv_usec;
 
-		p->totalTime = secs*1000000 + usecs;
+		p->totalTime += secs*1000000 + usecs;
 	}
 }
 
