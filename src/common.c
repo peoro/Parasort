@@ -281,7 +281,7 @@ void sequentialSort( const TestInfo *ti, Data *data )
 *
 * @return The index of the bucket in which to insert ele
 */
-int getBucketIndex( const int *ele, const int *splitters, const dal_size_t length )
+int getBucketIndex( const int *ele, const int *splitters, const int length )
 {
 	int low = 0;
 	int high = length;

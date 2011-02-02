@@ -32,6 +32,7 @@ void compareLowData( Data *d1, Data *d2 )
 	Data buffer;
 	DAL_init( &buffer );
 	SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_allowedBufSize() ), "not enough memory..." );
+	DAL_ASSERT( DAL_dataSize( &buffer ) > 2, &buffer, "buffer size must be greater than 2" );
 
 	int bufSize = DAL_dataSize( &buffer ) / 3;
 	dal_size_t d1Count, d2Count, mergedCount;
@@ -101,6 +102,7 @@ void compareHighData( Data *d1, Data *d2 )
 	Data buffer;
 	DAL_init( &buffer );
 	SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_allowedBufSize() ), "not enough memory..." );
+	DAL_ASSERT( DAL_dataSize( &buffer ) > 2, &buffer, "buffer size must be greater than 2" );
 
 	int bufSize = DAL_dataSize( &buffer ) / 3;
 	dal_size_t d1Count, d2Count, mergedCount;
@@ -176,9 +178,9 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	dal_size_t 			recvCount = local_M;				//Number of elements that will be received from partner
 
 	int					mask, mask2, partner;
-	dal_size_t			i, j, k, z, flag;
+	int					i, j, k, z, flag;
 
-	PhaseHandle 		scatterP, localP, mergeP, gatherP;
+	PhaseHandle 		scatterP, sortingP, computationP, localP, mergeP, gatherP;
 
 	SPD_ASSERT( isPowerOfTwo( n ), "n should be a power of two (but it's %d)", n );
 
@@ -196,11 +198,13 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
+	sortingP = startPhase( ti, "sorting" );
+	computationP = startPhase( ti, "computation" );
 
 /***************************************************************************************************************/
 /*********************************************** Local Phase ***************************************************/
 /***************************************************************************************************************/
-	localP = startPhase( ti, "local sorting" );
+	localP = startPhase( ti, "sequential sort" );
 
 	/* Sorting local data */
 	sequentialSort( ti, data );
@@ -225,8 +229,9 @@ void bitonicSort( const TestInfo *ti, Data *data )
 		for ( j=0; j<i; j++, mask2>>=1 ) {
 			partner = id ^ mask2;				//Selects as partner the process with rank that differs from id only at the j-th bit
 
-			/* Exchanging data with partner */
-			DAL_sendrecv( data, local_M, 0, &recvData, recvCount, 0, partner );
+			stopPhase( ti, computationP );
+			DAL_sendrecv( data, local_M, 0, &recvData, recvCount, 0, partner );		//Exchanging data with partner
+			resumePhase( ti, computationP );
 
 			/* Each process must call the dual function of its partner */
 			if ( (id-partner) * flag > 0 )
@@ -239,6 +244,8 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	stopPhase( ti, mergeP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
+	stopPhase( ti, computationP );
+	stopPhase( ti, sortingP );
 
 /***************************************************************************************************************/
 /********************************************** Ghater Phase ***************************************************/

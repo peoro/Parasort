@@ -90,7 +90,7 @@ void bucketSort( const TestInfo *ti, Data *data )
 	dal_size_t			sdispls[n], rdispls[n];				//Send/receive buffer displacements
 	dal_size_t			i, j, k;
 
-	PhaseHandle 		scatterP, localP, bucketsP, gatherP;
+	PhaseHandle 		scatterP, sortingP, computationP, localP, bucketsP, gatherP;
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
@@ -109,12 +109,14 @@ void bucketSort( const TestInfo *ti, Data *data )
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
+	sortingP = startPhase( ti, "sorting" );
+	computationP = startPhase( ti, "computation" );
 
 /***************************************************************************************************************/
 /*********************************************** Local Phase ***************************************************/
 /***************************************************************************************************************/
 
-	localP = startPhase( ti, "local sorting" );
+	localP = startPhase( ti, "sequential sort" );
 
 	/* Sorting local data */
 	sequentialSort( ti, data );
@@ -132,6 +134,7 @@ void bucketSort( const TestInfo *ti, Data *data )
 	/* Computing the number of integers to be sent to each process */
 	getSendCounts( data, n, sendCounts );
 
+	stopPhase( ti, computationP );
 	/* Informing all processes on the number of elements that will receive */
 	MPI_Alltoall( sendCounts, 1, MPI_LONG_LONG, recvCounts, 1, MPI_LONG_LONG, MPI_COMM_WORLD );
 
@@ -147,6 +150,7 @@ void bucketSort( const TestInfo *ti, Data *data )
 	}
 	/* Sending data to the appropriate processes */
 	DAL_alltoallv( data, sendCounts, sdispls, recvCounts, rdispls );
+	resumePhase( ti, computationP );
 
 	/* Sorting local bucket */
 	sequentialSort( ti, data );
@@ -154,6 +158,8 @@ void bucketSort( const TestInfo *ti, Data *data )
 	stopPhase( ti, bucketsP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
+	stopPhase( ti, computationP );
+	stopPhase( ti, sortingP );
 
 /***************************************************************************************************************/
 /********************************************** Ghater Phase ***************************************************/

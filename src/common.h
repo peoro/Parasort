@@ -29,7 +29,7 @@ void sequentialSort( const TestInfo *ti, Data *data );
 //merge k Data runs into an output Data
 void fileKMerge( Data *run_devices, const int k, Data *output_device );
 
-int getBucketIndex( const int *ele, const int *splitters, const dal_size_t length );
+int getBucketIndex( const int* ele, const int* splitters, const int length );
 void chooseSplitters( int *array, const dal_size_t length, const int n, int *newSplitters );
 void chooseSplittersFromData( Data *data, const int n, int *newSplitters );
 

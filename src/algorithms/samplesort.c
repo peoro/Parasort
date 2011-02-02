@@ -92,7 +92,7 @@ void sampleSort( const TestInfo *ti, Data *data )
 	dal_size_t			sdispls[n], rdispls[n];				//Send/receive buffer displacements
 	dal_size_t			i, j, k;
 
-	PhaseHandle 		scatterP, localP, samplingP, bucketsP, gatherP;
+	PhaseHandle 		scatterP, sortingP, computationP, localP, samplingP, bucketsP, gatherP;
 
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
@@ -111,12 +111,14 @@ void sampleSort( const TestInfo *ti, Data *data )
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
+	sortingP = startPhase( ti, "sorting" );
+	computationP = startPhase( ti, "computation" );
 
 /***************************************************************************************************************/
 /*********************************************** Local Phase ***************************************************/
 /***************************************************************************************************************/
 
-	localP = startPhase( ti, "local sorting" );
+	localP = startPhase( ti, "sequential sort" );
 
 	/* Sorting local data */
 	sequentialSort( ti, data );
@@ -139,7 +141,9 @@ void sampleSort( const TestInfo *ti, Data *data )
 		allSplitters = (int*) malloc ( ((n-1)*n) * sizeof(int) );
 		SPD_ASSERT( allSplitters != NULL, "not enough memory..." );
 	}
+	stopPhase( ti, computationP );
 	MPI_Gather( localSplitters, n-1, MPI_INT, allSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+	resumePhase( ti, computationP );
 
 	/* Choosing global splitters (n-1 equidistant elements of the allSplitters array) */
 	globalSplitters = localSplitters;     //--> To save space but keeping the correct semantics!!! :F
@@ -148,8 +152,10 @@ void sampleSort( const TestInfo *ti, Data *data )
 		qsort( allSplitters, (n-1)*n, sizeof(int), compare );
 		chooseSplitters( allSplitters, (n-1)*n, n, globalSplitters );
 	}
+	stopPhase( ti, computationP );
 	/* Broadcasting global splitters */
 	MPI_Bcast( globalSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+	resumePhase( ti, computationP );
 
 	stopPhase( ti, samplingP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -164,6 +170,7 @@ void sampleSort( const TestInfo *ti, Data *data )
 	/* Computing the number of integers to be sent to each process */
 	getSmallBucketLengths( data, globalSplitters, n, sendCounts );
 
+	stopPhase( ti, computationP );
 	/* Informing all processes on the number of elements that will receive */
 	MPI_Alltoall( sendCounts, 1, MPI_LONG_LONG, recvCounts, 1, MPI_LONG_LONG, MPI_COMM_WORLD );
 
@@ -179,6 +186,7 @@ void sampleSort( const TestInfo *ti, Data *data )
 	}
 	/* Sending data to the appropriate processes */
 	DAL_alltoallv( data, sendCounts, sdispls, recvCounts, rdispls );
+	resumePhase( ti, computationP );
 
 	/* Sorting local bucket */
 	sequentialSort( ti, data );
@@ -186,6 +194,8 @@ void sampleSort( const TestInfo *ti, Data *data )
 	stopPhase( ti, bucketsP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
+	stopPhase( ti, computationP );
+	stopPhase( ti, sortingP );
 
 /***************************************************************************************************************/
 /********************************************** Ghater Phase ***************************************************/

@@ -62,6 +62,7 @@ void fileMerge( const dal_size_t flength, const dal_size_t fdispl, Data *d1, con
 	Data buffer;
 	DAL_init( &buffer );
 	SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_allowedBufSize() ), "not enough memory..." );
+	DAL_ASSERT( DAL_dataSize( &buffer ) > 2, &buffer, "buffer size must be greater than 2" );
 
 	int bufSize = DAL_dataSize( &buffer ) / 3;
 	dal_size_t d1Count, d2Count, mergedCount;
@@ -234,7 +235,7 @@ void lbmergesort( const TestInfo *ti, Data *data )
 
 	int 				groupSize, idInGroup, partner, pairedGroupRoot, groupRoot;
 	int					i, j, k, h, flag;
-	PhaseHandle 		scatterP, localP, samplingP, mergeP, gatherP;
+	PhaseHandle 		scatterP, sortingP, computationP, localP, samplingP, mergeP, gatherP;
 
 	SPD_ASSERT( isPowerOfTwo( n ), "n should be a power of two (but it's %d)", n );
 
@@ -258,11 +259,13 @@ void lbmergesort( const TestInfo *ti, Data *data )
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
+	sortingP = startPhase( ti, "sorting" );
+	computationP = startPhase( ti, "computation" );
 
 /***************************************************************************************************************/
 /*********************************************** Local Phase ***************************************************/
 /***************************************************************************************************************/
-	localP = startPhase( ti, "local sorting" );
+	localP = startPhase( ti, "sequential sort" );
 
 	/* Sorting local data */
 	sequentialSort( ti, data );
@@ -285,7 +288,9 @@ void lbmergesort( const TestInfo *ti, Data *data )
 		allSplitters = (int*) malloc ( ((n-1)*n) * sizeof(int) );
 		SPD_ASSERT( allSplitters != NULL, "not enough memory..." );
 	}
+	stopPhase( ti, computationP );
 	MPI_Gather( localSplitters, n-1, MPI_INT, allSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+	resumePhase( ti, computationP );
 
 	/* Choosing global splitters (n-1 equidistant elements of the allSplitters array) */
 	globalSplitters = localSplitters;     //--> To save space but keeping the correct semantics!!! :F
@@ -294,8 +299,10 @@ void lbmergesort( const TestInfo *ti, Data *data )
 		qsort( allSplitters, (n-1)*n, sizeof(int), compare );
 		chooseSplitters( allSplitters, (n-1)*n, n, globalSplitters );
 	}
+	stopPhase( ti, computationP );
 	/* Broadcasting global splitters */
 	MPI_Bcast( globalSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+	resumePhase( ti, computationP );
 
 	stopPhase( ti, samplingP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -339,7 +346,9 @@ void lbmergesort( const TestInfo *ti, Data *data )
 
 		/* Exchanging data with the paired group avoiding deadlocks */
 		for ( h=1, j=partner; h<=groupSize; h++ ) {
+			stopPhase( ti, computationP );
 			recvDataLength += DAL_sendrecv( data, sendCounts[j], sdispls[j], &recvData, buffSize, recvDataLength, j );
+			resumePhase( ti, computationP );
 			sentDataLength += sendCounts[j];
 
 			j = ((id + h*flag) % groupSize + groupRoot) ^ groupSize;		//Selects the next partner to avoid deadlocks
@@ -352,6 +361,8 @@ void lbmergesort( const TestInfo *ti, Data *data )
 	stopPhase( ti, mergeP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
+	stopPhase( ti, computationP );
+	stopPhase( ti, sortingP );
 
 /***************************************************************************************************************/
 /********************************************** Ghater Phase ***************************************************/
@@ -372,10 +383,6 @@ void lbmergesort( const TestInfo *ti, Data *data )
 	}
 	/* Gathering sorted data */
 	DAL_gatherv( data, recvCounts, rdispls, root );
-
-// 	if( id == root )
-// 		DAL_PRINT_DATA( data, "Sorted Data" );
-
 
 	stopPhase( ti, gatherP );
 /*--------------------------------------------------------------------------------------------------------------*/

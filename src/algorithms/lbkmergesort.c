@@ -181,7 +181,7 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 	int					*globalSplitters = 0;            	//Global splitters (will be selected from the allSplitters array)
 
 	dal_size_t			i, j, k, h, z, flag;
-	PhaseHandle 		scatterP, localP, samplingP, multiwayMergeP, gatherP;
+	PhaseHandle 		scatterP, sortingP, computationP, localP, samplingP, multiwayMergeP, gatherP;
 	int 				groupSize, idInGroup, partner, pairedGroupRoot, groupRoot;
 
 	SPD_ASSERT( isPowerOfTwo( n ), "n should be a power of two (but it's %d)", n );
@@ -203,11 +203,13 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 	stopPhase( ti, scatterP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
+	sortingP = startPhase( ti, "sorting" );
+	computationP = startPhase( ti, "computation" );
 
 /***************************************************************************************************************/
 /*********************************************** Local Phase ***************************************************/
 /***************************************************************************************************************/
-	localP = startPhase( ti, "local sorting" );
+	localP = startPhase( ti, "sequential sort" );
 
 	/* Sorting local data */
 	sequentialSort( ti, data );
@@ -230,7 +232,9 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 		allSplitters = (int*) malloc ( ((n-1)*n) * sizeof(int) );
 		SPD_ASSERT( allSplitters != NULL, "not enough memory..." );
 	}
+	stopPhase( ti, computationP );
 	MPI_Gather( localSplitters, n-1, MPI_INT, allSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+	resumePhase( ti, computationP );
 
 	/* Choosing global splitters (n-1 equidistant elements of the allSplitters array) */
 	globalSplitters = localSplitters;     //--> To save space but keeping the correct semantics!!! :F
@@ -239,8 +243,10 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 		qsort( allSplitters, (n-1)*n, sizeof(int), compare );
 		chooseSplitters( allSplitters, (n-1)*n, n, globalSplitters );
 	}
+	stopPhase( ti, computationP );
 	/* Broadcasting global splitters */
 	MPI_Bcast( globalSplitters, n-1, MPI_INT, root, MPI_COMM_WORLD );
+	resumePhase( ti, computationP );
 
 	stopPhase( ti, samplingP );
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -280,7 +286,9 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 
 		/* Exchanging data with the paired group avoiding deadlocks */
 		for ( h=1, j=partner; h<=groupSize; h++ ) {
+			stopPhase( ti, computationP );
 			k = DAL_sendrecv( data, sendCounts[j], sdispls[j], &recvData[j], maxLocal_M, 0, j );
+			resumePhase( ti, computationP );
 			dataLength += k;
 			recvCounts[z++] = k;
 
@@ -297,6 +305,8 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 	stopPhase( ti, multiwayMergeP );
 /*--------------------------------------------------------------------------------------------------------------*/
 
+	stopPhase( ti, computationP );
+	stopPhase( ti, sortingP );
 
 /***************************************************************************************************************/
 /********************************************** Ghater Phase ***************************************************/
