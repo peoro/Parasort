@@ -102,41 +102,7 @@ $\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$ bytes)  & $T\_send$   & 
 
 \paragraph{MPI on Physics}
 
+\input{alg_efficiency}
 \input{performance}
-
-\subsection{Algorithms Efficiency}
-In this section, we are going to analyze the theoretical Algorithm Efficiency defined in~\ref{terminology}. For the sake of commodity, we report here the definition. Given
-\begin{itemize}
-\item $N$, the parallelism degree; 
-\item $m$, the number of steps of the algorithm;
-\item $X_i$, a random variable which counts the number of active processes that contribute to the calculation during the step $i$.
-\end{itemize}
-We defined the Algorithm Efficiency $\varphi$ as:
-\begin{center}
-$\varphi = \frac{\sum_{i=0}^m E[X_i]}{N \times m} $
-\end{center}
-In this section we want to give a roughly idea of how many of the $N$ processes with which a  Sorting Algorithms is launched are effectively exploited by the parallel logic of the algorithm. Therefore, we list the Algorithm Efficiency of each algorithm and then we refine the comments about the scalability of Sorting Algorithms given in section~\ref{performance-analysys}.
-
-\begin{itemize}
-\item \textbf{Mergesort.} $\varphi = \frac{\sum_{i=0}^{\log_2{N}} 2^i}{N \times \log_2{N}} $
-\begin{enumerate}
-\item $N = 16 \rightarrow \frac{31}{64} \approx 0.5$
-\item $N = 32 \rightarrow \frac{63}{160} \approx 0.39$
-\end{enumerate}
-
-\item \textbf{K-Way Mergesort.} TODO
-\begin{enumerate}
-\item TODO
-\end{enumerate}
-
-\item \textbf{Quicksort} TODO
-
-\item \textbf{Bitonicsort.} $\varphi = \frac{\sum_{i=0}^{(\log_2{N})^2} N}{N \times (\log_2{N})^2} = 1 $
-\item \textbf{Bucketsort, Samplesort.} In these algorithms steps have the characteristic of being heterogenous: a first step is the local sorting of datas, than a step of sampling and finally a step for building buckets. A process will never sleep, so we trivialy have: $\varphi = 1$.
-
-\item \textbf{Load Balanced Mergesort, K-Way Load Balanced Mergesort} TODO
-
-\end{itemize}
-
 
 \subsection{Comparing the results}
