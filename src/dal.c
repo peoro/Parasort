@@ -657,52 +657,35 @@ void DAL_send( Data *data, int dest )
 {
 	DAL_ASSERT( ! DAL_isInitialized(data), data, "data shouldn't have been initialized" );
 
-	/*
-	char buf[64];
-	DAL_DEBUG( data, "sending "DST" items to %d: %s", DAL_dataSize(data), dest, DAL_dataItemsToString(data,buf,sizeof(buf)) );
-	*/
+// 	char buf[64];
+// 	DAL_DEBUG( data, "sending "DST" items to %d: %s", DAL_dataSize(data), dest, DAL_dataItemsToString(data,buf,sizeof(buf)) );
 
-	Data buffer;
-	DAL_acquireGlobalBuffer( &buffer );
-
-	dal_size_t i = 0;
+	dal_size_t i;
 	dal_size_t r;
-	while( i < DAL_BLOCK_COUNT(data, &buffer) ) {
-		r = DAL_dataCopyO( data, i * DAL_dataSize(&buffer), &buffer, 0 );
-		DAL_MPI_SEND( buffer.array.data, r, MPI_INT, dest );
-		++ i;
-	}
+	Data globalBuf;
+	DAL_acquireGlobalBuffer( &globalBuf );
 
-	DAL_releaseGlobalBuffer( &buffer );
-
-	// TODO: optimize for Array
-
-	/*
-
-
-			Data buffer = DAL_buffer;
-			dal_size_t r;
-			dal_size_t total = 0;
-			while( total != DAL_dataSize(data) ) {
-				buffer = DAL_buffer; // to reset size
-				r = DAL_readDataBlock( data, DAL_dataSize(&buffer), 0, &buffer, 0 );
-				total += r;
-				if( r == 0 ) {
-					DAL_ERROR( data, "something went wrong, data should be "DST", but I could only read "DST"", DAL_dataSize(data), total );
-				}
-				buffer.array.size = r;
-				DAL_send( &buffer, dest );
+	switch( data->medium ) {
+		case File: {
+			for ( i=0; i<DAL_BLOCK_COUNT(data, &globalBuf); i++ ) {
+				r = DAL_dataCopyO( data, i * DAL_dataSize(&globalBuf), &globalBuf, 0 );
+				DAL_MPI_SEND( globalBuf.array.data, r, MPI_INT, dest );
 			}
 			break;
 		}
 		case Array: {
-			DAL_MPI_SEND( data->array.data, DAL_dataSize(data), MPI_INT, dest );
+			dal_size_t offset;
+			for ( i=0; i<DAL_BLOCK_COUNT(data, &globalBuf); i++ ) {
+				offset = i*DAL_dataSize(&globalBuf);
+				r = MIN( DAL_dataSize(data)-offset, DAL_dataSize(&globalBuf) );
+				DAL_MPI_SEND( data->array.data+offset, r, MPI_INT, dest );
+			}
 			break;
 		}
 		default:
 			DAL_UNSUPPORTED( data );
 	}
-	*/
+	DAL_releaseGlobalBuffer( &globalBuf );
 }
 
 /**
@@ -714,60 +697,36 @@ void DAL_send( Data *data, int dest )
 */
 void DAL_receive( Data *data, dal_size_t size, int source )
 {
-	char buf[64];
-	// DAL_DEBUG( data, "receiving "DST" items from %d", size, source );
+// 	char buf[64];
+// 	DAL_DEBUG( data, "receiving "DST" items from %d", size, source );
 
 	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
 
 	DAL_allocData( data, size );
-	Data buffer;
-	DAL_acquireGlobalBuffer( &buffer );
 
-	dal_size_t i = 0;
-	dal_size_t r;
-	while( i < DAL_BLOCK_COUNT(data, &buffer) ) {
-		r = DAL_MPI_RECEIVE( buffer.array.data, DAL_dataSize(&buffer), MPI_INT, source );
-		DAL_dataCopyO( &buffer, 0, data, i * DAL_dataSize(&buffer) );
-		++ i;
-	}
+	dal_size_t i;
+	Data globalBuf;
+	DAL_acquireGlobalBuffer( &globalBuf );
 
-	// DAL_DEBUG( data, "received "DST" items from %d: %s", DAL_dataSize(data), source, DAL_dataItemsToString(data,buf,sizeof(buf)) );
-
-	DAL_releaseGlobalBuffer( &buffer );
-
-
-
-#if 0
-	/*
-	char buf[64];
-	DAL_DEBUG( data, "receiving "DST" items from %d", size, source );
-	*/
-
-	if( DAL_allocArray( data, size ) ) {
-		// data->medium == Array
-		DAL_MPI_RECEIVE( data->array.data, size, MPI_INT, source );
-	}
-	else if( DAL_allocFile( data, size ) ) {
-		Data buffer = DAL_buffer;
-		dal_size_t missing = size;
-		while( missing != 0 ) {
-			if( missing < DAL_dataSize(&buffer) ) {
-				buffer.array.size = missing;
+	switch( data->medium ) {
+		case File: {
+			dal_size_t r;
+			for ( i=0; i<DAL_BLOCK_COUNT(data, &globalBuf); i++ ) {
+				r = DAL_MPI_RECEIVE( globalBuf.array.data, DAL_dataSize(&globalBuf), MPI_INT, source );
+				DAL_dataCopyO( &globalBuf, 0, data, i * DAL_dataSize(&globalBuf) );
 			}
-
-			DAL_MPI_RECEIVE( buffer.array.data, DAL_dataSize(&buffer), MPI_INT, source );
-			DAL_writeDataBlock( data, DAL_dataSize(&buffer), 0, &buffer, 0 );
-			missing -= DAL_dataSize( &buffer );
+			break;
 		}
+		case Array: {
+			for ( i=0; i<DAL_BLOCK_COUNT(data, &globalBuf); i++ ) {
+				DAL_MPI_RECEIVE( data->array.data+i*DAL_dataSize(&globalBuf), DAL_dataSize(&globalBuf), MPI_INT, source );
+			}
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( data );
 	}
-	else {
-		SPD_ERROR( "Couldn't allocate any medium to read "DST" items into...", size );
-	}
-
-	/*
-	DAL_DEBUG( data, "received "DST" items from %d: %s", DAL_dataSize(data), source, DAL_dataItemsToString(data,buf,sizeof(buf)) );
-	*/
-#endif
+	DAL_releaseGlobalBuffer( &globalBuf );
 }
 
 void DAL_sendU( Data *data, int dest )
