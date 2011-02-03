@@ -1,6 +1,6 @@
 MPICC = mpicc
 MPICPP = mpicxx
-CFLAGS = -D_FILE_OFFSET_BITS=64 -Wall -W -Wno-unused -O2 -g
+CFLAGS = -D_FILE_OFFSET_BITS=64 -DSPD_PIANOSA -Wall -W -Wno-unused -O2 -g
 ALGOCFLAGS = $(CFLAGS) -I.. -I. -L.. -fPIC -DSPD_PIANOSA
 SPDFLAGS = -ldl -rdynamic
 
@@ -34,15 +34,15 @@ main: spd spddbg spdlog
 
 spd: spd.c  $(OBJECTS)
 	@echo "Compiling spd..."
-	$(MPICC) -DSPD_PIANOSA $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -o spd
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -o spd
 
 spddbg: spd.c $(OBJECTS)
 	@echo "Compiling spddbg (debug mode)..."
-	$(MPICC) -DSPD_PIANOSA $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -DDEBUG -o spddbg
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -DDEBUG -o spddbg
 
 spdlog: spd.c
 	@echo "Compiling spdlog (profiling mode)..."
-	$(MPICC) -DSPD_PIANOSA $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -mpe=mpilog -o spdlog
+	$(MPICC) $(CFLAGS) -ldl -rdynamic spd.c $(OBJECTS) -mpe=mpilog -o spdlog
 
 tests:  $(TESTS)
 

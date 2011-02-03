@@ -82,7 +82,7 @@ dal_size_t DAL_getFileCursor( Data *d )
 	DAL_ASSERT( d->medium == File, d, "Data should be of type File" );
 
 #ifndef SPD_PIANOSA
-	return ftello64( d->file.handle ) / sizeof(int);
+	return ftello( d->file.handle ) / sizeof(int);
 #else
 	dal_size_t returnValue;
 	SPD_ASSERT( fgetpos64( d->file.handle, &returnValue ) == 0, "fgetpos64 error: %s", strerror(errno) );
@@ -93,7 +93,11 @@ void DAL_setFileCursor( Data *d, dal_size_t offset )
 {
 	DAL_ASSERT( d->medium == File, d, "Data should be of type File" );
 
+#ifndef SPD_PIANOSA
+	fseeko( d->file.handle, offset*sizeof(int), SEEK_SET );
+#else
 	fseeko64( d->file.handle, offset*sizeof(int), SEEK_SET );
+#endif
 
 	DAL_ASSERT( DAL_getFileCursor( d ) == offset, d, "DAL_setFileCursor error: file cursor = "DST" while offset = "DST, DAL_getFileCursor( d ), offset );
 }
