@@ -102,6 +102,8 @@ int nth_token_owner( const TestInfo *ti, int n )
 
 #define SWAP( a, i, j ) { int tmp; tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
 
+#define MIN(a,b) ( (a)<(b) ? (a) : (b) )
+
 /*
 // partitions the array:
 // a is the array, of size size. p is the pivot
@@ -122,7 +124,6 @@ long _partition( int *a, long size, int p )
 }
 */
 
-static PhaseHandle sequentialSortP; // time for sequentialSort()
 static PhaseHandle computationP; // time for local computation, but communication
 
 // \smaller contain the first partition (the one with smaller numbers than pivot)
@@ -152,34 +153,66 @@ void partition( Data *data, Data *smaller, Data *bigger )
 				DAL_destroy( &buf );
 			}
 			
+			// allocating partitions
 			DAL_allocData( smaller, DAL_dataSize(data) );
 			DAL_allocData( bigger, DAL_dataSize(data) );
 			dal_size_t smallIdx = 0, bigIdx = 0; // items copied into \smaller and \bigger
 			
-			dal_size_t i;
-			for( i = 0; i < DAL_dataSize(data); ++ i ) {
-				// using a 1-item buffer to load data one item by one item
-				Data buf;
-				DAL_init( &buf );
-				SPD_ASSERT( DAL_allocArray( &buf, 1 ), "not enough memory..." );
+			// initializing buffers
+			Data bufB, bufS, bufD; // buffers for bigger, smaller and data
+			dal_size_t bufSize; // size of the three buffers
+			dal_size_t bbIdx, bsIdx;
+			{
+				DAL_init( &bufB );
+				DAL_init( &bufS );
+				DAL_init( &bufD );
 				
-				DAL_dataCopyOS( data, i, &buf, 0, 1 ); // reading i-th item
-				if( buf.array.data[0] <= pivot ) {
-					// copying it to smaller
-					DAL_dataCopyOS( &buf, 0, smaller, smallIdx, 1 );
-					smallIdx ++;
-				}
-				else {
-					// copying it to bigger
-					DAL_dataCopyOS( &buf, 0, bigger, bigIdx, 1 );
-					bigIdx ++;
+				DAL_allocBuffer( &bufB, DAL_dataSize(data) );
+				DAL_allocBuffer( &bufS, DAL_dataSize(data) );
+				DAL_allocBuffer( &bufD, DAL_dataSize(data) );
+				bufSize = MIN( DAL_dataSize(&bufB), MIN( DAL_dataSize(&bufS), DAL_dataSize(&bufD) ) );
+				// these should let buffers in memory...
+				DAL_reallocData( &bufB, bufSize );
+				DAL_reallocData( &bufS, bufSize );
+				DAL_reallocData( &bufD, bufSize );
+				
+				DAL_ASSERT( bufB.medium == Array, &bufB, "Buffer for bigger partition not in memory..." );
+				DAL_ASSERT( bufS.medium == Array, &bufS, "Buffer for smaller partition not in memory..." );
+				DAL_ASSERT( bufD.medium == Array, &bufD, "Buffer for data not in memory..." );
+			}
+			
+			dal_size_t i, j;
+			for( i = 0; i < DAL_dataSize(data); i += bufSize ) {
+				DAL_dataCopyOS( data, i, &bufD, 0, bufSize ); // reading one block from \data
+				
+				// partitioning data in buffers \smaller and \bigger
+				bbIdx = bsIdx = 0;
+				for( j = 0; j < bufSize; ++ j ) {
+					if( bufD.array.data[j] > pivot ) {
+						DAL_dataCopyOS( &bufD, j, &bufB, bbIdx, 1 );
+						bbIdx ++;
+					} else {
+						DAL_dataCopyOS( &bufD, j, &bufS, bsIdx, 1 );
+						bsIdx ++;
+					}
 				}
 				
-				DAL_destroy( &buf );
+				// flushing out \smaller and \bigger
+				DAL_dataCopyOS( &bufB, 0, bigger, bigIdx, bbIdx );
+				bigIdx += bbIdx;
+				DAL_dataCopyOS( &bufS, 0, smaller, smallIdx, bsIdx );
+				smallIdx += bsIdx;
 			}
 			
 			DAL_reallocData( smaller, smallIdx );
 			DAL_reallocData( bigger, bigIdx );
+			
+			// destroying buffers
+			{
+				DAL_destroy( &bufB );
+				DAL_destroy( &bufS );
+				DAL_destroy( &bufD );
+			}
 			
 #if 0
 			int pivotIndex = rand() % data->array.size;
