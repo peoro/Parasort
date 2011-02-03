@@ -1,12 +1,22 @@
 \label{conclusion}
 \section{Conclusions}
-In this report we explained goals and current state of our work. First, we spent a lot of efforts in understanding the state of the art of parallel sorting by searching in books and papers. Once gathered sufficient informations, we designed a framework to address all the problems that would have been common to all our algorithms: e.g.: generation, loading and storing of data, timing, initialization of the MPI environment and so on. Keep in mind that, thanks to its modularity, we will be able to exploit the features of our framework for any new sorting algorithm we would like to implement. 
+In our project the goal was to study the state-of-the-art of parallel sorting algorithm, implement them on top of MPI and finally make a comparison. In spite of the apparent simplicity, a lot of problems arised due to a lot of different factors.  
 
-\subsection{Future Works}
+The first thing we understood is that we needed a common framework to let algorithms share a set of specific functionalities (timing functions, generation of data set and so on). From this intuition, we decided to implement the Sorting Framework layer. We noticed also that each Sorting Algorithm is characterized by its own parallel logic, but also by a phase of sequential sorting common to all the algorithms. Therefore, Sorting Framework provides all Sorting Algorithms with the same sequential algorithm, namely the \textit{Sequential Sort}, an implementation of the well-known \textit{K-Way Mergesort}. This way, we have achieved a first important result: \textit{decoupling the parallel logic of an algorithm from the sequential one}. 
+
+Then, we early understood that handling data sets that cannot fit the primary memory would not have been so straightforward. We had two choices: either let each Sorting Algorithm to take care of the I/O part or adopting a structured approach common to the algorithms. The former approach is obviously unacceptable in terms of implementation complexity, that is why we have ideated the Data Abstraction Layer. The DAL logically place below the Sorting Framework to offer a fundamental abstraction: elements as \textit{atomic set of datas}. Users exploit DAL by designing parallel applications that do not have to take care both where and how elements are stored: they could be either in primary memory, on a disk, striped on multi-disks or even in a compressed format. We think also that we would not have any significative benefits, in terms of performance, if we had choosed the complex approach without the DAL. Finally, recall that the DAL is not strictly related to the Sorting Algorithms themselves, but rather it can be considered a new parallel programming tool.
+
+Thanks to this approach, studying a Sorting Algorithm requires to focus only on the parallel strategy to sort the data set. By looking at the literature, we have understood that the most known parallel sorting algorithms were Mergesort, Bucketsort, Samplesort and Bitonicsort. Moreover, Bitonicsort seemed to be the only one originally conceived with a parallel logic, while the others were just readaptations (to be honest, not so good) of the sequential logic in a parallel context. Therefore, we first rewrite and adapted these algorithms on top of our framework. Then, we decided to study new possible algorithms. Our idea was very simple: move the ''Divide'' or the ''Conquer'' phase of a sequential algorithm to a parallel level. It was exactly what happened for the parallel version of mergesort: the conquer phase was made between the processes of the Sorting Algorithm. Thus, we studied parallel versions of Quicksort and K-Way Mergesort. Finally, we concentrated on the Load-Balanced Mergesort, a parallel version of Mergesort aimed at obtaining the algorithm efficiency as high as possible. We developed also a second version of this latter algorithm, namely the K-Way Load-Balanced Mergesort. 
+
+Once implemented all these things (it tooks about 10000 lines of code and a lot of time for debugging!), the final step has been to evaluate and to compare the performance of the Sorting Algorithms, leading to the results explained in section~\ref{performance-analysys}. 
+
+There are a lot of possible future works:  
 \begin{itemize}
-\item Asynchronous I/O to send \texttt{Data}. 
-\item Dynamic approach within DAL.
+\item Studying and implementing new Parallel Sorting Algorithms on top of our framework.
+\item Make a comparison with other parallel sorting algorithms developed in other contexts. In particular, we should understand which is the approach used by those algorithms for managing data set that cannot fit the primary memory.
+\item Evaluate the possibility of introducing asynchronous I/O within the \texttt{Data}. 
+\item Implement the $dynamic approach$ for the communication buffer of the DAL.
 \item Structuring the Sorting DAL layer.
-\item Better implementation of the $DAL\_allowedBufSize$.
-\item Measuring the DAL overhead for sorting data sets that can fit the primary memory.
+\item Find better heuristics for the $DAL\_allowedBufSize$, the function of the DAL that establish the maximum amount of memory that a process is allowed to allocate.
+\item In general, estimating the overhead introduced by the DAL with respect to a solution in which each Sorting Algorithm uses its own strategy for the I/O system.
 \end{itemize}
