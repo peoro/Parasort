@@ -700,9 +700,7 @@ void DAL_receive( Data *data, dal_size_t size, int source )
 // 	char buf[64];
 // 	DAL_DEBUG( data, "receiving "DST" items from %d", size, source );
 
-	DAL_ASSERT( DAL_isInitialized(data), data, "data should have been initialized" );
-
-	DAL_allocData( data, size );
+	SPD_ASSERT( DAL_allocData( data, size ), "not enough space to allocate data" );
 
 	dal_size_t i;
 	Data globalBuf;
@@ -1483,26 +1481,63 @@ void DAL_alltoallv( Data *data, dal_size_t *scounts, dal_size_t *sdispls, dal_si
 
 
 
-
 void DAL_bcastSend( Data *data )
 {
+	dal_size_t i;
+	dal_size_t r;
+	Data globalBuf;
+	DAL_acquireGlobalBuffer( &globalBuf );
+
 	switch( data->medium ) {
 		case File: {
-			DAL_UNIMPLEMENTED( data );
+			for ( i=0; i<DAL_BLOCK_COUNT(data, &globalBuf); i++ ) {
+				r = DAL_dataCopyO( data, i * DAL_dataSize(&globalBuf), &globalBuf, 0 );
+				MPI_Bcast( globalBuf.array.data, r, MPI_INT, GET_ID(), MPI_COMM_WORLD );
+			}
 			break;
 		}
 		case Array: {
-			MPI_Bcast( data->array.data, data->array.size, MPI_INT, GET_ID(), MPI_COMM_WORLD );
+			dal_size_t offset;
+			for ( i=0; i<DAL_BLOCK_COUNT(data, &globalBuf); i++ ) {
+				offset = i*DAL_dataSize(&globalBuf);
+				r = MIN( DAL_dataSize(data)-offset, DAL_dataSize(&globalBuf) );
+				MPI_Bcast( data->array.data+offset, r, MPI_INT, GET_ID(), MPI_COMM_WORLD );
+			}
 			break;
 		}
 		default:
 			DAL_UNSUPPORTED( data );
 	}
+	DAL_releaseGlobalBuffer( &globalBuf );
+
 }
 void DAL_bcastReceive( Data *data, dal_size_t size, int root )
 {
-	SPD_ASSERT( DAL_allocArray( data, size ), "not enough memory to allocate data" );
-	MPI_Bcast( data->array.data, size, MPI_INT, root, MPI_COMM_WORLD );
+	SPD_ASSERT( DAL_allocData( data, size ), "not enough space to allocate data" );
+
+	dal_size_t i;
+	Data globalBuf;
+	DAL_acquireGlobalBuffer( &globalBuf );
+
+	switch( data->medium ) {
+		case File: {
+			dal_size_t r;
+			for ( i=0; i<DAL_BLOCK_COUNT(data, &globalBuf); i++ ) {
+				r = MPI_Bcast( globalBuf.array.data, DAL_dataSize(&globalBuf), MPI_INT, root, MPI_COMM_WORLD );
+				DAL_dataCopyO( &globalBuf, 0, data, i * DAL_dataSize(&globalBuf) );
+			}
+			break;
+		}
+		case Array: {
+			for ( i=0; i<DAL_BLOCK_COUNT(data, &globalBuf); i++ ) {
+				MPI_Bcast( data->array.data+i*DAL_dataSize(&globalBuf), DAL_dataSize(&globalBuf), MPI_INT, root, MPI_COMM_WORLD );
+			}
+			break;
+		}
+		default:
+			DAL_UNSUPPORTED( data );
+	}
+	DAL_releaseGlobalBuffer( &globalBuf );
 }
 /**
 * @brief Broadcasts data to processes
