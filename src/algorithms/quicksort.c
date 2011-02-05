@@ -181,13 +181,13 @@ void partition( Data *data, Data *smaller, Data *bigger )
 				DAL_ASSERT( bufD.medium == Array, &bufD, "Buffer for data not in memory..." );
 			}
 			
-			dal_size_t i, j;
-			for( i = 0; i < DAL_dataSize(data); i += bufSize ) {
-				DAL_dataCopyOS( data, i, &bufD, 0, bufSize ); // reading one block from \data
+			dal_size_t i = 0, j;
+			while( i < DAL_dataSize(data) ) {
+				dal_size_t realBufSize = DAL_dataCopyO( data, i, &bufD, 0 ); // reading one block from \data
 				
 				// partitioning data in buffers \smaller and \bigger
 				bbIdx = bsIdx = 0;
-				for( j = 0; j < bufSize; ++ j ) {
+				for( j = 0; j < realBufSize; ++ j ) {
 					if( bufD.array.data[j] > pivot ) {
 						DAL_dataCopyOS( &bufD, j, &bufB, bbIdx, 1 );
 						bbIdx ++;
@@ -202,6 +202,8 @@ void partition( Data *data, Data *smaller, Data *bigger )
 				bigIdx += bbIdx;
 				DAL_dataCopyOS( &bufS, 0, smaller, smallIdx, bsIdx );
 				smallIdx += bsIdx;
+				
+				i += realBufSize;
 			}
 			
 			DAL_reallocData( smaller, smallIdx );
