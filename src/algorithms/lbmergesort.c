@@ -354,8 +354,7 @@ void lbmergesort( const TestInfo *ti, Data *data )
 			j = ((id + h*flag) % groupSize + groupRoot) ^ groupSize;		//Selects the next partner to avoid deadlocks
 		}
  		mergeData( recvDataLength, 0, &recvData, dataLength-sentDataLength, sdispls[groupRoot], data );
-		dataLength = dataLength - sentDataLength + recvDataLength;
-		DAL_destroy( &recvData );
+		dataLength = dataLength - sentDataLength + recvDataLength;		
 	}
 
 	stopPhase( ti, mergeP );

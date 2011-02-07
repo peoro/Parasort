@@ -240,7 +240,7 @@ void DAL_initialize( int *argc, char ***argv )
 	MPI_Init( argc, argv );
 
 	DAL_init( & DAL_buffer );
-	DAL_allocBuffer( & DAL_buffer, 1024*1024*10 ); // TODO: find a better size... 10 MB for now
+	DAL_allocBuffer( & DAL_buffer, 1024*1024*10 ); // TODO: find a better size... 40MB (10 Mega integers) for now
 }
 void DAL_finalize( )
 {
@@ -786,10 +786,7 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 	MPI_Status 	status;
 
 	if( rdata->medium == NoMedium ) {
-		SPD_ASSERT( DAL_allocData( rdata, rdispl+rcount ), "not enough space to allocate data" );
-	}
-	else {
-		SPD_ASSERT( DAL_reallocData( rdata, rdispl+rcount ), "not enough space to allocate data" );
+		SPD_ASSERT( DAL_allocData( rdata, 0 ), "not enough space to allocate data" );
 	}
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
@@ -813,13 +810,13 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 
 		MPI_Sendrecv( sendBuf->array.data, sc, MPI_INT, partner, 100, recvBuf->array.data, rc, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
 		MPI_Get_count( &status, MPI_INT, &rc );
-
-		if ( rc ) {
+		
+		if ( rc ) {		
+			SPD_ASSERT( DAL_reallocData( rdata, DAL_dataSize(rdata)+rc ), "not enough space to allocate data" );
 			DAL_dataCopyOS( recvBuf, 0, rdata, rdispl + recvCount, rc );
 			recvCount += rc;
 		}
 	}
-	SPD_ASSERT( DAL_reallocData( rdata, rdispl+recvCount ), "not enough space to allocate data" );
 
 	DAL_releaseGlobalBuffer( &globalBuf );
 
