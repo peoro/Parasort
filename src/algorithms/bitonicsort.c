@@ -184,9 +184,6 @@ void bitonicSort( const TestInfo *ti, Data *data )
 
 	SPD_ASSERT( isPowerOfTwo( n ), "n should be a power of two (but it's %d)", n );
 
-	/* Initializing data objects */
-	DAL_init( &recvData );
-
 /***************************************************************************************************************/
 /********************************************* Scatter Phase ***************************************************/
 /***************************************************************************************************************/
@@ -224,12 +221,14 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	/* Bitonic Sort */
 	for ( i=1, mask=2; i<=k; i++, mask<<=1 ) {
 		mask2 = 1 << (i - 1);					//Bitmask for partner selection
-		flag = (id & mask) == 0 ? -1 : 1;		//flag=-1 iff id has a 0 at the i-th bit, flag=1 otherwise (NOTE: mask = 2^i)
-
+		flag = (id & mask) == 0 ? -1 : 1;		//flag=-1 iff id has a 0 at the i-th bit, flag=1 otherwise (NOTE: mask = 2^i)		
+		
 		for ( j=0; j<i; j++, mask2>>=1 ) {
 			partner = id ^ mask2;				//Selects as partner the process with rank that differs from id only at the j-th bit
 
-			stopPhase( ti, computationP );
+			DAL_init( &recvData );
+			
+			stopPhase( ti, computationP );			
 			DAL_sendrecv( data, local_M, 0, &recvData, recvCount, 0, partner );		//Exchanging data with partner
 			resumePhase( ti, computationP );
 
@@ -238,6 +237,8 @@ void bitonicSort( const TestInfo *ti, Data *data )
 				compareLowData( &recvData, data );
 			else
 				compareHighData( &recvData, data );
+			
+			DAL_destroy(&recvData);
 		}
 	}
 
@@ -257,9 +258,6 @@ void bitonicSort( const TestInfo *ti, Data *data )
 
 	stopPhase( ti, gatherP );
 /*--------------------------------------------------------------------------------------------------------------*/
-
-	/* Freeing memory */
-	DAL_destroy( &recvData );
 }
 
 void mainSort( const TestInfo *ti, Data *data )

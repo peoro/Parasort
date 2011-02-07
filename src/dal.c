@@ -812,7 +812,7 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 		MPI_Get_count( &status, MPI_INT, &rc );
 		
 		if ( rc ) {		
-			SPD_ASSERT( DAL_reallocData( rdata, DAL_dataSize(rdata)+rc ), "not enough space to allocate data" );
+			SPD_ASSERT( DAL_reallocData( rdata, MAX(DAL_dataSize(rdata),rdispl)+rc ), "not enough space to allocate data" );
 			DAL_dataCopyOS( recvBuf, 0, rdata, rdispl + recvCount, rc );
 			recvCount += rc;
 		}
