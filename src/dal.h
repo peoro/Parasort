@@ -154,7 +154,7 @@ void DAL_receiveU( Data *data, int source );
 void DAL_receiveA( Data *data, dal_size_t size, int source );
 void DAL_receiveAU( Data *data, int source );
 
-dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data *rdata, dal_size_t rcount, dal_size_t rdispl, int partner );
+dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data *rdata, dal_size_t rdispl, int partner );
 
 // scatter
 void DAL_scatterSend( Data *data );

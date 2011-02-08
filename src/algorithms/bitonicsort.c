@@ -175,7 +175,6 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	const dal_size_t	local_M = GET_LOCAL_M( ti );        //Number of elements assigned to each process
 
 	Data				recvData;
-	dal_size_t 			recvCount = local_M;				//Number of elements that will be received from partner
 
 	int					mask, mask2, partner;
 	int					i, j, k, z, flag;
@@ -218,6 +217,8 @@ void bitonicSort( const TestInfo *ti, Data *data )
 
 	k = _log2( n );		//Number of steps of the outer loop
 
+	DAL_init( &recvData );
+			
 	/* Bitonic Sort */
 	for ( i=1, mask=2; i<=k; i++, mask<<=1 ) {
 		mask2 = 1 << (i - 1);					//Bitmask for partner selection
@@ -225,11 +226,9 @@ void bitonicSort( const TestInfo *ti, Data *data )
 		
 		for ( j=0; j<i; j++, mask2>>=1 ) {
 			partner = id ^ mask2;				//Selects as partner the process with rank that differs from id only at the j-th bit
-
-			DAL_init( &recvData );
 			
 			stopPhase( ti, computationP );			
-			DAL_sendrecv( data, local_M, 0, &recvData, recvCount, 0, partner );		//Exchanging data with partner
+			DAL_sendrecv( data, local_M, 0, &recvData, 0, partner );		//Exchanging data with partner
 			resumePhase( ti, computationP );
 
 			/* Each process must call the dual function of its partner */
@@ -237,10 +236,9 @@ void bitonicSort( const TestInfo *ti, Data *data )
 				compareLowData( &recvData, data );
 			else
 				compareHighData( &recvData, data );
-			
-			DAL_destroy(&recvData);
 		}
-	}
+	}			
+	DAL_destroy(&recvData);
 
 	stopPhase( ti, mergeP );
 /*--------------------------------------------------------------------------------------------------------------*/

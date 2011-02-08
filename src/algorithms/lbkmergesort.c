@@ -15,6 +15,12 @@
 #include "../common.h"
 #include "../dal_internals.h"
 
+#ifndef SPD_PIANOSA
+	#define MPI_DST MPI_LONG
+#else
+	#define MPI_DST MPI_LONG_LONG
+#endif
+
 #define MIN(a,b) ( (a)<(b) ? (a) : (b) )
 #define MAX(a,b) ( (a)>(b) ? (a) : (b) )
 
@@ -168,7 +174,6 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 	const int			id = GET_ID( ti );                	//Rank (ID) of the process
 	const int			n = GET_N( ti );                   	//Number of processes
 	const dal_size_t	M = GET_M( ti );                   	//Number of data elements
-	const dal_size_t	maxLocal_M = M / n + (0 < M%n);    	//Max number of elements assigned to a process
 	dal_size_t 			dataLength = GET_LOCAL_M( ti );     //Number of elements assigned to this process
 
 	dal_size_t 			sendCounts[n], recvCounts[n];		//Number of elements in send/receive buffers
@@ -287,7 +292,7 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 		/* Exchanging data with the paired group avoiding deadlocks */
 		for ( h=1, j=partner; h<=groupSize; h++ ) {
 			stopPhase( ti, computationP );
-			k = DAL_sendrecv( data, sendCounts[j], sdispls[j], &recvData[j], maxLocal_M, 0, j );
+			k = DAL_sendrecv( data, sendCounts[j], sdispls[j], &recvData[j], 0, j );
 			resumePhase( ti, computationP );
 			dataLength += k;
 			recvCounts[z++] = k;
@@ -295,9 +300,10 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 			j = ((id + h*flag) % groupSize + groupRoot) ^ groupSize;		//Selects the next partner to avoid deadlocks
 		}
 	}
-	k = DAL_sendrecv( data, sendCounts[id], sdispls[id], &recvData[id], sendCounts[id], 0, id );
-	dataLength += k;
-	recvCounts[z] = k;
+	DAL_allocData( &recvData[id], sendCounts[id] );
+	DAL_dataCopyOS( data, sdispls[id], &recvData[id], 0, sendCounts[id] );	
+	dataLength += sendCounts[id];
+	recvCounts[z] = sendCounts[id];
 
 	/* Merging received data */
 	kmergeData( recvData, n, dataLength, data );
@@ -314,7 +320,7 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 	gatherP = startPhase( ti, "gathering" );
 
 	/* Gathering the lengths of the all buckets */
-	MPI_Gather( &dataLength, 1, MPI_LONG_LONG, recvCounts, 1, MPI_LONG_LONG, root, MPI_COMM_WORLD );
+	MPI_Gather( &dataLength, 1, MPI_DST, recvCounts, 1, MPI_DST, root, MPI_COMM_WORLD );
 
 	/* Computing displacements relative to the output array at which to place the incoming data from each process  */
 	if ( id == root ) {

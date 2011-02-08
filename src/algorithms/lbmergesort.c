@@ -14,6 +14,12 @@
 #include "../common.h"
 #include "../dal_internals.h"
 
+#ifndef SPD_PIANOSA
+	#define MPI_DST MPI_LONG
+#else
+	#define MPI_DST MPI_LONG_LONG
+#endif
+
 #define MIN(a,b) ( (a)<(b) ? (a) : (b) )
 #define MAX(a,b) ( (a)>(b) ? (a) : (b) )
 
@@ -216,8 +222,6 @@ void lbmergesort( const TestInfo *ti, Data *data )
 	const int			id = GET_ID( ti );                  	//Rank (ID) of the process
 	const int			n = GET_N( ti );                    	//Number of processes
 	const dal_size_t	M = GET_M( ti );                    	//Number of data elements
-	const dal_size_t	maxLocal_M = M / n + (0 < M%n);     	//Max number of elements assigned to a process
-	const dal_size_t	buffSize = n > 4 ? (n>>1)*maxLocal_M : 2*maxLocal_M;
 
 	dal_size_t			dataLength = GET_LOCAL_M( ti );         //Number of elements assigned to this process
 	dal_size_t			recvDataLength, sentDataLength;
@@ -347,7 +351,7 @@ void lbmergesort( const TestInfo *ti, Data *data )
 		/* Exchanging data with the paired group avoiding deadlocks */
 		for ( h=1, j=partner; h<=groupSize; h++ ) {
 			stopPhase( ti, computationP );
-			recvDataLength += DAL_sendrecv( data, sendCounts[j], sdispls[j], &recvData, buffSize, recvDataLength, j );
+			recvDataLength += DAL_sendrecv( data, sendCounts[j], sdispls[j], &recvData, recvDataLength, j );
 			resumePhase( ti, computationP );
 			sentDataLength += sendCounts[j];
 
@@ -369,7 +373,7 @@ void lbmergesort( const TestInfo *ti, Data *data )
 	gatherP = startPhase( ti, "gathering" );
 
 	/* Gathering the lengths of the all buckets */
-	MPI_Gather( &dataLength, 1, MPI_LONG_LONG, recvCounts, 1, MPI_LONG_LONG, root, MPI_COMM_WORLD );
+	MPI_Gather( &dataLength, 1, MPI_DST, recvCounts, 1, MPI_DST, root, MPI_COMM_WORLD );
 
 	/* Computing displacements relative to the output array at which to place the incoming data from each process  */
 	if ( id == root ) {

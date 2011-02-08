@@ -14,6 +14,12 @@
 #include "../common.h"
 #include "../dal_internals.h"
 
+#ifndef SPD_PIANOSA
+	#define MPI_DST MPI_LONG
+#else
+	#define MPI_DST MPI_LONG_LONG
+#endif
+
 #define MIN(a,b) ( (a)<(b) ? (a) : (b) )
 #define MAX(a,b) ( (a)>(b) ? (a) : (b) )
 
@@ -172,7 +178,7 @@ void sampleSort( const TestInfo *ti, Data *data )
 
 	stopPhase( ti, computationP );
 	/* Informing all processes on the number of elements that will receive */
-	MPI_Alltoall( sendCounts, 1, MPI_LONG_LONG, recvCounts, 1, MPI_LONG_LONG, MPI_COMM_WORLD );
+	MPI_Alltoall( sendCounts, 1, MPI_DST, recvCounts, 1, MPI_DST, MPI_COMM_WORLD );
 
 	/* Computing the displacements */
 	for ( j=0, k=0, i=0; i<n; i++ ) {
@@ -203,7 +209,7 @@ void sampleSort( const TestInfo *ti, Data *data )
 	gatherP = startPhase( ti, "gathering" );
 
 	/* Gathering the lengths of the all buckets */
-	MPI_Gather( &j, 1, MPI_LONG_LONG, recvCounts, 1, MPI_LONG_LONG, root, MPI_COMM_WORLD );
+	MPI_Gather( &j, 1, MPI_DST, recvCounts, 1, MPI_DST, root, MPI_COMM_WORLD );
 
 	/* Computing displacements relative to the output array at which to place the incoming data from each process  */
 	if ( id == root ) {

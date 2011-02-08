@@ -6,6 +6,11 @@
 #include "dal.h"
 #include "dal_internals.h"
 
+#ifndef SPD_PIANOSA
+	#define MPI_DST MPI_LONG
+#else
+	#define MPI_DST MPI_LONG_LONG
+#endif
 
 #define MIN(a,b) ( (a)<(b) ? (a) : (b) )
 #define MAX(a,b) ( (a)>(b) ? (a) : (b) )
@@ -731,13 +736,13 @@ void DAL_sendU( Data *data, int dest )
 {
 	dal_size_t size = DAL_dataSize(data);
 	//SPD_DEBUG( "telling I'll be sending "DST" items", size );
-	DAL_MPI_SEND( & size, 1, MPI_LONG_LONG, dest ); // sending size
+	DAL_MPI_SEND( & size, 1, MPI_DST, dest ); // sending size
 	DAL_send( data, dest ); // sending data
 }
 void DAL_receiveU( Data *data, int source )
 {
 	dal_size_t size;
-	DAL_MPI_RECEIVE( &size, 1, MPI_LONG_LONG, source ); // receiving size
+	DAL_MPI_RECEIVE( &size, 1, MPI_DST, source ); // receiving size
 	//SPD_DEBUG( "heard I'll be receiving "DST" items", size );
 	DAL_receive( data, size, source ); // receiving data
 }
@@ -760,7 +765,7 @@ void DAL_receiveA( Data *data, dal_size_t size, int source )
 void DAL_receiveAU( Data *data, int source )
 {
 	dal_size_t size;
-	DAL_MPI_RECEIVE( &size, 1, MPI_LONG_LONG, source ); // receiving size
+	DAL_MPI_RECEIVE( &size, 1, MPI_DST, source ); // receiving size
 	//SPD_DEBUG( "heard I'll be appending "DST" items to the "DST" I've already got", size, data->array.size );
 	DAL_receiveA( data, size, source ); // receiving data
 }
@@ -779,14 +784,19 @@ void DAL_receiveAU( Data *data, int source )
 *
 * @returns Number of received integers
 */
-dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data* rdata, dal_size_t rcount, dal_size_t rdispl, int partner )
+dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data* rdata, dal_size_t rdispl, int partner )
 {
-	int i, sc, rc, tmp;
-	dal_size_t recvCount = 0;
+	int i, sc, rc, tmp;	
+	dal_size_t rcount, recvCount = 0;
 	MPI_Status 	status;
+	
+	MPI_Sendrecv( &scount, 1, MPI_DST, partner, 100, &rcount, 1, MPI_DST, partner, 100, MPI_COMM_WORLD, &status );
 
 	if( rdata->medium == NoMedium ) {
-		SPD_ASSERT( DAL_allocData( rdata, 0 ), "not enough space to allocate data" );
+		SPD_ASSERT( DAL_allocData( rdata, rcount ), "not enough space to allocate data" );
+	}
+	else {
+		SPD_ASSERT( DAL_reallocData( rdata, rdispl+rcount ), "not enough space to allocate data" );
 	}
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
@@ -795,9 +805,10 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 	Data *sendBuf = &bufs[0];
 	Data *recvBuf = &bufs[1];
 
-	//Retrieving the number of iterations
+	//Retrieving the number of iterations	
+	dal_size_t max_count = MAX( scount, rcount );
 	int blockSize = DAL_dataSize(sendBuf);
-	int num_iterations = rcount / blockSize + (rcount % blockSize > 0);
+	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 
 	for ( i=0; i<num_iterations; i++ ) {
 		tmp = MIN( blockSize, (scount-i*blockSize) );		//Number of elements to be sent to the partner process by MPI_Sendrecv
@@ -811,8 +822,7 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 		MPI_Sendrecv( sendBuf->array.data, sc, MPI_INT, partner, 100, recvBuf->array.data, rc, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
 		MPI_Get_count( &status, MPI_INT, &rc );
 		
-		if ( rc ) {		
-			SPD_ASSERT( DAL_reallocData( rdata, MAX(DAL_dataSize(rdata),rdispl)+rc ), "not enough space to allocate data" );
+		if ( rc ) {					
 			DAL_dataCopyOS( recvBuf, 0, rdata, rdispl + recvCount, rc );
 			recvCount += rc;
 		}
@@ -1092,7 +1102,7 @@ void DAL_scattervSend( Data *data, dal_size_t *counts, dal_size_t *displs )
 	for ( i=0; i<GET_N(); i++ )
 		if ( counts[i] > max_count )
 			max_count = counts[i];
-	MPI_Bcast( &max_count, 1, MPI_LONG_LONG, GET_ID(), MPI_COMM_WORLD );
+	MPI_Bcast( &max_count, 1, MPI_DST, GET_ID(), MPI_COMM_WORLD );
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int s, tmp;
 
@@ -1148,7 +1158,7 @@ void DAL_scattervReceive( Data *data, dal_size_t count, int root )
 
 	//Retrieving the number of iterations
 	dal_size_t max_count;
-	MPI_Bcast( &max_count, 1, MPI_LONG_LONG, root, MPI_COMM_WORLD );
+	MPI_Bcast( &max_count, 1, MPI_DST, root, MPI_COMM_WORLD );
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int recvCount, tmp;
 
@@ -1216,7 +1226,7 @@ void DAL_gathervSend( Data *data, int root )
 	//Retrieving the number of iterations
 	dal_size_t max_count;
 	dal_size_t size = DAL_dataSize(data);
-	MPI_Allreduce( &size, &max_count, 1, MPI_LONG_LONG, MPI_MAX, MPI_COMM_WORLD );
+	MPI_Allreduce( &size, &max_count, 1, MPI_DST, MPI_MAX, MPI_COMM_WORLD );
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int sendCount, tmp;
 
@@ -1266,7 +1276,7 @@ void DAL_gathervReceive( Data *data, dal_size_t *counts, dal_size_t *displs )
 
 	//Retrieving the number of iterations
 	dal_size_t max_count = 0;
-	MPI_Allreduce( &counts[GET_ID()], &max_count, 1, MPI_LONG_LONG, MPI_MAX, MPI_COMM_WORLD );
+	MPI_Allreduce( &counts[GET_ID()], &max_count, 1, MPI_DST, MPI_MAX, MPI_COMM_WORLD );
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int r, tmp;
 
@@ -1439,7 +1449,7 @@ void DAL_alltoallv( Data *data, dal_size_t *scounts, dal_size_t *sdispls, dal_si
 
 	//Retrieving the number of iterations
 	dal_size_t max_count;
-	MPI_Allreduce( &rcount, &max_count, 1, MPI_LONG_LONG, MPI_MAX, MPI_COMM_WORLD );
+	MPI_Allreduce( &rcount, &max_count, 1, MPI_DST, MPI_MAX, MPI_COMM_WORLD );
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int s, r, tmp;
 
