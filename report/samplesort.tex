@@ -7,6 +7,8 @@ The goal of \textit{sample sort} is to determine the ranges so that each bucket 
 	\item each partition is sorted and a sample of $n-1$ evenly spaced numbers is chosen from each of them;
 	\item the obtained $n \cdot (n-1)$ samples are then sorted, and again $n-1$ equally spaced numbers are selected as global splitters;
 \end{enumerate}
+It is shown that no bucket will receive more than $4 \cdot \frac{M}{n}$ elements with probability at least $1/2$ ~\cite{SAN}.
+
 After the range of each bucket is set by the splitters, the algorithm continues in the same fashion as bucket sort, with the only difference in placing the numbers in small buckets, operation that now requires for each element a binary search on the array of splitters.
 
 The parallel version of the algorithm works as follows:
