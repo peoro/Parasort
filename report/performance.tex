@@ -90,7 +90,8 @@ Finally, we observe an interesting behaviour. We consider again the Time Complet
 \end{figure} 
   
 \paragraph{Comparison between Sorting Algorithms}
-In the previous section we have analyzed the scalability of singles Sorting Algorithms for different sizes of the data set. Figures~\ref{NxTxA-large} and~\ref{NxTxA-huge} can be used to derive which algorithm exhibit the best Time Completion respectively for large and huge data sets. First, We consider the case of \textbf{large} data sets. First of all, notice that it is almost sure that the data set can fit the primary memory, so a call to \textit{Sequentialsort} becomes a call to the standard \textit{ANSI qsort}. 
+In the previous section we have analyzed the scalability of singles Sorting Algorithms for different sizes of the data set. Now, we focus on determining the best Sorting Algorithm, in terms of Time Completion, for different sizes of the data set. First of all, recall that whether a data set fits the primary memory, a call to \textit{Sequentialsort} is simply a call to the standard \textit{ANSI qsort} (see chapter~\ref{sort-fram}). Therefore, in case of \textbf{small} data sets, the \textit{Sequentialsort} is the best algorithm we can use. Indeed, as we have already anticipated, in these cases the overhead of the parallelization is greater than the time that we would spend in a sequential, optimized computation, like the one of \textit{qsort}. On the other hand, things are obvioulsy different for larger data sets. Figures~\ref{NxTxA-large} and~\ref{NxTxA-huge} can be used to derive which algorithms exhibit the best Time Completions respectively for large and huge data sets. First, we consider the case of \textbf{large} data sets. 
+Aside the \textit{Quicksort}, which suffers TODO, most of the Sorting Algorithms outperform \textit{Sequentialsort}, at least when the size of the data set is greater than 4M integers. At least up to parallelism degree 16, the best algorithm is \textit{Mergesort}: in the best case, it is able to lower the Time Completion of \textit{qsort} of roughly 25$\%$ (see Figure~\ref{NxTxA-32M}). Now, we move to \textit{huge} data sets. It has been a great pleasure to see that the \textit{Load-Balanced Multi-Way Mergesort} (the Sorting Algorithm we designed and implemented by taking cue from \textit{Load-Balanced Mergesort}) is the algorithm that shows \textit{always} the best Time Completion (see also Figures~\ref{MxTxA-n4},~\ref{MxTxA-n8} and~\ref{MxTxA-n16}). Unfortunately, the lack of further machines to increase the parallelism degree at least up to 32 prevents the possibility of claiming deeper conclusions on these aspects. 
 
 
 \begin{figure}[!ht]
@@ -132,16 +133,15 @@ In the previous section we have analyzed the scalability of singles Sorting Algo
 \end{figure} 
 
 \begin{figure}[!ht]
-	\ContinuedFloat
 	\centering
-	\subfloat[Parallelism degree 2.]{\label{large-sequential}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxA/n2_pianosa_MxTxA}} 
+	\subfloat[Parallelism degree 2.]{\label{MxTxA-n2}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxA/n2_pianosa_MxTxA}} 
 	\hspace*{20pt}	
-  	\subfloat[Parallelism degree 4.]{\label{large-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxA/n4_pianosa_MxTxA}} 
+  	\subfloat[Parallelism degree 4.]{\label{MxTxA-n4}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxA/n4_pianosa_MxTxA}} 
   		
 	\centering
-	\subfloat[Parallelism degree 8.]{\label{large-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxA/n8_pianosa_MxTxA}} 
+	\subfloat[Parallelism degree 8.]{\label{MxTxA-n8}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxA/n8_pianosa_MxTxA}} 
   	\hspace*{20pt}
-  	\subfloat[Parallelism degree 16.]{\label{large-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxA/n16_pianosa_MxTxA}} 
+  	\subfloat[Parallelism degree 16.]{\label{MxTxA-n16}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxA/n16_pianosa_MxTxA}} 
   	
 	\caption{Time Completion for sorting data sets with fixed parallelism degree.}
 	\label{MxTxA}

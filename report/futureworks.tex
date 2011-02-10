@@ -19,4 +19,5 @@ There are a lot of possible future works:
 \item Structuring the Sorting DAL layer.
 \item Find better heuristics for the $DAL\_allowedBufSize$, the function of the DAL that establish the maximum amount of memory that a process is allowed to allocate.
 \item In general, estimating the overhead introduced by the DAL with respect to a solution in which each Sorting Algorithm uses its own strategy for the I/O system.
+\item Evaluate the performance of the Sorting Algorithms for atomic items that are \textit{not} integers, but rather objects whose size is still close to the one of integers, but with a \textit{comparing function} having either a higher or lower cost. This way we would be able to evaluate the performance of Sorting Algorithms also for different computational grains.
 \end{itemize}
