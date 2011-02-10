@@ -800,34 +800,53 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 	}
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
-	Data bufs[2];
-	DAL_splitBuffer( &globalBuf, 2, bufs );
-	Data *sendBuf = &bufs[0];
-	Data *recvBuf = &bufs[1];
 
 	//Retrieving the number of iterations	
 	dal_size_t max_count = MAX( scount, rcount );
-	int blockSize = DAL_dataSize(sendBuf);
+	int blockSize = DAL_dataSize(&globalBuf) / 2;
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 
-	for ( i=0; i<num_iterations; i++ ) {
-		tmp = MIN( blockSize, (scount-i*blockSize) );		//Number of elements to be sent to the partner process by MPI_Sendrecv
-		sc = tmp > 0 ? tmp : 0;
-		tmp = MIN( blockSize, (rcount-i*blockSize) );		//Number of elements to be received from the partner process by MPI_Sendrecv
-		rc = tmp > 0 ? tmp : 0;
-
-		if ( sc )
-			DAL_dataCopyOS( sdata, sdispl + i*blockSize, sendBuf, 0, sc );
-
-		MPI_Sendrecv( sendBuf->array.data, sc, MPI_INT, partner, 100, recvBuf->array.data, rc, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
-		MPI_Get_count( &status, MPI_INT, &rc );
+	
+	if ( sdata->medium == File && rdata->medium == File ) {
+		Data bufs[2];
+		DAL_splitBuffer( &globalBuf, 2, bufs );
+		Data *sendBuf = &bufs[0];
+		Data *recvBuf = &bufs[1];
 		
-		if ( rc ) {					
-			DAL_dataCopyOS( recvBuf, 0, rdata, rdispl + recvCount, rc );
-			recvCount += rc;
+		for ( i=0; i<num_iterations; i++ ) {
+			tmp = MIN( blockSize, (scount-i*blockSize) );		//Number of elements to be sent to the partner process by MPI_Sendrecv
+			sc = tmp > 0 ? tmp : 0;
+			tmp = MIN( blockSize, (rcount-i*blockSize) );		//Number of elements to be received from the partner process by MPI_Sendrecv
+			rc = tmp > 0 ? tmp : 0;
+
+			if ( sc )
+				DAL_dataCopyOS( sdata, sdispl + i*blockSize, sendBuf, 0, sc );
+
+			MPI_Sendrecv( sendBuf->array.data, sc, MPI_INT, partner, 100, recvBuf->array.data, rc, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
+			MPI_Get_count( &status, MPI_INT, &rc );
+			
+			if ( rc ) {					
+				DAL_dataCopyOS( recvBuf, 0, rdata, rdispl + recvCount, rc );
+				recvCount += rc;
+			}
 		}
 	}
+	else if ( sdata->medium == Array && rdata->medium == Array ) {
+		
+		for ( i=0; i<num_iterations; i++ ) {
+			tmp = MIN( blockSize, (scount-i*blockSize) );		//Number of elements to be sent to the partner process by MPI_Sendrecv
+			sc = tmp > 0 ? tmp : 0;
+			tmp = MIN( blockSize, (rcount-i*blockSize) );		//Number of elements to be received from the partner process by MPI_Sendrecv
+			rc = tmp > 0 ? tmp : 0;
 
+			MPI_Sendrecv(sdata->array.data+sdispl+i*blockSize, sc, MPI_INT, partner, 100, rdata->array.data+rdispl+recvCount, rc, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
+			MPI_Get_count( &status, MPI_INT, &rc );
+			recvCount += rc;			
+		}		
+	}
+	else
+		DAL_UNSUPPORTED( &sdata );
+	
 	DAL_releaseGlobalBuffer( &globalBuf );
 
 	return recvCount;
