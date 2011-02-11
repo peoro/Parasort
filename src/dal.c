@@ -807,7 +807,7 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 
 	
-	if ( sdata->medium == File && rdata->medium == File ) {
+	if ( sdata->medium == File || rdata->medium == File ) {
 		Data bufs[2];
 		DAL_splitBuffer( &globalBuf, 2, bufs );
 		Data *sendBuf = &bufs[0];
@@ -845,7 +845,7 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 		}		
 	}
 	else
-		DAL_UNSUPPORTED( &sdata );
+		DAL_UNSUPPORTED( sdata );
 	
 	DAL_releaseGlobalBuffer( &globalBuf );
 
