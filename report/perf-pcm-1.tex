@@ -5,32 +5,32 @@ In this section we analyze the behaviour of Sorting Algorithms on a Chip MultiPr
 
 \begin{figure}[h]
 	\begin{center}
-		\includegraphics[scale=0.6]{plots/test_00_pcm/NxTxM/sequential_pianosa_NxTxM}
+		\includegraphics[scale=0.6]{plots/test_00_PCM/NxTxM/sequential_PCM_NxTxM}
 	\end{center}
   	\caption{\textit{Intel Xeon X5670}. Completion Time for the Sequentialsort.}
-  	\label{sequential-pianosa}
+  	\label{sequential-PCM}
 \end{figure}
 
 \begin{figure}[h]
 	\centering
-	\subfloat[Quicksort.]{\label{PCM-NxTxM-sequential}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxM/quicksort_pianosa_NxTxM}} 
+	\subfloat[Quicksort.]{\label{PCM-NxTxM-sequential}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxM/quicksort_PCM_NxTxM}} 
 	\hspace*{20pt}	
-  	\subfloat[Bitonicsort.]{\label{PCM-NxTxM-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxM/bitonicsort_pianosa_NxTxM}} 
+  	\subfloat[Bitonicsort.]{\label{PCM-NxTxM-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxM/bitonicsort_PCM_NxTxM}} 
 	
 	\centering
-	\subfloat[Bucketsort.]{\label{PCM-NxTxM-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxM/bucketsort_pianosa_NxTxM}} 
+	\subfloat[Bucketsort.]{\label{PCM-NxTxM-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxM/bucketsort_PCM_NxTxM}} 
   	\hspace*{20pt}
-  	\subfloat[Samplesort.]{\label{PCM-NxTxM-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxM/samplesort_pianosa_NxTxM}} 
+  	\subfloat[Samplesort.]{\label{PCM-NxTxM-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxM/samplesort_PCM_NxTxM}} 
 	
 	\centering
-  	\subfloat[Mergesort.]{\label{PCM-NxTxM-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxM/mergesort_pianosa_NxTxM}}   
+  	\subfloat[Mergesort.]{\label{PCM-NxTxM-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxM/mergesort_PCM_NxTxM}}   
   	\hspace*{20pt}  
-  	\subfloat[4-Way Mergesort.]{\label{PCM-NxTxM-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxM/kmerge_pianosa_NxTxM}} 
+  	\subfloat[4-Way Mergesort.]{\label{PCM-NxTxM-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxM/kmerge_PCM_NxTxM}} 
 	
 	\centering
-  	\subfloat[Load-Balanced Mergesort.]{\label{PCM-NxTxM-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxM/lbmergesort_pianosa_NxTxM}} 
+  	\subfloat[Load-Balanced Mergesort.]{\label{PCM-NxTxM-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxM/lbmergesort_PCM_NxTxM}} 
   	\hspace*{20pt}  
-  	\subfloat[Load-Balanced Multi-Way Mergesort.]{\label{PCM-NxTxM-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxM/lbkmergesort_pianosa_NxTxM}} 	
+  	\subfloat[Load-Balanced Multi-Way Mergesort.]{\label{PCM-NxTxM-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxM/lbkmergesort_PCM_NxTxM}} 	
   	
 	\caption{\textit{Intel Xeon X5670}. Time Completion of Sorting Algorithms by varying the parallelism degree. Each shape on a graphic represents the Time Completion of a certain Sorting Algorithm for a data set of specific size.}
 	\label{PCM-NxTxM}
@@ -38,24 +38,24 @@ In this section we analyze the behaviour of Sorting Algorithms on a Chip MultiPr
  
 \begin{figure}[!ht]
 	\centering
-	\subfloat[Quicksort.]{\label{PCM-MxTxN-sequential}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/MxTxN/quicksort_pianosa_MxTxN}} 
+	\subfloat[Quicksort.]{\label{PCM-MxTxN-sequential}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxN/quicksort_PCM_MxTxN}} 
 	\hspace*{20pt}	
-  	\subfloat[Bitonicsort.]{\label{PCM-MxTxN-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/MxTxN/bitonicsort_pianosa_MxTxN}} 
+  	\subfloat[Bitonicsort.]{\label{PCM-MxTxN-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxN/bitonicsort_PCM_MxTxN}} 
   		
 	\centering
-	\subfloat[Bucketsort.]{\label{PCM-MxTxN-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/MxTxN/bucketsort_pianosa_MxTxN}} 
+	\subfloat[Bucketsort.]{\label{PCM-MxTxN-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxN/bucketsort_PCM_MxTxN}} 
   	\hspace*{20pt}
-  	\subfloat[Samplesort.]{\label{PCM-MxTxN-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/MxTxN/samplesort_pianosa_MxTxN}} 
+  	\subfloat[Samplesort.]{\label{PCM-MxTxN-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxN/samplesort_PCM_MxTxN}} 
 	
 	\centering
-  	\subfloat[Mergesort.]{\label{PCM-MxTxN-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/MxTxN/mergesort_pianosa_MxTxN}}   
+  	\subfloat[Mergesort.]{\label{PCM-MxTxN-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxN/mergesort_PCM_MxTxN}}   
   	\hspace*{20pt}  
-  	\subfloat[4-Way Mergesort.]{\label{PCM-MxTxN-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/MxTxN/kmerge_pianosa_MxTxN}} 
+  	\subfloat[4-Way Mergesort.]{\label{PCM-MxTxN-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxN/kmerge_PCM_MxTxN}} 
 	
 	\centering
-  	\subfloat[Load-Balanced Mergesort.]{\label{PCM-MxTxN-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/MxTxN/lbmergesort_pianosa_MxTxN}} 
+  	\subfloat[Load-Balanced Mergesort.]{\label{PCM-MxTxN-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxN/lbmergesort_PCM_MxTxN}} 
   	\hspace*{20pt}  
-  	\subfloat[Load-Balanced Multi-Way Mergesort.]{\label{PCM-MxTxN-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/MxTxN/lbkmergesort_pianosa_MxTxN}} 
+  	\subfloat[Load-Balanced Multi-Way Mergesort.]{\label{PCM-MxTxN-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxN/lbkmergesort_PCM_MxTxN}} 
   	
 	\caption{\textit{Intel Xeon X5670}. Time Completion of Sorting Algorithms for increasing sizes of the data set. }
 	\label{PCM-MxTxN}
@@ -67,24 +67,24 @@ TODO
 
 \begin{figure}[!ht]
 	\centering
-	\subfloat[Data set of 1K integers.]{\label{PCM-NxTxA-1M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M1024_pianosa_NxTxA}} 
+	\subfloat[Data set of 1K integers.]{\label{PCM-NxTxA-1M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M1024_PCM_NxTxA}} 
 	\hspace*{20pt}	
-  	\subfloat[Data set of 2K integers.]{\label{PCM-NxTxA-2M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M2048_pianosa_NxTxA}} 
+  	\subfloat[Data set of 2K integers.]{\label{PCM-NxTxA-2M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M2048_PCM_NxTxA}} 
   		
 	\centering
-	\subfloat[Data set of 4K integers.]{\label{PCM-NxTxA-4M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M4096_pianosa_NxTxA}} 
+	\subfloat[Data set of 4K integers.]{\label{PCM-NxTxA-4M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M4096_PCM_NxTxA}} 
   	\hspace*{20pt}
-  	\subfloat[Data set of 8K integers.]{\label{PCM-NxTxA-8M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M8192_pianosa_NxTxA}} 
+  	\subfloat[Data set of 8K integers.]{\label{PCM-NxTxA-8M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M8192_PCM_NxTxA}} 
 	
 	\centering
-  	\subfloat[Data set of 16K integers.]{\label{PCM-NxTxA-16M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M16384_pianosa_NxTxA}}   
+  	\subfloat[Data set of 16K integers.]{\label{PCM-NxTxA-16M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M16384_PCM_NxTxA}}   
   	\hspace*{20pt}  
-  	\subfloat[Data set of 32K integers.]{\label{PCM-NxTxA-32M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M32768_pianosa_NxTxA}} 
+  	\subfloat[Data set of 32K integers.]{\label{PCM-NxTxA-32M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M32768_PCM_NxTxA}} 
   	
 	\centering
-  	\subfloat[Data set of 64K integers.]{\label{PCM-NxTxA-16M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M65536_pianosa_NxTxA}}   
+  	\subfloat[Data set of 64K integers.]{\label{PCM-NxTxA-16M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M65536_PCM_NxTxA}}   
   	\hspace*{20pt}  
-  	\subfloat[Data set of 128K integers.]{\label{PCM-NxTxA-32M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M131072_pianosa_NxTxA}}   	
+  	\subfloat[Data set of 128K integers.]{\label{PCM-NxTxA-32M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M131072_PCM_NxTxA}}   	
   	
 	\caption{\textit{Intel Xeon X5670}. Time Completion for sorting \textit{small} data sets. Each graphic represents a data set of fixed size, while each shape on a graphic shows the Time Completion of a certain Sorting Algorithm for that data set.}
 	\label{PCM-NxTxA-small}
@@ -92,24 +92,24 @@ TODO
 
 \begin{figure}[!ht]
 	\centering
-	\subfloat[Data set of 256K integers.]{\label{PCM-NxTxA-1M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M262144_pianosa_NxTxA}} 
+	\subfloat[Data set of 256K integers.]{\label{PCM-NxTxA-1M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M262144_PCM_NxTxA}} 
 	\hspace*{20pt}	
-  	\subfloat[Data set of 512K integers.]{\label{PCM-NxTxA-2M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M524288_pianosa_NxTxA}} 
+  	\subfloat[Data set of 512K integers.]{\label{PCM-NxTxA-2M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M524288_PCM_NxTxA}} 
 
 	\centering
-	\subfloat[Data set of 1M integers.]{\label{PCM-NxTxA-1M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M1048576_pianosa_NxTxA}} 
+	\subfloat[Data set of 1M integers.]{\label{PCM-NxTxA-1M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M1048576_PCM_NxTxA}} 
 	\hspace*{20pt}	
-  	\subfloat[Data set of 2M integers.]{\label{PCM-NxTxA-2M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M2097152_pianosa_NxTxA}} 
+  	\subfloat[Data set of 2M integers.]{\label{PCM-NxTxA-2M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M2097152_PCM_NxTxA}} 
   		
 	\centering
-	\subfloat[Data set of 4M integers.]{\label{PCM-NxTxA-4M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M4194304_pianosa_NxTxA}} 
+	\subfloat[Data set of 4M integers.]{\label{PCM-NxTxA-4M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M4194304_PCM_NxTxA}} 
   	\hspace*{20pt}
-  	\subfloat[Data set of 8M integers.]{\label{PCM-NxTxA-8M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M8388608_pianosa_NxTxA}} 
+  	\subfloat[Data set of 8M integers.]{\label{PCM-NxTxA-8M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M8388608_PCM_NxTxA}} 
 	
 	\centering
-  	\subfloat[Data set of 16M integers.]{\label{PCM-NxTxA-16M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M16777216_pianosa_NxTxA}}   
+  	\subfloat[Data set of 16M integers.]{\label{PCM-NxTxA-16M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M16777216_PCM_NxTxA}}   
   	\hspace*{20pt}  
-  	\subfloat[Data set of 32M integers.]{\label{PCM-NxTxA-32M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M33554432_pianosa_NxTxA}} 
+  	\subfloat[Data set of 32M integers.]{\label{PCM-NxTxA-32M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M33554432_PCM_NxTxA}} 
   	
 	\caption{\textit{Intel Xeon X5670}. Time Completion for sorting \textit{large} data sets. Each graphic represents a data set of fixed size, while each shape on a graphic shows the Time Completion of a certain Sorting Algorithm for that data set.}
 	\label{PCM-NxTxA-large}
@@ -117,14 +117,14 @@ TODO
 
 \begin{figure}[!ht]
 	\centering
-	\subfloat[Data set of 64M integers.]{\label{PCM-NxTxA-64M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M67108864_pianosa_NxTxA}} 
+	\subfloat[Data set of 64M integers.]{\label{PCM-NxTxA-64M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M67108864_PCM_NxTxA}} 
 	\hspace*{20pt}	
-  	\subfloat[Data set of 128M integers.]{\label{PCM-NxTxA-128M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M134217728_pianosa_NxTxA}} 
+  	\subfloat[Data set of 128M integers.]{\label{PCM-NxTxA-128M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M134217728_PCM_NxTxA}} 
   		
 	\centering
-	\subfloat[Data set of 256M integers.]{\label{PCM-NxTxA-256M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M268435456_pianosa_NxTxA}} 
+	\subfloat[Data set of 256M integers.]{\label{PCM-NxTxA-256M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M268435456_PCM_NxTxA}} 
   	\hspace*{20pt}
-  	\subfloat[Data set of 512M integers.]{\label{PCM-NxTxA-512M}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/NxTxA/M536870912_pianosa_NxTxA}} 
+  	\subfloat[Data set of 512M integers.]{\label{PCM-NxTxA-512M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M536870912_PCM_NxTxA}} 
 	
 	\caption{\textit{Intel Xeon X5670}. Time Completion for sorting \textit{huge} data sets. Each graphic represents a data set of fixed size, while each shape on a graphic shows the Time Completion of a certain Sorting Algorithm for that data set.}
 	\label{PCM-NxTxA-huge}
@@ -132,12 +132,12 @@ TODO
 
 \begin{figure}[!ht]
 	\centering
-	\subfloat[Parallelism degree 2.]{\label{PCM-MxTxA-n2}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/MxTxA/n2_pianosa_MxTxA}} 
+	\subfloat[Parallelism degree 2.]{\label{PCM-MxTxA-n2}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxA/n2_PCM_MxTxA}} 
 	\hspace*{20pt}	
-  	\subfloat[Parallelism degree 4.]{\label{PCM-MxTxA-n4}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/MxTxA/n4_pianosa_MxTxA}} 
+  	\subfloat[Parallelism degree 4.]{\label{PCM-MxTxA-n4}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxA/n4_PCM_MxTxA}} 
   		
 	\centering
-	\subfloat[Parallelism degree 8.]{\label{PCM-MxTxA-n8}\includegraphics[width=0.4\textwidth]{plots/test_00_pcm/MxTxA/n8_pianosa_MxTxA}} 
+	\subfloat[Parallelism degree 8.]{\label{PCM-MxTxA-n8}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxA/n8_PCM_MxTxA}} 
   	
 	\caption{\textit{Intel Xeon X5670}. Time Completion for sorting data sets with fixed parallelism degree.}
 	\label{PCM-MxTxA}

@@ -3,7 +3,15 @@
 [[ -n "$1" ]] || { echo "Usage: $0 \"path\""; exit 0 ; }
 
 path=$1
-platform="pianosa"
+platform=`echo $path | cut -d "_" -f3 | cut -d "/" -f1`
+testID=`echo $path | cut -d "_" -f2 | cut -d "/" -f1`
+output_path="plots/test_"$testID"_"$platform
+
+mkdir -p $output_path
+
+# TODO: handle more seeds and number of tests
+s=1
+t=1
 
 ALGOS=( `ls $path | grep result_ | cut -d "_" -f4 | sort -u` )
 # echo -e ${ALGOS[@]}
@@ -18,10 +26,10 @@ if [ ${NUM_PROCS[0]} -eq 1 ]; then
 	for M in ${DATA_SIZES[*]}; do
 		for n in ${NUM_PROCS[*]}; do
 			if [ $n -ne 1 ]; then
-				cp $path"/result_n1_M"$M"_sequential_s1_t1" $path"/result_n"$n"_M"$M"_sequential_s1_t1"
+				cp $path"/result_n1_M"$M"_sequential_s"$s"_t"$t $path"/result_n"$n"_M"$M"_sequential_s"$s"_t"$t
 			fi
 		done
-		rm $path"/result_n1_M"$M"_sequential_s1_t1"
+		rm $path"/result_n1_M"$M"_sequential_s"$s"_t"$t
 	done
 fi
 
@@ -45,7 +53,7 @@ for algo in ${ALGOS[*]}; do
 		#for each n
 		for n in ${NUM_PROCS[*]}; do
 
-			file=$path"/result_n"$n"_M"$M"_"$algo"_s1_t1"
+			file=$path"/result_n"$n"_M"$M"_"$algo"_s"$s"_t"$t
 
 			if [ -f $file ]; then
 				sort_time=`python results.py $file`
@@ -58,10 +66,10 @@ for algo in ${ALGOS[*]}; do
 		done
 	done
 
-
+    mkdir -p $output_path"/NxTxM"
 	##################################################### NxTxM plot ##########################################################
 	terminal='set terminal postscript eps enhanced color\n'
-	terminal_name='set output "'$algo'_'$platform'_NxTxM.eps"\n'
+	terminal_name='set output "'$output_path'/NxTxM/'$algo'_'$platform'_NxTxM.eps"\n'
 	xtics='set log x\n set xtics (2,4,8,16)\n'
 	ytics='' #'set ytics 0,2e7,2.2e8\n'
 	yrange='' #'set yrange [0:2.2e8]\n'
@@ -98,9 +106,10 @@ for algo in ${ALGOS[*]}; do
 
 
 
+    mkdir -p $output_path"/MxTxN"
 	##################################################### MxTxN plot ##########################################################
 	terminal='set terminal postscript eps enhanced color\n'
-	terminal_name='set output "'$algo'_'$platform'_MxTxN.eps"\n'
+	terminal_name='set output "'$output_path'/MxTxN/'$algo'_'$platform'_MxTxN.eps"\n'
 	xtics='' #'set log x\n set xtics (2,4,8,16)\n'
 	ytics='' #'set ytics 0,2e7,2.2e8\n'
 	yrange='' #'set yrange [0:2.2e8]\n'
@@ -126,11 +135,12 @@ done
 
 
 
+mkdir -p $output_path"/MxTxA"
 ##################################################### MxTxA plots ##########################################################
 NUM_PROCS=( `ls $path | grep result_ | grep -v _sequential_ | cut -d "_" -f2 | cut -d "n" -f2 | sort -n -u` )
 for n in ${NUM_PROCS[*]}; do
 	terminal='set terminal postscript eps enhanced color\n'
-	terminal_name='set output "n'$n'_'$platform'_MxTxA.eps"\n'
+	terminal_name='set output "'$output_path'/MxTxA/n'$n'_'$platform'_MxTxA.eps"\n'
 	xtics='' #'set log x\n set xtics (2,4,8,16)\n'
 	ytics='' #'set ytics 0,2e7,2.2e8\n'
 	yrange='' #'set yrange [0:2.2e8]\n'
@@ -154,6 +164,7 @@ done
 
 
 
+mkdir -p $output_path"/NxTxA"
 ##################################################### NxTxA plots ##########################################################
 for M in ${DATA_SIZES[*]}; do
 
@@ -176,7 +187,7 @@ for M in ${DATA_SIZES[*]}; do
 	fi
 
 	terminal='set terminal postscript eps enhanced color\n'
-	terminal_name='set output "M'$M'_'$platform'_NxTxA.eps"\n'
+	terminal_name='set output "'$output_path'/NxTxA/M'$M'_'$platform'_NxTxA.eps"\n'
 	xtics='set log x\n set xtics (2,4,8,16)\n'
 	ytics='' #'set ytics 0,2e7,2.2e8\n'
 	yrange='' #'set yrange [0:2.2e8]\n'
