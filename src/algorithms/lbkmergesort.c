@@ -292,7 +292,7 @@ void lbkmergesort( const TestInfo *ti, Data *data )
 		/* Exchanging data with the paired group avoiding deadlocks */
 		for ( h=1, j=partner; h<=groupSize; h++ ) {
 			stopPhase( ti, computationP );
-			k = DAL_sendrecv( data, sendCounts[j], sdispls[j], &recvData[j], 0, j );
+			k = DAL_sendrecv( data, sendCounts[j], sdispls[j], &recvData[j], GET_LOCAL_M(ti), 0, j );
 			resumePhase( ti, computationP );
 			dataLength += k;
 			recvCounts[z++] = k;

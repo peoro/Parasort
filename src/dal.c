@@ -58,7 +58,7 @@ void DAL_splitBuffer( Data *buf, const int parts, Data *bufs )
 dal_size_t DAL_allowedBufSize( )
 {
 	//TODO: find the optimal value
-	return 64*1024*1024;
+	return 128*1024*1024;
 }
 
 
@@ -245,7 +245,7 @@ void DAL_initialize( int *argc, char ***argv )
 	MPI_Init( argc, argv );
 
 	DAL_init( & DAL_buffer );
-	DAL_allocBuffer( & DAL_buffer, 1024*1024*10 ); // TODO: find a better size... 40MB (10 Mega integers) for now
+	DAL_allocBuffer( & DAL_buffer, 32*1024*1024 ); // TODO: find a better size... 128MB (32 Mega integers) for now
 }
 void DAL_finalize( )
 {
@@ -784,19 +784,19 @@ void DAL_receiveAU( Data *data, int source )
 *
 * @returns Number of received integers
 */
-dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data* rdata, dal_size_t rdispl, int partner )
+dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data* rdata, dal_size_t rcount, dal_size_t rdispl, int partner )
 {
 	int i, sc, rc, tmp;	
-	dal_size_t rcount, recvCount = 0;
+	dal_size_t oldSize = 0;
+	dal_size_t recvCount = 0;
 	MPI_Status 	status;
-	
-	MPI_Sendrecv( &scount, 1, MPI_DST, partner, 100, &rcount, 1, MPI_DST, partner, 100, MPI_COMM_WORLD, &status );
 
 	if( rdata->medium == NoMedium ) {
 		SPD_ASSERT( DAL_allocData( rdata, rcount ), "not enough space to allocate data" );
 	}
 	else {
-		SPD_ASSERT( DAL_reallocData( rdata, rdispl+rcount ), "not enough space to allocate data" );
+		oldSize = DAL_dataSize( rdata );
+		SPD_ASSERT( DAL_reallocData( rdata, oldSize+rcount ), "not enough space to allocate data" );
 	}
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
@@ -805,7 +805,6 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 	dal_size_t max_count = MAX( scount, rcount );
 	int blockSize = DAL_dataSize(&globalBuf) / 2;
 	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
-
 	
 	if ( sdata->medium == File || rdata->medium == File ) {
 		Data bufs[2];
@@ -814,21 +813,24 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 		Data *recvBuf = &bufs[1];
 		
 		for ( i=0; i<num_iterations; i++ ) {
-			tmp = MIN( blockSize, (scount-i*blockSize) );		//Number of elements to be sent to the partner process by MPI_Sendrecv
+			tmp = MIN( blockSize, (scount-i*blockSize) );		//Number of elements to be sent to the partner process by MPI_Sendrecv			
 			sc = tmp > 0 ? tmp : 0;
 			tmp = MIN( blockSize, (rcount-i*blockSize) );		//Number of elements to be received from the partner process by MPI_Sendrecv
 			rc = tmp > 0 ? tmp : 0;
-
+						
 			if ( sc )
 				DAL_dataCopyOS( sdata, sdispl + i*blockSize, sendBuf, 0, sc );
-
+			
 			MPI_Sendrecv( sendBuf->array.data, sc, MPI_INT, partner, 100, recvBuf->array.data, rc, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
-			MPI_Get_count( &status, MPI_INT, &rc );
+			MPI_Get_count( &status, MPI_INT, &rc );			
 			
 			if ( rc ) {					
 				DAL_dataCopyOS( recvBuf, 0, rdata, rdispl + recvCount, rc );
 				recvCount += rc;
 			}
+			
+			if ( sc < blockSize && rc < blockSize )
+				break;
 		}
 	}
 	else if ( sdata->medium == Array && rdata->medium == Array ) {
@@ -842,11 +844,14 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 			MPI_Sendrecv(sdata->array.data+sdispl+i*blockSize, sc, MPI_INT, partner, 100, rdata->array.data+rdispl+recvCount, rc, MPI_INT, partner, 100, MPI_COMM_WORLD, &status );
 			MPI_Get_count( &status, MPI_INT, &rc );
 			recvCount += rc;			
-		}		
+			
+			if ( sc < blockSize && rc < blockSize )
+				break;
+		}						
 	}
 	else
 		DAL_UNSUPPORTED( sdata );
-	
+	SPD_ASSERT( DAL_reallocData( rdata, oldSize+recvCount ), "not enough space to allocate data" );
 	DAL_releaseGlobalBuffer( &globalBuf );
 
 	return recvCount;
