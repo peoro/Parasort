@@ -8,8 +8,8 @@ SAVE_DIR="logs/test_"$testID"_"$platform
 ALGOS=( quicksort mergesort kmerge lbmergesort lbkmergesort samplesort bucketsort bitonicsort )
 NUM_PROCESSORS=( 1 2 4 8 16 )
 
-SEEDS=( 1 )
-NUM_TEST=10
+SEEDS=( 1 2 3 )
+NUM_TEST=3
 
 let KILO=1024
 let MEGA=KILO*KILO
@@ -24,6 +24,8 @@ done
 
 path=$SAVE_DIR/
 mkdir -p $path
+
+date
 
 for t in `seq 1 $NUM_TEST`; do
 	#for each data size (M)
@@ -88,5 +90,7 @@ for t in `seq 1 $NUM_TEST`; do
 		rm ~/.spd/data/*.unsorted
 	done
 done
+
+date
 
 echo FINISHED!!!

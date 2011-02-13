@@ -1,35 +1,42 @@
 #!/bin/bash
 
-[[ -n "$1" ]] || { echo "Usage: $0 \"path\""; exit 0 ; }
+if [[ $# -ne 2 ]]; then
+	echo "Usage: $0 \"path\" \"output_path\""
+	exit 0 
+fi
 
 path=$1
 platform=`echo $path | cut -d "_" -f3 | cut -d "/" -f1`
-testID=`echo $path | cut -d "_" -f2 | cut -d "/" -f1`
-output_path="plots/test_"$testID"_"$platform
+output_path=$2
 
 mkdir -p $output_path
-
-# TODO: handle more seeds and number of tests
-s=1
-t=1
 
 ALGOS=( `ls $path | grep result_ | cut -d "_" -f4 | sort -u` )
 # echo -e ${ALGOS[@]}
 DATA_SIZES=( `ls $path | grep result_ | cut -d "_" -f3 | cut -d "M" -f2 | sort -n -u` )
 # echo -e ${DATA_SIZES[@]}
+SEEDS=( `ls $path | grep result_ | cut -d "_" -f5 | cut -d "s" -f2 | sort -n -u` )
+# echo -e ${SEEDS[@]}
+NUM_TEST=( `ls $path | grep result_ | cut -d "_" -f6 | cut -d "t" -f2 | sort -n -u` )
+# echo -e ${NUM_TEST[@]}
 
 
 #Moving file related to sequential sort to obtain better plots
 NUM_PROCS=( `ls $path | grep result_ | cut -d "_" -f2 | cut -d "n" -f2 | sort -n -u` )
 # echo -e ${NUM_PROCS[0]}
 if [ ${NUM_PROCS[0]} -eq 1 ]; then
-	for M in ${DATA_SIZES[*]}; do
-		for n in ${NUM_PROCS[*]}; do
-			if [ $n -ne 1 ]; then
-				cp $path"/result_n1_M"$M"_sequential_s"$s"_t"$t $path"/result_n"$n"_M"$M"_sequential_s"$s"_t"$t
-			fi
+	for M in ${DATA_SIZES[*]}; do					
+		#for each seed
+		for s in ${SEEDS[*]}; do
+			for t in ${NUM_TEST[*]}; do
+				for n in ${NUM_PROCS[*]}; do	
+					if [ $n -ne 1 ]; then
+						cp $path"/result_n1_M"$M"_sequential_s"$s"_t"$t $path"/result_n"$n"_M"$M"_sequential_s"$s"_t"$t
+					fi					
+				done
+				rm $path"/result_n1_M"$M"_sequential_s"$s"_t"$t
+			done
 		done
-		rm $path"/result_n1_M"$M"_sequential_s"$s"_t"$t
 	done
 fi
 
@@ -52,17 +59,36 @@ for algo in ${ALGOS[*]}; do
 	for M in ${DATA_SIZES[*]}; do
 		#for each n
 		for n in ${NUM_PROCS[*]}; do
+			let sum_time=0
+			let valid_files=0
+			
+			#for each seed
+			for s in ${SEEDS[*]}; do
 
-			file=$path"/result_n"$n"_M"$M"_"$algo"_s"$s"_t"$t
+				for t in ${NUM_TEST[*]}; do
 
-			if [ -f $file ]; then
-				sort_time=`python results.py $file`
-				echo -e $n"\t"$sort_time >> $algo"_M"$M".data"
-				echo -e $M"\t"$sort_time >> $algo"_n"$n".data"
-			else
-				echo $file" doesn't exist";
+					file=$path"/result_n"$n"_M"$M"_"$algo"_s"$s"_t"$t
+
+					if [ -f $file ]; then
+						sort_time=`python results.py $file 2> /dev/null`
+
+						if ! [[ "$sort_time" =~ ^[0-9]+$ ]] ; then
+							echo $file" is not valid!"
+						else
+							let valid_files=valid_files+1
+							let sum_time=sum_time+sort_time
+						fi
+					else
+						echo $file" doesn't exist";
+					fi
+				done
+			done
+
+			if [ $valid_files -ne 0 ]; then
+				let average_sort_time=sum_time/valid_files
+				echo -e $n"\t"$average_sort_time >> $algo"_M"$M".data"
+				echo -e $M"\t"$average_sort_time >> $algo"_n"$n".data"
 			fi
-
 		done
 	done
 
@@ -70,7 +96,7 @@ for algo in ${ALGOS[*]}; do
 	##################################################### NxTxM plot ##########################################################
 	terminal='set terminal postscript eps enhanced color\n'
 	terminal_name='set output "'$output_path'/NxTxM/'$algo'_'$platform'_NxTxM.eps"\n'
-	xtics='set log x\n set xtics (2,4,8,16)\n'
+	xtics='set log x\n set xtics ('`echo ${NUM_PROCS[*]} | tr " " ","`')\n'
 	ytics='' #'set ytics 0,2e7,2.2e8\n'
 	yrange='' #'set yrange [0:2.2e8]\n'
 	xlabel='set xlabel "Number of processors"\n'
@@ -110,7 +136,7 @@ for algo in ${ALGOS[*]}; do
 	##################################################### MxTxN plot ##########################################################
 	terminal='set terminal postscript eps enhanced color\n'
 	terminal_name='set output "'$output_path'/MxTxN/'$algo'_'$platform'_MxTxN.eps"\n'
-	xtics='' #'set log x\n set xtics (2,4,8,16)\n'
+	xtics='' #'set log x\n set xtics ('`echo ${NUM_PROCS[*]} | tr " " ","`')\n'
 	ytics='' #'set ytics 0,2e7,2.2e8\n'
 	yrange='' #'set yrange [0:2.2e8]\n'
 	xlabel='set xlabel "Number of integers"\n'
@@ -141,7 +167,7 @@ NUM_PROCS=( `ls $path | grep result_ | grep -v _sequential_ | cut -d "_" -f2 | c
 for n in ${NUM_PROCS[*]}; do
 	terminal='set terminal postscript eps enhanced color\n'
 	terminal_name='set output "'$output_path'/MxTxA/n'$n'_'$platform'_MxTxA.eps"\n'
-	xtics='' #'set log x\n set xtics (2,4,8,16)\n'
+	xtics='' #'set log x\n set xtics ('`echo ${NUM_PROCS[*]} | tr " " ","`')\n'
 	ytics='' #'set ytics 0,2e7,2.2e8\n'
 	yrange='' #'set yrange [0:2.2e8]\n'
 	xlabel='set xlabel "Number of integers"\n'
@@ -188,7 +214,7 @@ for M in ${DATA_SIZES[*]}; do
 
 	terminal='set terminal postscript eps enhanced color\n'
 	terminal_name='set output "'$output_path'/NxTxA/M'$M'_'$platform'_NxTxA.eps"\n'
-	xtics='set log x\n set xtics (2,4,8,16)\n'
+	xtics='set log x\n set xtics ('`echo ${NUM_PROCS[*]} | tr " " ","`')\n'
 	ytics='' #'set ytics 0,2e7,2.2e8\n'
 	yrange='' #'set yrange [0:2.2e8]\n'
 	xlabel='set xlabel "Number of processors"\n'
