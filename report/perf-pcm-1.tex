@@ -1,9 +1,9 @@
 \subsubsection{Intel Xeon X5670}
 In this section we analyze the behaviour of Sorting Algorithms on a Chip MultiProcessor (CMP), namely a Symmetric MultiProcessor (SMP) on chip. The CMP in question is the Intel Xeon X5670, described in~\ref{PCM}, which is a generic node of the cluster $PCM$. We will be able to test our algorithms for parallelism degrees up to 8. We expect that performance results on this architecture will be significantly different from the ones obtained on Pianosa, in particular from a \textit{qualitative} point of view. Indeed, there are two key factors: first, the huge amount of primary memory will diminish the overhead due to I/Os; second, the communications now take place in shared memory thus they are less expensive.
 
-\paragraph{Scalability of Sorting Algorithms} Figure~\ref{PCM-NxTxM} and~\ref{PCM-MxTxN} show the time completion of Sorting Algorithms for data sets up to 2 GB. Again, due to the fine grain computation, there is no Sorting Algorithm that scales for \textbf{small} data sets. On the other hand, the previous considerations on the primary memory size and the cost of communications justify intuitively why, for \textbf{large} data sets, most Sorting Algorithms scale better than on $Pianosa$. Increasing the parallelism degree from 2 to 4, a lot of Sorting Algorithms scale really close to the ideality, while from 4 to 8 the gain is in general lower. Exactly as on $Pianosa$, \textit{Bucketsort}, \textit{Samplesort} and \textit{Load-Balanced Multi-Way Mergesort} exhibit the best performance in terms of both scalability and time completion. \textit{Mergesort} (Figure~\ref{PCM-NxTxM-mergesort}) was bad on $Pianosa$ because of both the communications overhead and the unbalanced workload, but now exhibit a great scalability up to parallelism degree 8; this is thanks also to the faster hardware which let the last sequential phase of merging becoming less incisive on the overall time completion. Figure~\ref{PCM-NxTxM-quicksort} shows \textit{Quicksort} which has the worst performance TODO. Figure~\ref{PCM-NxTxM-kmerge} shows the bad performance of \textit{4-Way Mergesort}; this algorithm suffers the last phase of merging that, since it is made by a single process (see~\ref{kmerge}), becomes predominant with respect to the gain of the parallelization.
+\paragraph{Scalability of Sorting Algorithms} Figure~\ref{PCM-NxTxM} and~\ref{PCM-MxTxN} show the time completion of Sorting Algorithms for data sets up to 2 GB. Exactly as on $Pianosa$, due to the fine grain computation, there is not any Sorting Algorithm that shows a good scalability for \textbf{small} data sets. On the other hand, the previous considerations on the primary memory size and the cost of communications justify intuitively why, for \textbf{large} data sets, most Sorting Algorithms scale better than on $Pianosa$ (even if still far away from the ideality). Figure~\ref{PCM-NxTxM} shows that increasing the parallelism degree from 2 to 4, a lot of Sorting Algorithms scale really close to the ideality, while from 4 to 8 there is still a gain, but in general lower. Exactly as on $Pianosa$, \textit{Bucketsort}, \textit{Samplesort} and \textit{Load-Balanced Multi-Way Mergesort} exhibit the best performance in terms of both scalability and time completion. \textit{Mergesort} (Figure~\ref{PCM-NxTxM-mergesort}) was bad on $Pianosa$ because of both the communications overhead and the unbalanced workload, but now exhibit a great scalability up to parallelism degree 8; this is thanks also to the faster hardware which let the last sequential phase of merging becoming less incisive on the overall time completion. Figure~\ref{PCM-NxTxM-quicksort} shows \textit{Quicksort} which has the worst performance TODO. Figure~\ref{PCM-NxTxM-kmerge} shows the bad performance of \textit{4-Way Mergesort}; this algorithm suffers the last phase of merging that, since it is made by a single process (see~\ref{kmerge}), becomes predominant with respect to the gain of the parallelization. 
 
-\begin{figure}[h]
+\begin{figure}[t]
 	\begin{center}
 		\includegraphics[scale=0.6]{plots/test_00_PCM/NxTxM/sequential_PCM_NxTxM}
 	\end{center}
@@ -62,8 +62,7 @@ In this section we analyze the behaviour of Sorting Algorithms on a Chip MultiPr
 \end{figure} 
 
 
-\paragraph{Comparison between Sorting Algorithms} First, notice an interesting aspect: we have said that on $Pianosa$, for small data sets, the best algorithm was surely the \textit{qsort}; on this architecture things are a little bit different. Indeed, altough Sorting Algorithms still do not scale, we can see by looking at Figure~\ref{PCM-NxTxA-small} that some of them outperform \textit{qsort}, at least for sizes of the data set greater than 8 KB. 
-TODO
+\paragraph{Comparison between Sorting Algorithms} Figures~\ref{PCM-NxTxA-small} and~\ref{PCM-NxTxA-large} highlight the behaviour of different Sorting Algorithms for specifics sizes of the data set. Notice an interesting aspect reguarding \textbf{small} data sets: we have seen that on $Pianosa$ best algorithms were \textit{qsort} and parallel \textit{Mergesort} (at low parallelism degrees). On this architecture things are deeply different and this is likely due to the fact that processes communications now take place in shared memory. Figure~\ref{PCM-NxTxA-small} shows that most of Sorting Algorithms, altough still far away from the linear scalability, definitely outperform \textit{qsort} (at least for sizes of the data set greater than 8 KB). Moreover, \textit{Mergesort} confirms itself as one of the best Sorting Algorithms both for small data sets and now even for \textbf{large} data sets, together with \textit{Bitonicsort}, \textit{Bucketsort}, \textit{Samplesort} and \textit{Load-Balanced (Multi-Way) Mergesort}.
 
 \begin{figure}[!ht]
 	\centering
@@ -86,11 +85,12 @@ TODO
   	\hspace*{20pt}  
   	\subfloat[Data set of 128K integers.]{\label{PCM-NxTxA-32M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M131072_PCM_NxTxA}}   	
   	
-	\caption{\textit{Intel Xeon X5670}. Time Completion for sorting \textit{small} data sets. Each graphic represents a data set of fixed size, while each shape on a graphic shows the Time Completion of a certain Sorting Algorithm for that data set.}
-	\label{PCM-NxTxA-small}
+	%\caption{\textit{Intel Xeon X5670}. Time Completion for sorting \textit{small} data sets. Each graphic represents a data set of fixed size, while each shape on a graphic shows the Time Completion of a certain Sorting Algorithm for that data set.}
+	%\label{PCM-NxTxA-small}
 \end{figure} 
 
 \begin{figure}[!ht]
+	\ContinuedFloat
 	\centering
 	\subfloat[Data set of 256K integers.]{\label{PCM-NxTxA-1M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M262144_PCM_NxTxA}} 
 	\hspace*{20pt}	
@@ -111,8 +111,8 @@ TODO
   	\hspace*{20pt}  
   	\subfloat[Data set of 32M integers.]{\label{PCM-NxTxA-32M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M33554432_PCM_NxTxA}} 
   	
-	\caption{\textit{Intel Xeon X5670}. Time Completion for sorting \textit{large} data sets. Each graphic represents a data set of fixed size, while each shape on a graphic shows the Time Completion of a certain Sorting Algorithm for that data set.}
-	\label{PCM-NxTxA-large}
+	\caption{\textit{Intel Xeon X5670}. Time Completion for sorting \textit{small} data sets. Each graphic represents a data set of fixed size, while each shape on a graphic shows the Time Completion of a certain Sorting Algorithm for that data set.}
+	\label{PCM-NxTxA-small}
 \end{figure} 
 
 \begin{figure}[!ht]
@@ -126,18 +126,19 @@ TODO
   	\hspace*{20pt}
   	\subfloat[Data set of 512M integers.]{\label{PCM-NxTxA-512M}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/NxTxA/M536870912_PCM_NxTxA}} 
 	
-	\caption{\textit{Intel Xeon X5670}. Time Completion for sorting \textit{huge} data sets. Each graphic represents a data set of fixed size, while each shape on a graphic shows the Time Completion of a certain Sorting Algorithm for that data set.}
-	\label{PCM-NxTxA-huge}
+	\caption{\textit{Intel Xeon X5670}. Time Completion for sorting \textit{large} data sets. Each graphic represents a data set of fixed size, while each shape on a graphic shows the Time Completion of a certain Sorting Algorithm for that data set.}
+	\label{PCM-NxTxA-large}
 \end{figure} 
 
 \begin{figure}[!ht]
 	\centering
-	\subfloat[Parallelism degree 2.]{\label{PCM-MxTxA-n2}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxA/n2_PCM_MxTxA}} 
-	\hspace*{20pt}	
-  	\subfloat[Parallelism degree 4.]{\label{PCM-MxTxA-n4}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxA/n4_PCM_MxTxA}} 
+	\subfloat[Parallelism degree 2.]{\label{PCM-MxTxA-n2}\includegraphics[width=0.5\textwidth]{plots/test_00_PCM/MxTxA/n2_PCM_MxTxA}} 
+	
+	\centering
+  	\subfloat[Parallelism degree 4.]{\label{PCM-MxTxA-n4}\includegraphics[width=0.5\textwidth]{plots/test_00_PCM/MxTxA/n4_PCM_MxTxA}} 
   		
 	\centering
-	\subfloat[Parallelism degree 8.]{\label{PCM-MxTxA-n8}\includegraphics[width=0.4\textwidth]{plots/test_00_PCM/MxTxA/n8_PCM_MxTxA}} 
+	\subfloat[Parallelism degree 8.]{\label{PCM-MxTxA-n8}\includegraphics[width=0.5\textwidth]{plots/test_00_PCM/MxTxA/n8_PCM_MxTxA}} 
   	
 	\caption{\textit{Intel Xeon X5670}. Time Completion for sorting data sets with fixed parallelism degree.}
 	\label{PCM-MxTxA}

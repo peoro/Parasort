@@ -2,7 +2,9 @@
 On this architecture, due to the lack of space on disks, we will be able to test Sorting Algorithms for data sets of size at most 4GB, namely 1G integers. Further, given the results of tests shown in~\ref{test-env-pianosa}, the size of the communication buffer of the DAL layer has been set to 30MB. 
 
 \paragraph{Scalability of Sorting Algorithms}
-If the data set is \textbf{small} (i.e. of size up to 64MB) there is not any Sorting Algorithms that scales. Even worse, if we plotted the same shapes of Figure~\ref{NxTxM} on a logarithmic scale, we would notice that by increasing the parallelism degree we would obtain an increase of the Time Completion too. In reality, this behaviour is not surprising. The cost of \textit{Sequentialsort} for small data sets varies between a few seconds and tens of milliseconds, that is the same order magnitude of $T\_send( \sim KB )$ (see~\ref{test-env-pianosa} for more details). This means that the cost of communications between processes has a significative impact on the final performance of Sorting Algorithms. From a qualitative point of view, the higher the parallelism degree, the higher both the number of communications and the overall time spent in sending datas, so higher is even the overhead introduced by the parallelization. This is why Sorting Algorithms cannot scale and usually exhibit a Time Completion even worse than the one of \textit{Sequentialsort} (that becomes a simple call to the standard \textit{ANSI qsort}, since the data set surely fits the primary memory).
+Figures~\ref{NxTxM} and~\ref{MxTxN} show the Time Completion of Sorting Algorithms on Pianosa.
+
+If the data set is \textbf{small} (i.e. of size up to 64MB) there is not any Sorting Algorithms that shows a good scalability. Even worse, if we look at Figure~\ref{NxTxA-small} we notice that by increasing the parallelism degree we obtain an increase of the Time Completion too. In reality, this behaviour is not surprising. The cost of \textit{Sequentialsort} (that is, the cost of the standard \textit{ANSI qsort}, since the data set surely fits the primary memory) for small data sets varies between a few seconds and tens of milliseconds, that is the same order magnitude of $T\_send( \sim KB )$ (see~\ref{test-env-pianosa} for more details). This means that the cost of communications between processes has a significative impact on the final performance of Sorting Algorithms. From a qualitative point of view, the higher the parallelism degree, the higher both the number of communications and the overall time spent in sending datas, so higher is even the overhead introduced by the parallelization. This is why Sorting Algorithms cannot scale and usually exhibit a Time Completion even worse than the one of \textit{Sequentialsort}.
 
 Things are a little bit different when the data set is \textbf{large}, namely when its size is between 128MB and 512MB. Figure~\ref{NxTxM} clearly shows that there is not any algorithm that scales. Bucketsort and Samplesort have a little improvement passing from $n=2$ to $n=4$, but nothing extraordinary. However, if the data set is of 512MB, the parallelization is useful to lower the Time Completion with respect to the one of \textit{Sequentialsort}. Figure~\ref{sequential-pianosa} shows that, for sorting 512 MB, \textit{Sequentialsort} takes roughly 400s, while all Sorting Algorithms, except Quicksort, are able to lower it up to roughly 200s with just $n=4$. Unfortunately, we do not obtain any further improve neither moving from $n=4$ to $n=8$ nor considering a smaller data size (with just $M=256MB$ the parallelizzation gain is not significative). Reasons are quite obvious. From one hand, if we increase the parallelism degree the negative impact of communications is greater than the gain coming from having more computational units (working on smaller partitions).  From the other hand, $M=512MB$ means a jump to an important computational grain: indeed, moving from $n=2$ to $n=4$ guarantees processes to work with a partition of the data set that is still significative; this explains why some Sorting Algorithms shows a gain in terms of Time Completion within this range of processes. If we further increase $n$ up to $16$, processes have to work on smaller partitions, which let the parallelization in some sense useless.
 
@@ -89,23 +91,30 @@ Aside the \textit{Quicksort}, which suffers TODO, most of the Sorting Algorithms
   	\hspace*{20pt}  
   	\subfloat[Data set of 32M integers.]{\label{NxTxA-32M}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxA/M33554432_pianosa_NxTxA}} 
   	
-	\caption{\textit{Pianosa}. Time Completion for sorting \textit{large} data sets. Each graphic represents a data set of fixed size, while each shape on a graphic shows the Time Completion of a certain Sorting Algorithm for that data set.}
-	\label{NxTxA-large}
+	\caption{\textit{Pianosa}. Time Completion for sorting \textit{small} data sets. Each graphic represents a data set of fixed size, while each shape on a graphic shows the Time Completion of a certain Sorting Algorithm for that data set.}
+	\label{NxTxA-small}
 \end{figure} 
 
 \begin{figure}[!ht]
 	\centering
-	\subfloat[Data set of 64M integers.]{\label{NxTxA-64M}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxA/M67108864_pianosa_NxTxA}} 
-	\hspace*{20pt}	
-  	\subfloat[Data set of 128M integers.]{\label{NxTxA-128M}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxA/M134217728_pianosa_NxTxA}} 
-  		
-	\centering
-	\subfloat[Data set of 256M integers.]{\label{NxTxA-256M}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxA/M268435456_pianosa_NxTxA}} 
-  	\hspace*{20pt}
-  	\subfloat[Data set of 512M integers.]{\label{NxTxA-512M}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxA/M536870912_pianosa_NxTxA}} 
+	\subfloat[Data set of 64M integers.]{\label{NxTxA-64M}\includegraphics[width=0.5\textwidth]{plots/test_01_pianosa/NxTxA/M67108864_pianosa_NxTxA}} 
 	
 	\centering
-  	\subfloat[Data set of 1G integers.]{\label{NxTxA-1G}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxA/M1073741824_pianosa_NxTxA}}    
+  	\subfloat[Data set of 128M integers.]{\label{NxTxA-128M}\includegraphics[width=0.5\textwidth]{plots/test_01_pianosa/NxTxA/M134217728_pianosa_NxTxA}} 
+  		
+	\centering
+	\subfloat[Data set of 256M integers.]{\label{NxTxA-256M}\includegraphics[width=0.5\textwidth]{plots/test_01_pianosa/NxTxA/M268435456_pianosa_NxTxA}} 
+  	
+  	\caption{\textit{Pianosa}. Time Completion for sorting \textit{large} data sets. Each graphic represents a data set of fixed size, while each shape on a graphic shows the Time Completion of a certain Sorting Algorithm for that data set.}
+	\label{NxTxA-large}
+\end{figure}
+
+\begin{figure}[!ht]  	
+  	\centering
+  	\subfloat[Data set of 512M integers.]{\label{NxTxA-512M}\includegraphics[width=0.6\textwidth]{plots/test_01_pianosa/NxTxA/M536870912_pianosa_NxTxA}} 
+	
+	\centering
+  	\subfloat[Data set of 1G integers.]{\label{NxTxA-1G}\includegraphics[width=0.6\textwidth]{plots/test_01_pianosa/NxTxA/M1073741824_pianosa_NxTxA}}    
   	
 	\caption{\textit{Pianosa}. Time Completion for sorting \textit{huge} data sets. Each graphic represents a data set of fixed size, while each shape on a graphic shows the Time Completion of a certain Sorting Algorithm for that data set.}
 	\label{NxTxA-huge}
