@@ -14,10 +14,11 @@ There are a lot of possible future works:
 \begin{itemize}
 \item Studying and implementing new Parallel Sorting Algorithms on top of our framework (e.g. a K-Way Quicksort to improve the Algorithm Efficiency of the origianl parallel Quicksort).
 \item Make a comparison with other parallel sorting algorithms developed in other contexts. In particular, we should understand which is the approach used by those algorithms for managing data set that cannot fit the primary memory.
-\item Evaluate the possibility of introducing asynchronous I/O within the \texttt{Data}. 
+\item Evaluate the possibility of introducing asynchronous I/O within the DAL.
 \item Implement the \textit{dynamic approach} for the communication buffer of the DAL.
-\item Structuring the Sorting DAL layer.
+\item Find heuristics for estimating at run-time the \textit{static} optimum size of the communication buffer of the DAL such that do not require a separate study.
 \item Find better heuristics for the $DAL\_allowedBufSize$, the function of the DAL that establish the maximum amount of memory that a process is allowed to allocate.
+\item Structuring the Sorting DAL layer.
 \item In general, estimating the overhead introduced by the DAL with respect to a solution in which each Sorting Algorithm uses its own strategy for the I/O system.
 \item Evaluate the performance of the Sorting Algorithms for atomic items that are \textit{not} integers, but rather objects whose size is still close to the one of integers, but with a \textit{comparing function} having either a higher or lower cost. This way we would be able to evaluate the performance of Sorting Algorithms also for different computational grains.
 \end{itemize}
