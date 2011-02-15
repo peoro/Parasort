@@ -7,7 +7,7 @@ path=nsends_logs
 RET=""
 
 function byteMe() { # Divides by 2^10 until < 1024 and then append metric suffix
-declare -a METRIC=('' 'K' 'M' 'G' 'T' 'X' 'P') # Array of suffixes
+declare -a METRIC=("" K M G T X P) # Array of suffixes
 MAGNITUDE=0  # magnitude of 2^10
 PRECISION="scale=0" # change this numeric value to inrease decimal precision
 UNITS=$1 # numeric paramerter val (in bytes) to be converted
