@@ -35,7 +35,7 @@ for MB in ${DATA_SIZE_MB[*]}; do
 			
 			byteMe $(($M / $n_sends))
 			
-		    echo "Starting test for M="$M", n="$N", #sends="$n_sends
+		    echo "Starting test for M="$MB", n="$N", #sends="$n_sends
 		    echo -n $((2**$s))" & "$RET" & " >> $filename
 
 		    mpiexec -n $N ./tsetup $M $n_sends | awk '{printf $1 " & " $2 " & " $3}' >> $filename
