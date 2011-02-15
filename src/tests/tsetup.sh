@@ -11,7 +11,7 @@ declare -a METRIC=('' 'K' 'M' 'G' 'T' 'X' 'P') # Array of suffixes
 MAGNITUDE=0  # magnitude of 2^10
 PRECISION="scale=0" # change this numeric value to inrease decimal precision
 UNITS=$1 # numeric paramerter val (in bytes) to be converted
-while [ "${UNITS/.*}" -gt 1024 ]; do # compares integers (b/c no floats in bash)
+while [ "${UNITS/.*}" -ge 1024 ]; do # compares integers (b/c no floats in bash)
 	UNITS=`echo "$PRECISION; $UNITS/1024" | bc` # floating point math via `bc`
 	((MAGNITUDE++)) # increments counter for array pointer
 done
