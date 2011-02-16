@@ -70,13 +70,14 @@ for algo in ${ALGOS[*]}; do
 					file=$path"/result_n"$n"_M"$M"_"$algo"_s"$s"_t"$t
 
 					if [ -f $file ]; then
-						sort_time=`python results.py $file 2> /dev/null`
+						phase_time=(`python results.py "spd" $file 2> /dev/null`)						
+						let spd_time=phase_time[0]
 
-						if ! [[ "$sort_time" =~ ^[0-9]+$ ]] ; then
+						if ! [[ "$spd_time" =~ ^[0-9]+$ ]] ; then
 							echo $file" is not valid!"
 						else
 							let valid_files=valid_files+1
-							let sum_time=sum_time+sort_time
+							let sum_time=sum_time+spd_time
 						fi
 					else
 						echo $file" doesn't exist";
@@ -85,9 +86,9 @@ for algo in ${ALGOS[*]}; do
 			done
 
 			if [ $valid_files -ne 0 ]; then
-				let average_sort_time=sum_time/valid_files
-				echo -e $n"\t"$average_sort_time >> $algo"_M"$M".data"
-				echo -e $M"\t"$average_sort_time >> $algo"_n"$n".data"
+				let average_spd_time=sum_time/valid_files
+				echo -e $n"\t"$average_spd_time >> $algo"_M"$M".data"
+				echo -e $M"\t"$average_spd_time >> $algo"_n"$n".data"
 			fi
 		done
 	done
@@ -219,7 +220,7 @@ for M in ${DATA_SIZES[*]}; do
 	yrange='' #'set yrange [0:2.2e8]\n'
 	xlabel='set xlabel "Number of processors"\n'
 	ylabel='set ylabel "Execution Time (microsecs)"\n'
-	title='set title "Performance with '$val' '$measure' (\"'$platform'\")"\n'
+	title='set title "Performance for '$val' '$measure' (\"'$platform'\")"\n'
 	plot='plot 0 notitle'
 	gpl_content=( $terminal $terminal_name $xtics $ytics $yrange $xlabel $ylabel $title $plot )
 	gpl_filename="M"$M"_NxTxA.gpl"
