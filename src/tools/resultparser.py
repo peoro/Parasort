@@ -13,7 +13,7 @@ def parseFile( path ):
 				currentPhase = m.group(1)
 				results[ currentPhase ] = []
 			
-			m = re.match( '   node  ([^:]*): ([^ ]*) microsecs :: ([^ ]*) millisecs :: ([^ ]*) secs$', l )
+			m = re.match( '   node +([^:]*): ([^ ]*) microsecs :: ([^ ]*) millisecs :: ([^ ]*) secs$', l )
 			if m:
 				assert( currentPhase )
 				results[ currentPhase ].append( int( m.group(2) ) )
