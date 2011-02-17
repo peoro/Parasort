@@ -89,9 +89,8 @@ for algo in ${ALGOS[*]}; do
 								echo $file" is not valid!"
 							else
 								let valid_files=valid_files+1								
-								let last=n-1
-
-								for rank in `seq 0 $last`; do
+								
+								for rank in `seq 0 $last`; do									
 									let sum_phase_time[$rank]=sum_phase_time[$rank]+phase_time[$rank]
 								done
 							fi
@@ -103,14 +102,10 @@ for algo in ${ALGOS[*]}; do
 
 				p=`echo $p | tr " " "_"`
 
-				if [ $valid_files -ne 0 ]; then							
-					let last=n-1
-
+				if [ $valid_files -ne 0 ]; then		
 					for rank in `seq 0 $last`; do
 						let average_phase_time=sum_phase_time[$rank]/valid_files
-# 						echo -e $n"\t"$average_phase_time >> $algo"_M"$M"_"$p"_rank"$rank".data"
-# 						echo -e $M"\t"$average_phase_time >> $algo"_n"$n"_"$p"_rank"$rank".data"
-						echo -e $rank"\t"$average_phase_time >> "n"$n"_M"$M"_"$algo"_"$p".data"
+						echo -e $rank"\t"$average_phase_time >> "n"$n"_M"$M"_"$algo"_"$p".data"						
 					done
 				fi
 			done
@@ -144,7 +139,7 @@ for algo in ${ALGOS[*]}; do
 				yrange='' #'set yrange [0:2.2e8]\n'
 				xlabel='set xlabel "Ranks"\n'
 				ylabel='set ylabel "Execution Time (microsecs)"\n'
-				style='set boxwidth 1 absolute\nset style fill solid 1.00 border 1\nset style data histogram\nset style histogram cluster gap 1\n'
+				style='set boxwidth 1 absolute\nset style fill solid 1.00 border -1\nset style data histogram\nset style histogram cluster gap 1\n'
 				title='set title "Performance of different phases for '$algo' on '$val' '$measure' with '$n' processors (\"'$platform'\")"\n'
 				plot='plot 0 notitle'
 				gpl_content=( $terminal $terminal_name $xtics $ytics $yrange $xlabel $ylabel $style $title $plot )

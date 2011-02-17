@@ -1053,7 +1053,7 @@ void DAL_gatherReceive( Data *data, dal_size_t size )
 			tmp = MIN( blockSize, (count-i*blockSize) );
 
 			for ( r=0, j=0; j<GET_N(); j++ ) {
-				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
+				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Gatherv
 				rd[j] = r;
 				r += rc[j];
 			}
@@ -1071,7 +1071,7 @@ void DAL_gatherReceive( Data *data, dal_size_t size )
 			tmp = MIN( blockSize, (count-i*blockSize) );
 
 			for ( j=0; j<GET_N(); j++ ) {
-				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
+				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Gatherv
 				rd[j] = j*count + i*blockSize;
 			}
 			MPI_Gatherv( data->array.data+rd[GET_ID()], rc[GET_ID()], MPI_INT, recvData.array.data, rc, rd, MPI_INT, GET_ID(), MPI_COMM_WORLD );
@@ -1320,7 +1320,7 @@ void DAL_gathervReceive( Data *data, dal_size_t *counts, dal_size_t *displs )
 
 			for ( r=0, j=0; j<GET_N(); j++ ) {
 				tmp = MIN( blockSize, (counts[j]-i*blockSize) );
-				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_toallv
+				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Gatherv
 				rd[j] = r;
 				r += rc[j];
 			}
@@ -1332,6 +1332,7 @@ void DAL_gathervReceive( Data *data, dal_size_t *counts, dal_size_t *displs )
 			for ( j=0; j<GET_N(); j++ )
 				if( rc[j] )
 					DAL_dataCopyOS( &globalBuf, rd[j], &recvData, displs[j] + i*blockSize, rc[j] );
+				
 		}
 	}
 	else if (data->medium == Array && recvData.medium == Array ) {
@@ -1340,7 +1341,7 @@ void DAL_gathervReceive( Data *data, dal_size_t *counts, dal_size_t *displs )
 
 			for ( j=0; j<GET_N(); j++ ) {
 				tmp = MIN( blockSize, (counts[j]-i*blockSize) );
-				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Alltoallv
+				rc[j] =	tmp > 0 ? tmp : 0;	//Number of elements to be sent to process j by MPI_Gatherv
 				rd[j] = displs[j] + i*blockSize;
 			}
 			MPI_Gatherv( data->array.data+rd[GET_ID()], rc[GET_ID()], MPI_INT, recvData.array.data, rc, rd, MPI_INT, GET_ID(), MPI_COMM_WORLD );
