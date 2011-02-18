@@ -44,13 +44,74 @@ The following test were performed:
 In the bisection test the complete system is logically divided into two subsystems and the aggregated bandwidth and latency between the two subsystems is measured. An example of this is splitting the system in two vertically and letting each node in the left half communicate with a node in the right part on a one-to-one basis.
 
 \paragraph{Optimum size of the DAL's communication buffer}
-As we said in section~\ref{DAL-impl} we are interested in estimating the \textit{optimum size} for the communication buffer of the DAL layer. In particular, let's assume that we are performing a $DAL\_send$ of $L$ words. We may have to send these $L$ words either by performing a single $MPI\_Send$ or, more in general, by performing $X$ $MPI\_Send$. The latter situation is not unusual in our framework due to the structure of the DAL layer. Indeed, from section~\ref{DAL-impl}, we remind that each process has its own buffer dedicated to MPI-communications, and this buffer is of fixed size, let's say $K$ words. Since in general $K < L$, assuming without loss of generality that $L = K \times X$, the cost of sending $L$ words is equal to the cost of performing $X$ $MPI\_Send$ each of size $K$. For each architecture, we have to choose the best value of $K$: indeed, a low value may negatively impact on $T\_send$ (because of the setup cost of each $MPI\_Send$); a high value could be useless because a too large communication buffer may not give any benefit, rather it may only constitue a waste of important memory. In order to find the optimal value of $K$, namely the size of the ''static'' communication buffer, we developed a set of utilites (program and script that goes under the name of \textit{Tsetup}) that practically estimates $T\_send$ as function of $L$ and $X$. 
+As we said in section~\ref{DAL-impl} we are interested in estimating the \textit{optimum size} for the communication buffer of the DAL layer. In particular, assume that we are performing a $DAL\_send$ of $L$ words. We could send these $L$ words either by performing a single $MPI\_Send$ or, more in general, by performing $X$ $MPI\_Send$. The latter situation is typical in our framework due to the structure of the DAL. Indeed, from section~\ref{DAL-impl}, we remind that each process has its own buffer dedicated to communications; this buffer is of fixed size, let's say $K$ words. Since in general $K < L$, assuming without loss of generality that $L = K \times X$, the cost of sending $L$ words is equal to the cost of performing $X$ $MPI\_Send$ each of size $K$. For each architecture, we have to choose the best value of $K$: indeed, a low value may negatively impact on $T\_send$ (for instance, because of the setup cost of each $MPI\_Send$); a high value could be useless because a too large communication buffer may not give any benefit, rather it may only constitue a waste of important memory. In order to find the optimal value of $K$, namely the size of the ''static'' communication buffer, we have developed a set of utilites (a program and scripts that share the same prefix  \textit{Tsetup}) that practically estimates the various $T\_send$, $T\_scatter$ and $T\_alltoall$ as functions of $L$ and $X$. 
 
 \paragraph{MPI on Pianosa}
 \label{test-env-pianosa}
-Figures~\ref{pianosa-mpi-1},~\ref{pianosa-mpi-2},~\ref{pianosa-mpi-3} show the cost of $T\_send$ obtained on Pianosa. We will refer to these Figures in the following, when we will explain the performance analisys of the algorithms.
+As stated in the previous paragraph, we focus on determining the \textit{optimum} size of the communication buffer on $Pianosa$. Table~\ref{tsetup-pianosa-n8-M32} shows the time spent by the most used communication primitives (DAL$\_\lbrace$send, scatter, gather, alltoall$\rbrace$) for a message of size 32MB. Each row $i$ of the table is relative to different sizes of the communication buffer. In this way the original message will be sent through $X$ MPI$\_\lbrace$send, scatter, gather, alltoall$\rbrace$ according to the size of the communication buffer ($X \in \lbrace 2^i : i = 0...18 \rbrace$). Table~\ref{tsetup-pianosa-n8-M128} shows another test in which the original message is of size 128MB. In both experiments the parallelism degree is set to 8 (Appendix~\ref{appendixB} shows results with different parallelism degrees). Notice that the parallelism degree is meaningful for scatter, gather and alltoall because it can impact on the overall time spent to carry out the collective communication. By means of these experiments we want to understand which sizes of the communication buffer cause overhead for sending a message with a specific DAL primitive. By looking at the tables we can notice that, from a certain row ahead, some columns are blank (filled with '-'). This mean that the overhead of a DAL primitive (column), for a specific size of the communication buffer (row), is become so high that is useless to perform further tests since they would be from one hand meaningless and from the other one a waste of time. Thanks both to these results and to a lot of experiments involving all Sorting Algorithms, we have set the value of the communication buffer to \textbf{32 MB}. 
 
-\begin{figure}[p]
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+1 & 32 MB & 3.2885 & 3.2538 & 3.2533 & 4.4369 \\\hline
+2 & 16 MB & 3.2846 & 3.2551 & 3.2524 & 5.4570 \\\hline
+4 & 8 MB & 3.2847 & 3.2543 & 3.2529 & 5.4825 \\\hline
+8 & 4 MB & 3.2851 & 3.2550 & 3.2550 & 5.5014 \\\hline
+16 & 2 MB & 3.2862 & 3.2560 & 3.2573 & 5.5177 \\\hline
+32 & 1 MB & 3.2867 & 3.2579 & 3.3236 & 19.19259 \\\hline
+64 & 512 KB & 3.2918 & 3.2915 & 3.3222 & 25.24587 \\\hline
+128 & 256 KB & 3.3006 & 3.2766 & 3.2989 & 27.27086 \\\hline
+256 & 128 KB & 3.2847 & 3.2535 & 3.2972 & 40.39969 \\\hline
+512 & 64 KB & 3.2848 & 3.2536 & 3.3068 & 69.68816 \\\hline
+1024 & 32 KB & 3.2887 & 3.2539 & 3.2965 & 116.116458 \\\hline
+2048 & 16 KB & 3.2887 & 3.2558 & 3.3272 & 266.266317 \\\hline
+4096 & 8 KB & 3.2894 & 3.2580 & 4.3730 & - \\\hline
+8192 & 4 KB & 3.2903 & 3.2645 & 14.13722 & - \\\hline
+16384 & 2 KB & 3.2890 & 3.2746 & 39.38740 & - \\\hline
+32768 & 1 KB & 3.2938 & 3.3331 & 209.208522 & - \\\hline
+65536 & 512 B & 3.3155 & 4.4322 & 353.353234 & - \\\hline
+131072 & 256 B & 3.3479 & 5.5415 & - & - \\\hline
+262144 & 128 & 6.5900 & 15.15130 & - & - \\\hline
+\end{tabular}
+\caption{DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 32MB. }
+\label{tsetup-pianosa-n8-M32}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+1 & 128 MB & 11.11400 & 10.10070 & 10.10043 & 17.17266 \\\hline
+2 & 64 MB & 11.11402 & 10.10094 & 10.10051 & 18.18033 \\\hline
+4 & 32 MB & 11.11405 & 10.10100 & 10.10071 & 20.19710 \\\hline
+8 & 16 MB & 11.11410 & 10.10082 & 10.10079 & 19.19299 \\\hline
+16 & 8 MB & 11.11418 & 10.10045 & 10.10081 & 20.20120 \\\hline
+32 & 4 MB & 11.11422 & 10.10075 & 10.10153 & 20.20133 \\\hline
+64 & 2 MB & 11.11471 & 10.10116 & 10.10247 & 21.20900 \\\hline
+128 & 1 MB & 11.11491 & 10.10205 & 11.10832 & 74.73857 \\\hline
+256 & 512 KB & 12.11698 & 12.11658 & 11.10849 & 102.101612 \\\hline
+512 & 256 KB & 12.12053 & 11.11130 & 11.10812 & 113.112904 \\\hline
+1024 & 128 KB & 11.11405 & 10.10025 & 11.10711 & 174.173785 \\\hline
+2048 & 64 KB & 11.11410 & 10.10042 & 11.10515 & 286.285505 \\\hline
+4096 & 32 KB & 11.11454 & 10.10067 & 11.11336 & 481.481320 \\\hline
+8192 & 16 KB & 11.11424 & 10.10119 & 16.16036 & 1060.1060080 \\\hline
+16384 & 8 KB & 11.11446 & 10.10249 & 65.64964 & - \\\hline
+32768 & 4 KB & 12.11526 & 10.10489 & 174.173768 & - \\\hline
+65536 & 2 KB & 12.11582 & 11.11229 & 692.691751 & - \\\hline
+131072 & 1 KB & 12.11758 & 13.13273 & 1196.1195668 & - \\\hline
+\end{tabular}
+\caption{DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 128MB. }
+\label{tsetup-pianosa-n8-M128}
+\end{center}
+\end{table}
+
+We conclude this paragraph by showing (Figures~\ref{pianosa-mpi-1},~\ref{pianosa-mpi-2},~\ref{pianosa-mpi-3}) the cost of $DAL\_send$ for small messages. We will have to refer to these figures in the following, when we will show the performance analisys of the algorithms.
+
+\begin{figure}[h]
 	\centering
   	\subfloat[Messages of length from 0 to 32 bytes (stride 4 bytes).]{\label{tsend_32}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/pianosa/tsend_4}}  
 	\hspace*{20pt}
@@ -70,39 +131,11 @@ Figures~\ref{pianosa-mpi-1},~\ref{pianosa-mpi-2},~\ref{pianosa-mpi-3} show the c
 	\label{pianosa-mpi-3}
 \end{figure}
 
-Now we focus on the size of the communication buffer. Table~\ref{tsetup-impact} shows the cost in seconds of DAL$\_\lbrace send, scatter, alltoall \rbrace$ for a message of size 32MB. The $X$ row of the table show the case in which the original message has been splitted in $X$ $MPI\_\lbrace send, scatter, alltoall \rbrace$, with $X \in \lbrace 2^i : i = 0...18 \rbrace$. TODO: need comment
-\begin{table}[h]
-\begin{center}
-\begin{tabular}{|c|c|c|c|c|}\hline
-\hline
-$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$ bytes)  & $T\_send$   & $T\_scatter$  & $T\_alltoall$      \\\hline\hline
-1 & 33554432 & 3.2890 & 3.2557 & 5.4890 \\\hline
-2 & 16777216 & 3.2845 & 3.2548 & 5.4769 \\\hline
-4 & 8388608 & 3.2847 & 3.2542 & 5.5114 \\\hline
-8 & 4194304 & 3.2852 & 3.2549 & 5.4967 \\\hline
-16 & 2097152 & 3.2862 & 3.2560 & 5.5235 \\\hline
-32 & 1048576 & 3.2867 & 3.2577 & 21.21224 \\\hline
-64 & 524288 & 3.2919 & 3.2892 & 26.26160 \\\hline
-128 & 262144 & 3.3007 & 3.2829 & 32.31925 \\\hline
-256 & 131072 & 3.2847 & 3.2531 & 41.40975 \\\hline
-512 & 65536 & 3.2891 & 3.2542 & 72.71889 \\\hline
-1024 & 32768 & 3.2854 & 3.2544 & 114.113511 \\\hline
-2048 & 16384 & 3.2853 & 3.2553 & 265.265055 \\\hline
-4096 & 8192 & 3.2859 & 3.2580 & 15.15112 \\\hline
-8192 & 4096 & 3.2868 & 3.2645 & 20.20080 \\\hline
-16384 & 2048 & 3.2892 & 3.2790 & 48.47531 \\\hline
-32768 & 1024 & 3.2935 & 3.3275 & 84.84000 \\\hline
-65536 & 512 & 3.3221 & 4.4270 & 155.154831 \\\hline
-131072 & 256 & 4.3956 & 6.6259 & 291.290647 \\\hline
-262144 & 128 & 6.5900 & 15.15130 & 573.572866 \\\hline
-\end{tabular}
-\caption{DAL$\_\lbrace send, scatter, alltoall \rbrace$ cost for messages of size 32MB. }
-\label{tsetup-impact}
-\end{center}
-\end{table}
-
+\clearpage
 
 \paragraph{MPI on PCM}
+We did the same experiment also on the cluster $PCM$. TODO
+
 
 \input{alg_efficiency}
 \input{performance}
