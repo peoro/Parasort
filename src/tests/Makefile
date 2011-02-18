@@ -1,6 +1,6 @@
 MPICC = mpicc
 MPICPP = mpic++
-CFLAGS = -Wall -Wextra -Wno-unused -Werror -g
+CFLAGS = -Wall -Wextra -Wno-unused -Werror -g -ftrapv
 
 OBJECTS = ../debug.o
 TESTS = sendrecv probe tsetup fwrite

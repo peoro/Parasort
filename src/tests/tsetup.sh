@@ -1,13 +1,13 @@
 #!/bin/bash
 
 DATA_SIZE_MB=( 32 )
-PAR_DEGREES=( 2 4 8 16 )
+PAR_DEGREES=( 8 ) #( 2 4 8 16 )
 N_SENDS=( 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 )
 path=nsends_logs
 RET=""
 
 function byteMe() { # Divides by 2^10 until < 1024 and then append metric suffix
-declare -a METRIC=("" K M G T X P) # Array of suffixes
+declare -a METRIC=(B KB MB GB TB XB PB) # Array of suffixes
 MAGNITUDE=0  # magnitude of 2^10
 PRECISION="scale=0" # change this numeric value to inrease decimal precision
 UNITS=$1 # numeric paramerter val (in bytes) to be converted
@@ -38,7 +38,7 @@ for MB in ${DATA_SIZE_MB[*]}; do
 		    echo "Starting test for M="$MB", n="$N", #sends="$n_sends
 		    echo -n $((2**$s))" & "$RET" & " >> $filename
 
-		    mpiexec -n $N ./tsetup $M $n_sends | awk '{printf $1 " & " $2 " & " $3}' >> $filename
+		    mpiexec -n $N ./tsetup $M $n_sends | awk '{printf $1 " & " $2 " & " $3 " & " $4}' >> $filename
 
 		    echo " \\\\\\hline" >> $filename
 

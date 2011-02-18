@@ -24,6 +24,10 @@ static inline void TESTS_MPI_SCATTER ( void *send_array, long size_per_proc, MPI
 	MPI_Scatter ( send_array, size_per_proc, dataType, recv_array, size_per_proc, dataType, root, MPI_COMM_WORLD ); 
 }
 
+static inline void TESTS_MPI_GATHER ( void *send_array, long size, long size_per_proc, MPI_Datatype dataType, void *recv_array, int root ) {
+	MPI_Gather ( send_array, size_per_proc, dataType, recv_array, size_per_proc, dataType, root, MPI_COMM_WORLD ); 
+}
+
 static inline void TESTS_MPI_ALLTOALL ( void *send_array, long size_per_proc, MPI_Datatype dataType, void *recv_array ) {
 	MPI_Alltoall ( send_array, size_per_proc, dataType, recv_array, size_per_proc, dataType, MPI_COMM_WORLD ); 
 }

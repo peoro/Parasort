@@ -50,7 +50,7 @@ int main( int argc, char **argv )
 	
 	
 	long blockSize = size / count;
-	long block_disp = ( blockSize / GET_N() ); //only for scatter and alltoall
+	long block_disp = ( blockSize / GET_N() ); //only for scatter, gather and alltoall
 	long current = 0;
 	Time start, end;
 	TimeDiff res;
@@ -96,6 +96,27 @@ int main( int argc, char **argv )
 		start = now( );
 		for( i = 0; i < count; ++ i ) {
 			TESTS_MPI_SCATTER( mem + current, block_disp, MPI_CHAR, mem_recv + i*block_disp, 0 );
+			current += blockSize;
+		}
+		end = now( );
+		res = timeDiff( start, end );
+		
+		if ( GET_ID() == 0 )
+			printf ( "%ld.%.3ld\t", res.time, res.mtime );
+	}
+	
+	//MPI_GATHER
+	{	
+		//if ( GET_ID() == 0 )
+			//SPD_DEBUG( "MPI_SCATTER: %ld blocks of %ld bytes, %ld bytes to each process at a time", count, blockSize, block_disp );
+		
+		SPD_ASSERT ( blockSize % GET_N() == 0, "Gathered block must be of equal size, now blockSize mod N = %ld", blockSize % GET_N() );
+		
+		current = 0;
+		
+		start = now( );
+		for( i = 0; i < count; ++ i ) {
+			TESTS_MPI_GATHER( mem + current, size, block_disp, MPI_CHAR, mem_recv + i*block_disp, 0 );
 			current += blockSize;
 		}
 		end = now( );
