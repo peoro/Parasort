@@ -1,4 +1,128 @@
-\section{Cost of DAL primitives for different sizes of the DAL's static communication buffer}
+\section{Overhead of the DAL's static communication buffer}
 \label{appendixB}
+We show the cost of the DAL's primitives for:
+\begin{itemize}
+\item different sizes of the static communication buffer;
+\item original messages of size 32MB and 128MB;
+\item parallelism degrees up to 16.
+\end{itemize} 
 
-TODO: inserire tabelle di setup
+\subsection*{Pianosa}
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+1 & 32 MB & 3.2844 & 2.2181 & 2.2171 & 3.2917  \\\hline
+2 & 16 MB & 3.2845 & 2.2182 & 2.2175 & 3.3290  \\\hline
+4 & 8 MB & 3.2848 & 2.2171 & 2.2176 & 4.3999 \\\hline
+8 & 4 MB & 3.2852 & 2.2165 & 2.2186 & 4.4104 \\\hline
+16 & 2 MB & 3.2863 & 2.2176 & 2.2198 & 4.4332 \\\hline
+32 & 1 MB & 3.2867 & 2.2187 & 2.2220 & 4.4445 \\\hline
+64 & 512 KB & 3.2918 & 2.2415 & 2.2475 & 19.18803 \\\hline
+128 & 256 KB & 3.3013 & 2.2203 & 2.2328 & 21.21201 \\\hline
+256 & 128 KB & 3.2853 & 2.2147 & 2.2437 & 22.22433 \\\hline
+512 & 64 KB & 3.2891 & 2.2155 & 2.2214 & 24.24157 \\\hline
+1024 & 32 KB & 3.2889 & 2.2157 & 2.2358 & - \\\hline
+2048 & 16 KB & 3.2893 & 2.2158 & 2.2230 & - \\\hline
+4096 & 8 KB & 3.2856 & 2.2182 & 2.2374 & - \\\hline
+8192 & 4 KB & 3.2868 & 2.2201 & 4.4308 & - \\\hline
+16384 & 2 KB & 3.2890 & 2.2277 & 20.20223 & - \\\hline
+32768 & 1 KB & 3.2935 & 2.2404 & 87.87425 & - \\\hline
+65536 & 512 B & 3.3025 & 3.3288 & 144.143928 & - \\\hline
+131072 & 256 B & 4.3800 & 5.4505 & - & - \\\hline
+\end{tabular}
+\caption{DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 32MB and parallelism degree 4. The cost of a primitive is the time expressed in seconds. }
+\label{tsetup-pianosa-n4-M32}
+\end{center}
+\end{table}
+
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+1 & 32 MB & 3.2847 & 3.2761 & 3.2732 & 6.6131 \\\hline
+2 & 16 MB & 3.2845 & 3.2790 & 3.2708 & 6.6369 \\\hline
+4 & 8 MB & 3.2847 & 3.2790 & 3.2715 & 7.6914 \\\hline
+8 & 4 MB & 3.2849 & 3.2796 & 3.2737 & 7.7443 \\\hline
+16 & 2 MB & 3.2862 & 3.2800 & 3.3349 & 28.27765 \\\hline
+32 & 1 MB & 3.2867 & 3.2801 & 3.3045 & 34.33959 \\\hline
+64 & 512 KB & 3.2918 & 3.3288 & 3.3421 & 35.35009 \\\hline
+128 & 256 KB & 3.3007 & 3.3173 & 3.3178 & 44.44079 \\\hline
+256 & 128 KB & 3.2890 & 3.2857 & 3.3196 & 73.72665 \\\hline
+512 & 64 KB & 3.2881 & 3.2788 & 3.3164 & 138.138153 \\\hline
+1024 & 32 KB & 3.2884 & 3.2792 & 3.3332 & 336.335744 \\\hline
+2048 & 16 KB & 3.2852 & 3.2812 & 3.3134 & - \\\hline
+4096 & 8 KB & 3.2893 & 3.2853 & 6.6092 & - \\\hline
+8192 & 4 KB & 3.2906 & 3.2957 & 18.18112 & - \\\hline
+16384 & 2 KB & 3.2920 & 3.3191 & 61.61431 & - \\\hline
+32768 & 1 KB & 3.2973 & 4.3894 & 299.299182 & - \\\hline
+65536 & 512 B & 3.3040 & 5.5186 & - & - \\\hline
+\end{tabular}
+\caption{DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 32MB and parallelism degree 16. The cost of a primitive is the time expressed in seconds. }
+\label{tsetup-pianosa-n16-M32}
+\end{center}
+\end{table}
+
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+1 & 128 MB & 11.11435 & 9.8689 & 9.8663 & 14.14440 \\\hline
+2 & 64 MB & 11.11440 & 9.8709 & 9.8668 & 16.15858 \\\hline
+4 & 32 MB & 11.11441 & 9.8709 & 9.8678 & 14.13817 \\\hline
+8 & 16 MB & 11.11453 & 9.8698 & 9.8680 & 15.15276 \\\hline
+16 & 8 MB & 11.11416 & 9.8621 & 9.8682 & 15.14930 \\\hline
+32 & 4 MB & 11.11425 & 9.8618 & 9.8721 & 15.15394 \\\hline
+64 & 2 MB & 11.11474 & 9.8657 & 9.8757 & 18.17515 \\\hline
+128 & 1 MB & 11.11495 & 9.8683 & 9.8835 & 18.17870 \\\hline
+256 & 512 KB & 12.11698 & 10.9644 & 9.9263 & 67.66990 \\\hline
+512 & 256 KB & 12.12050 & 9.8903 & 9.8653 & 90.89616 \\\hline
+1024 & 128 KB & 11.11404 & 9.8585 & 9.8688 & - \\\hline
+2048 & 64 KB & 11.11406 & 9.8586 & 9.9009 & - \\\hline
+4096 & 32 KB & 11.11415 & 9.8589 & 9.8643 & - \\\hline
+8192 & 16 KB & 11.11428 & 9.8614 & 9.9397 & - \\\hline
+16384 & 8 KB & 11.11452 & 9.8715 & 25.25044 & - \\\hline
+32768 & 4 KB & 11.11492 & 9.8802 & 93.92993 & - \\\hline
+65536 & 2 KB & 12.11582 & 9.9180 & 239.239397 & - \\\hline
+131072 & 1 KB & 12.11758 & 11.10623 & 344.343881 & - \\\hline
+\end{tabular}
+\caption{DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 128MB and parallelism degree 4. The cost of a primitive is the time expressed in seconds. }
+\label{tsetup-pianosa-n4-M128}
+\end{center}
+\end{table}
+
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+1 & 128 MB & 11.11437 & 11.10955 & 12.12440 & 28.27527 \\\hline
+2 & 64 MB & 11.11403 & 11.11216 & 12.11787 & 30.30334 \\\hline
+4 & 32 MB & 11.11404 & 12.11707 & 11.11359 & 32.32325 \\\hline
+8 & 16 MB & 11.11409 & 12.11567 & 11.11102 & 35.35057 \\\hline
+16 & 8 MB & 11.11415 & 14.14157 & 11.11047 & 42.42438 \\\hline
+32 & 4 MB & 11.11425 & 12.12152 & 11.11131 & 51.50936 \\\hline
+64 & 2 MB & 11.11472 & 12.12739 & 12.12321 & 123.123474 \\\hline
+128 & 1 MB & 11.11491 & 11.10878 & 13.12637 & 187.187238 \\\hline
+256 & 512 KB & 12.11700 & 12.12410 & 13.12669 & 185.185065 \\\hline
+512 & 256 KB & 12.12100 & 12.12413 & 12.12226 & 272.271852 \\\hline
+1024 & 128 KB & 11.11442 & 11.10821 & 13.12990 & 408.408434 \\\hline
+2048 & 64 KB & 11.11441 & 11.10841 & 12.12012 & - \\\hline
+4096 & 32 KB & 11.11420 & 11.10873 & 13.13453 & - \\\hline
+8192 & 16 KB & 11.11457 & 11.10941 & 32.31605 & - \\\hline
+16384 & 8 KB & 11.11448 & 11.11146 & 70.70188 & - \\\hline
+32768 & 4 KB & 11.11492 & 12.11547 & 284.284052 & - \\\hline
+65536 & 2 KB & 12.11622 & 12.12376 & 1235.1234657 & - \\\hline
+131072 & 1 KB & 12.11758 & 13.10623 & - & - \\\hline
+\end{tabular}
+\caption{DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 128MB and parallelism degree 16. The cost of a primitive is the time expressed in seconds.}
+\label{tsetup-pianosa-n16-M128}
+\end{center}
+\end{table}

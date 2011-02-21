@@ -11,7 +11,7 @@ of the MPI-implementation, the performance of the network and devices. Most inte
 
 We used the latter technique to measure the performance of MPI on our test environments, and a combination of both benchmarking and profiling techniques to measure the performance of the different sorting algorithms.
 
-\subsection{Test environment}
+\subsection{Test Environment}
 In this section we briefly discuss the architecture of our test environments. 
 
 \paragraph{Pianosa}
@@ -21,7 +21,7 @@ In this section we briefly discuss the architecture of our test environments.
 \label{PCM}
 The second target architecture is a cluster of Intel Xeon X5670 (2,93 Ghz) machines located at the Department of Physics, University of Pisa. Each node has 12 cores splitted in 2 chips (6 cores/chip) and each core allows the execution of two simultaneous threads. Each core has both a L1 cache of 64KB (32 KB dedicated to instructions, 32KB to datas) and L2 cache of 256KB. Each chip has also a L3 cache of 12MB, thus shared by 6 cores. The primary memory is of size 48GB. The disk subsystem is 1x1000 GB SATA II, 7200 RPM, surely faster than the one of Pianosa. The operative system is SUSE Linux Enterprise Server 11. Nodes are interconnected by means of Infiniband. We will use \textit{mvapich2}, a special version of \textit{mpich2} that supports Infiniband. It is clear that the comparison between the old Pianosa and this cluster is unfair: the newer powerful hardware of this architecture will play a key role for the performance of our Sorting Algorithms, both from a quantitative (absolute time completion) and qualitative (scalability) point of view. We will detail all these aspects in the following sections.
 
-\subsection{Cost Model of MPI}
+\subsection{Cost Model of MPI on the Test Environment}
 \label{MPI-cost-model}
 \paragraph{The cost of sending a message: the T$\_$send model}
 We are interested in evaluating the cost of communications in the test environments because it can help us in understanding the performance behaviour of the Sorting Algorithms. Indeed, depending on both the specific architecture and the algorithm, communications may significatively impact the completion time (and so even the scalability) of the algorithm itself. In a simplified view, the cost of sending a message between two tasks located on different processors can be represented by two parameters: the message startup time $T_{setup}$, which is the time required to initiate the communication, and the transmission time $T_{trasm}$ per word, which is mainly determined by the physical bandwidth of the communication channel linking the source and destination processors~\cite{VANN}. In this model, the time required to send a message of size $L$ (that is, for performing a $DAL\_send$ of size $L$) words is then
@@ -75,7 +75,7 @@ $\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_sc
 131072 & 256 B & 3.3479 & 5.5415 & - & - \\\hline
 262144 & 128 & 6.5900 & 15.15130 & - & - \\\hline
 \end{tabular}
-\caption{DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 32MB. }
+\caption{DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 32MB. The cost of a primitive is the time expressed in seconds. }
 \label{tsetup-pianosa-n8-M32}
 \end{center}
 \end{table}
@@ -104,7 +104,7 @@ $\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_sc
 65536 & 2 KB & 12.11582 & 11.11229 & 692.691751 & - \\\hline
 131072 & 1 KB & 12.11758 & 13.13273 & 1196.1195668 & - \\\hline
 \end{tabular}
-\caption{DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 128MB. }
+\caption{DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 128MB. The cost of a primitive is the time expressed in seconds.}
 \label{tsetup-pianosa-n8-M128}
 \end{center}
 \end{table}
