@@ -1,7 +1,7 @@
 #!/bin/bash
 
-DATA_SIZE_MB=( 32 )
-PAR_DEGREES=( 8 ) #( 2 4 8 16 )
+DATA_SIZE_MB=( 32 128  )
+PAR_DEGREES=( 2 4 8 16 32 )
 N_SENDS=( 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 )
 path=nsends_logs
 RET=""
