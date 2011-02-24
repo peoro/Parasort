@@ -73,7 +73,7 @@ cat $filename".gpl" | grep "[0-9]" > tmp
 
 cmd='plot "tmp" using 1:2 title "0" with linespoints, "tmp" using 1:3 title "256" with linespoints, "tmp" using 1:4 title "512" with linespoints, "tmp" using 1:5 title "768" with linespoints, "tmp" using 1:6 title "1024" with linespoints'
 
-plot=( 'set terminal postscript eps enhanced color\n' 'set output "'$SAVE_DIR"/"$filename'.eps"\n' 'set xlabel "Size (bytes)"\n' 'set ylabel "time (us)"\n' 'set title "Broadcast performance for MPI (pianosa) type blocking"\n' $cmd"\n" 'clear\n' )
+plot=( 'set terminal postscript eps enhanced color\n' 'set output"'$SAVE_DIR"/"$filename'.eps"\n' 'set xlabel "Number of processors"\n' 'set ylabel "time (us)"\n' 'set title "Broadcast performance for MPI (pianosa) type blocking"\n' $cmd"\n" 'clear\n' )
 echo -e ${plot[@]} > $filename".plot"
 gnuplot $filename".plot" > /dev/null
 
