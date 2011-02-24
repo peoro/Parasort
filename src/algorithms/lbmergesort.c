@@ -70,7 +70,7 @@ void fileMerge( const dal_size_t flength, const dal_size_t fdispl, Data *d1, con
 	SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_allowedBufSize() ), "not enough memory..." );
 	DAL_ASSERT( DAL_dataSize( &buffer ) > 2, &buffer, "buffer size must be greater than 2" );
 
-	int bufSize = DAL_dataSize( &buffer ) / 3;
+	dal_size_t bufSize = DAL_dataSize( &buffer ) / 3;
 	dal_size_t d1Count, d2Count, mergedCount;
 	dal_size_t d1c, d2c, mc;
 
@@ -85,7 +85,7 @@ void fileMerge( const dal_size_t flength, const dal_size_t fdispl, Data *d1, con
 	int* d1Array = buffer.array.data;
 	int* d2Array = buffer.array.data+bufSize;
 	int* mergedArray = buffer.array.data+2*bufSize;
-	int i, j, k;
+	dal_size_t i, j, k;
 	k = 0; j = 0; i = 0;
 
 	while ( d1Count < flength && d2Count < slength ) {
@@ -169,7 +169,7 @@ void mergeData( dal_size_t flength, dal_size_t fdispl, Data *d1, dal_size_t slen
 */
 void getSendCounts( Data *data, const int *splitters, const int n, const int start, dal_size_t *lengths )
 {
-	int i, j, k;
+	dal_size_t i, j, k;
 
 	/* Computing the number of integers to be sent to each process */
 	switch( data->medium ) {
@@ -179,9 +179,8 @@ void getSendCounts( Data *data, const int *splitters, const int n, const int sta
 			DAL_init( &buffer );
 			SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_dataSize(data) ), "not enough memory..." );
 
-			int blocks = DAL_BLOCK_COUNT(data, &buffer);
-			dal_size_t r, readCount = 0;
-			int i;
+			dal_size_t blocks = DAL_BLOCK_COUNT(data, &buffer);
+			dal_size_t r, readCount = 0;			
 
 			for( i=0; i<blocks; i++ ) {
 				r = DAL_dataCopyOS( data, i*DAL_dataSize(&buffer), &buffer, 0, MIN(DAL_dataSize(&buffer), DAL_dataSize(data)-readCount) );
@@ -189,7 +188,7 @@ void getSendCounts( Data *data, const int *splitters, const int n, const int sta
 
 				for ( k=0; k<r; k++ ) {
 					j = getBucketIndex( &buffer.array.data[k], splitters, n-1 );
-					SPD_ASSERT( j >= 0 && j < n, "Something went wrong: j should be within [0,%d], but it's %d", n-1, j );
+					SPD_ASSERT( j >= 0 && j < n, "Something went wrong: j should be within [0,%d], but it's "DST, n-1, j );
 					lengths[start+j]++;
 				}
 			}
@@ -238,7 +237,7 @@ void lbmergesort( const TestInfo *ti, Data *data )
 	int 				splittersCount = 0;
 
 	int 				groupSize, idInGroup, partner, pairedGroupRoot, groupRoot;
-	int					i, j, k, h, flag;
+	dal_size_t			i, j, k, h, flag;
 	PhaseHandle 		scatterP, sortingP, computationP, localP, samplingP, mergeP, gatherP;
 
 	SPD_ASSERT( isPowerOfTwo( n ), "n should be a power of two (but it's %d)", n );

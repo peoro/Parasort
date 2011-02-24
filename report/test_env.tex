@@ -136,6 +136,27 @@ We conclude this paragraph by showing (Figures~\ref{pianosa-mpi-1},~\ref{pianosa
 \paragraph{MPI on PCM}
 We did the same experiment also on the cluster $PCM$. TODO
 
+\begin{figure}[h]
+    \centering
+    \subfloat[Messages of length from 0 to 32 bytes (stride 4 bytes).]{\label{tsend_1}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/PCM/tsend_1}}  
+    \hspace*{20pt}
+    \subfloat[Messages of length from 0 to 1024 bytes (stride 32 bytes).]{\label{tsend_2}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/PCM/tsend_2}}  
+    \caption{Performance of blocking send between two processes.}
+    \label{PCM-mpi-1}
+    
+    \centering
+    \subfloat[Messages of length from 0 to 32768 bytes (stride $2^i$ bytes).]{\label{tsend_logscale}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/PCM/tsend_logscale}}  
+    \hspace*{20pt}
+    \subfloat[Bisection test with 4, 8 and 16 processors.]{\label{bisect_logscale}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/PCM/bisect_logscale}}  
+    \caption{Performance of blocking send and bisection test.}
+    \label{PCM-mpi-2}   
+    
+    \centering {\label{bcast}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/PCM/bcast}}  
+    \caption{Performance of broadcast with 4, 8 and 16 processors.}
+    \label{PCM-mpi-3}
+\end{figure}
+
+\clearpage
 
 \input{alg_efficiency}
 \input{performance}

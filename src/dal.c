@@ -338,6 +338,7 @@ bool DAL_reallocData( Data *data, dal_size_t size )
 			DAL_init( &tmp );
 
 			if( DAL_allocFile(&tmp, size) ) {
+				DAL_dataCopyO(data, 0, &tmp, 0);
 				DAL_destroy( data );
 				*data = tmp;
 				return 1;
@@ -786,7 +787,8 @@ void DAL_receiveAU( Data *data, int source )
 */
 dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data* rdata, dal_size_t rcount, dal_size_t rdispl, int partner )
 {
-	int i, sc, rc, tmp;	
+	dal_size_t i;
+	int sc, rc, tmp;	
 	dal_size_t oldSize = 0;
 	dal_size_t recvCount = 0;
 	MPI_Status 	status;
@@ -803,8 +805,8 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 
 	//Retrieving the number of iterations	
 	dal_size_t max_count = MAX( scount, rcount );
-	int blockSize = DAL_dataSize(&globalBuf) / 2;
-	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
+	dal_size_t blockSize = DAL_dataSize(&globalBuf) / 2;
+	dal_size_t num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	
 	if ( sdata->medium == File || rdata->medium == File ) {
 		Data bufs[2];
@@ -864,7 +866,7 @@ dal_size_t DAL_sendrecv( Data *sdata, dal_size_t scount, dal_size_t sdispl, Data
 
 void DAL_scatterSend( Data *data )
 {
-	int i, j;
+	dal_size_t i, j;
 
 	SPD_ASSERT( DAL_dataSize(data) % GET_N() == 0, "Data size should be a multiple of n=%d, but it's "DST, GET_N(), DAL_dataSize(data) );
 
@@ -873,11 +875,11 @@ void DAL_scatterSend( Data *data )
 
 	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a scatter communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
-	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
+	dal_size_t blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
 	//Retrieving the number of iterations
 	dal_size_t count = DAL_dataSize(data) / GET_N();
-	int num_iterations = count / blockSize + (count % blockSize > 0);
+	dal_size_t num_iterations = count / blockSize + (count % blockSize > 0);
 	int tmp;
 	int sc[GET_N()], sd[GET_N()];
 
@@ -919,17 +921,17 @@ void DAL_scatterSend( Data *data )
 }
 void DAL_scatterReceive( Data *data, dal_size_t count, int root )
 {
-	int i, j;
+	dal_size_t i, j;
 
 	SPD_ASSERT( DAL_allocData( data, count ), "not enough space to allocate data" );
 
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
-	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
+	dal_size_t blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
 	//Retrieving the number of iterations
-	int num_iterations = count / blockSize + (count % blockSize > 0);
+	dal_size_t num_iterations = count / blockSize + (count % blockSize > 0);
 	int tmp;
 
 	switch( data->medium ) {
@@ -982,16 +984,16 @@ void DAL_scatter( Data *data, dal_size_t count, int root )
 
 void DAL_gatherSend( Data *data, int root )
 {
-	int i, j;
+	dal_size_t i, j;
 
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
-	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
+	dal_size_t blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
 	//Retrieving the number of iterations
 	dal_size_t count = DAL_dataSize(data);
-	int num_iterations = count / blockSize + (count % blockSize > 0);
+	dal_size_t num_iterations = count / blockSize + (count % blockSize > 0);
 	int sendCount, tmp;
 
 
@@ -1029,18 +1031,18 @@ void DAL_gatherReceive( Data *data, dal_size_t size )
 	SPD_ASSERT( size % GET_N() == 0, "size should be a multiple of %d (but it's "DST")", GET_N(), size );
 	int rc[GET_N()];
 	int rd[GET_N()];
-	int i, j;
+	dal_size_t i, j;
 
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
 	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a gather communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
-	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
+	dal_size_t blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
 	//Retrieving the number of iterations
 	dal_size_t count = size/GET_N();
-	int num_iterations = count / blockSize + (count % blockSize > 0);
+	dal_size_t num_iterations = count / blockSize + (count % blockSize > 0);
 	int r, tmp;
 
 	//Data to store the received elements
@@ -1112,14 +1114,14 @@ void DAL_scattervSend( Data *data, dal_size_t *counts, dal_size_t *displs )
 {
 	int sc[GET_N()];
 	int sd[GET_N()];
-	int i, j;
+	dal_size_t i, j;
 
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
 	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a scatter communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
-	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
+	dal_size_t blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
 	//Retrieving the number of iterations
 	dal_size_t max_count = 0;
@@ -1127,7 +1129,7 @@ void DAL_scattervSend( Data *data, dal_size_t *counts, dal_size_t *displs )
 		if ( counts[i] > max_count )
 			max_count = counts[i];
 	MPI_Bcast( &max_count, 1, MPI_DST, GET_ID(), MPI_COMM_WORLD );
-	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
+	dal_size_t num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int s, tmp;
 
 	switch( data->medium ) {
@@ -1170,7 +1172,7 @@ void DAL_scattervSend( Data *data, dal_size_t *counts, dal_size_t *displs )
 }
 void DAL_scattervReceive( Data *data, dal_size_t count, int root )
 {
-	int i, j;
+	dal_size_t i, j;
 
 	SPD_ASSERT( DAL_isInitialized(data), "Data should be initialized" );
 	SPD_ASSERT( DAL_allocData( data, count ), "not enough space to allocate data" );
@@ -1178,12 +1180,12 @@ void DAL_scattervReceive( Data *data, dal_size_t count, int root )
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
-	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
+	dal_size_t blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
 	//Retrieving the number of iterations
 	dal_size_t max_count;
 	MPI_Bcast( &max_count, 1, MPI_DST, root, MPI_COMM_WORLD );
-	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
+	dal_size_t num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int recvCount, tmp;
 
 	switch( data->medium ) {
@@ -1240,18 +1242,18 @@ void DAL_scatterv( Data *data, dal_size_t *counts, dal_size_t *displs, int root 
 
 void DAL_gathervSend( Data *data, int root )
 {
-	int i, j;
+	dal_size_t i, j;
 
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
-	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
+	dal_size_t blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
 	//Retrieving the number of iterations
 	dal_size_t max_count;
 	dal_size_t size = DAL_dataSize(data);
 	MPI_Allreduce( &size, &max_count, 1, MPI_DST, MPI_MAX, MPI_COMM_WORLD );
-	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
+	dal_size_t num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int sendCount, tmp;
 
 	switch( data->medium ) {
@@ -1289,19 +1291,19 @@ void DAL_gathervReceive( Data *data, dal_size_t *counts, dal_size_t *displs )
 {
 	int rc[GET_N()];
 	int rd[GET_N()];
-	int i, j;
+	dal_size_t i, j;
 
 	Data globalBuf;
 	DAL_acquireGlobalBuffer( &globalBuf );
 
 	DAL_ASSERT( globalBuf.array.size >= GET_N(), &globalBuf, "The global-buffer is too small for a gather communication (its size is "DST", but there are %d processes)", globalBuf.array.size, GET_N() );
 
-	int blockSize = DAL_dataSize(&globalBuf) / GET_N();
+	dal_size_t blockSize = DAL_dataSize(&globalBuf) / GET_N();
 
 	//Retrieving the number of iterations
 	dal_size_t max_count = 0;
 	MPI_Allreduce( &counts[GET_ID()], &max_count, 1, MPI_DST, MPI_MAX, MPI_COMM_WORLD );
-	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
+	dal_size_t num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int r, tmp;
 
 	//Computing the total number of elements to be received
@@ -1403,8 +1405,8 @@ void DAL_alltoall( Data *data, dal_size_t count )
 
 	DAL_ASSERT( data->file.size >= sendBuf->array.size, data, "Data to be sent is too small, should be of type Array, but it's of type File" );
 
-	int i, j;
-	int blockSize = DAL_dataSize(sendBuf) / GET_N();
+	dal_size_t i, j;
+	dal_size_t blockSize = DAL_dataSize(sendBuf) / GET_N();
 
 	for ( i=0; i<DAL_BLOCK_COUNT(data, sendBuf); i++ ) {
 		int currCount = MIN( blockSize, (count-i*blockSize) );		//Number of elements to be sent to each process by MPI_Alltoall
@@ -1444,7 +1446,7 @@ void DAL_alltoallv( Data *data, dal_size_t *scounts, dal_size_t *sdispls, dal_si
 	if( data->medium != File && data->medium != Array )
 		DAL_UNSUPPORTED( data );
 
-	int i, j;
+	dal_size_t i, j;
 	int sc[GET_N()];
 	int sd[GET_N()];
 	int rc[GET_N()];
@@ -1470,12 +1472,12 @@ void DAL_alltoallv( Data *data, dal_size_t *scounts, dal_size_t *sdispls, dal_si
 	Data *sendBuf = &bufs[0];
 	Data *recvBuf = &bufs[1];
 
-	int blockSize = DAL_dataSize(sendBuf) / GET_N();
+	dal_size_t blockSize = DAL_dataSize(sendBuf) / GET_N();
 
 	//Retrieving the number of iterations
 	dal_size_t max_count;
 	MPI_Allreduce( &rcount, &max_count, 1, MPI_DST, MPI_MAX, MPI_COMM_WORLD );
-	int num_iterations = max_count / blockSize + (max_count % blockSize > 0);
+	dal_size_t num_iterations = max_count / blockSize + (max_count % blockSize > 0);
 	int s, r, tmp;
 
 	for ( i=0; i<num_iterations; i++ ) {

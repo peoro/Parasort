@@ -1,0 +1,15 @@
+
+#np time (us) for various sizes
+4 0.000000 2.918243 3.280640 3.600121 3.857613 
+
+#np time (us) for various sizes
+8 0.000000 3.857613 4.301071 4.720688 5.059242 
+
+#np time (us) for various sizes
+16 0.000000 4.158020 4.577637 5.140305 5.540848 
+
+#np time (us) for various sizes
+32 0.000000 4.696846 5.221367 5.798340 6.418228 
+
+#np time (us) for various sizes
+64 0.000000 6.241798 6.918907 7.557869 8.077621 

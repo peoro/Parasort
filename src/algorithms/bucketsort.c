@@ -33,7 +33,7 @@
 */
 void getSendCounts( Data *data, const int n, dal_size_t *lengths )
 {
-	int i, j, k;
+	dal_size_t i, j, k;
 	const int range = ((dal_size_t)INT_MAX+1) / n;	//Range of elements in each bucket
 
 	/* Initializing the lengths array */
@@ -47,9 +47,8 @@ void getSendCounts( Data *data, const int n, dal_size_t *lengths )
 			DAL_init( &buffer );
 			SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_dataSize(data) ), "not enough memory..." );
 
-			int blocks = DAL_BLOCK_COUNT(data, &buffer);
-			dal_size_t r, readCount = 0;
-			int i;
+			dal_size_t blocks = DAL_BLOCK_COUNT(data, &buffer);
+			dal_size_t r, readCount = 0;			
 
 			for( i=0; i<blocks; i++ ) {
 				r = DAL_dataCopyOS( data, i*DAL_dataSize(&buffer), &buffer, 0, MIN(DAL_dataSize(&buffer), DAL_dataSize(data)-readCount) );
@@ -57,7 +56,7 @@ void getSendCounts( Data *data, const int n, dal_size_t *lengths )
 
 				for ( k=0; k<r; k++ ) {
 					j = buffer.array.data[k] / range;
-					SPD_ASSERT( j >= 0 && j < n, "Something went wrong: j should be within [0,%d], but it's %d", n-1, j );
+					SPD_ASSERT( j >= 0 && j < n, "Something went wrong: j should be within [0,%d], but it's "DST, n-1, j );
 					lengths[j]++;
 				}
 			}

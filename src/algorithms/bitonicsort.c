@@ -34,7 +34,7 @@ void compareLowData( Data *d1, Data *d2 )
 	SPD_ASSERT( DAL_allocBuffer( &buffer, DAL_allowedBufSize() ), "not enough memory..." );
 	DAL_ASSERT( DAL_dataSize( &buffer ) > 2, &buffer, "buffer size must be greater than 2" );
 
-	int bufSize = DAL_dataSize( &buffer ) / 3;
+	dal_size_t bufSize = DAL_dataSize( &buffer ) / 3;
 	dal_size_t d1Count, d2Count, mergedCount;
 	dal_size_t d1c, d2c, mc;
 
@@ -47,7 +47,7 @@ void compareLowData( Data *d1, Data *d2 )
 	int* d1Array = buffer.array.data;
 	int* d2Array = buffer.array.data+bufSize;
 	int* mergedArray = buffer.array.data+2*bufSize;
-	int i, j, k;
+	dal_size_t i, j, k;
 	k = 0; j = 0; i = 0;
 
 	while ( mergedCount < DAL_dataSize(d1) ) {
@@ -119,7 +119,7 @@ void compareHighData( Data *d1, Data *d2 )
 	int* d1Array = buffer.array.data;
 	int* d2Array = buffer.array.data+bufSize;
 	int* mergedArray = buffer.array.data+2*bufSize;
-	int i, j, k;
+	dal_size_t i, j, k;
 	k = j = i = d1c-1;
 
 	while ( mergedCount < DAL_dataSize(d1) ) {
@@ -177,7 +177,7 @@ void bitonicSort( const TestInfo *ti, Data *data )
 	Data				recvData;
 
 	int					mask, mask2, partner;
-	int					i, j, k, z, flag;
+	dal_size_t			i, j, k, z, flag;
 
 	PhaseHandle 		scatterP, sortingP, computationP, localP, mergeP, gatherP;
 

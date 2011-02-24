@@ -67,7 +67,7 @@ inline int isPowerOfTwo( int x )
 
 typedef struct {
 	int val;
-	dal_size_t run_index;
+	int run_index;
 } Min_val;
 typedef struct {
 	int size;
@@ -143,7 +143,7 @@ void fileKMerge( Data *run_devices, const int k, Data *output_device )
 	Heap heap;
 	HeapInit( &heap, k );
 
-	int j;
+	dal_size_t j;
 	/* Initializing the buffered runs and the heap */
 	for ( j=0; j < k; j++ ) {
 		run_buf_sizes[j] = DAL_dataCopyOS( &run_devices[j], 0, &buffer, j*bufferedRunSize, MIN(bufferedRunSize, DAL_dataSize(&run_devices[j])) );
@@ -153,7 +153,7 @@ void fileKMerge( Data *run_devices, const int k, Data *output_device )
 	}
 
 	/* Merging the runs */
-	int outputSize = 0;
+	dal_size_t outputSize = 0;
 	dal_size_t outputOffset = 0;
 	dal_size_t i;
     for ( i=0; i<DAL_dataSize(output_device); i++ ) {
@@ -221,7 +221,7 @@ void fileSort( Data *data )
 		Data run_devices[k];
 		dal_size_t readSize = 0;
 		dal_size_t count = 0;
-		int i;
+		dal_size_t i;
 		/* Sorting single runs */
 		for( i=0; i<k; i++ ) {
 			count = MIN( runSize, dataSize-i*runSize );
@@ -229,7 +229,7 @@ void fileSort( Data *data )
 			readSize = DAL_dataCopyOS( data, i*runSize, &buffer, 0, count );
 
 			DAL_init( &run_devices[i] );
-			SPD_ASSERT( DAL_allocFile( &run_devices[i], readSize ), "couldn't create a temporary file for the %d-th run", i );
+			SPD_ASSERT( DAL_allocFile( &run_devices[i], readSize ), "couldn't create a temporary file for the "DST"-th run", i );
 
 			qsort( buffer.array.data, readSize, sizeof(int), compare );
 
