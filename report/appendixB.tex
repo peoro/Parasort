@@ -1,10 +1,10 @@
-\section{Overhead of the DAL's static communication buffer}
+\section{Overhead of the DAL' static communication buffer}
 \label{appendixB}
 We show the cost of the DAL's primitives for:
 \begin{itemize}
 \item different sizes of the static communication buffer;
 \item original messages of size 32MB and 128MB;
-\item parallelism degrees up to 16.
+\item parallelism degrees 4 and 16.
 \end{itemize} 
 
 \subsection*{Pianosa}
@@ -124,5 +124,65 @@ $\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_sc
 \end{tabular}
 \caption{DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 128MB and parallelism degree 16. The cost of a primitive is the time expressed in seconds.}
 \label{tsetup-pianosa-n16-M128}
+\end{center}
+\end{table}
+
+\clearpage
+
+\subsection*{PCM}
+We show the cost of the DAL's primitives for:
+\begin{itemize}
+\item different sizes of the static communication buffer;
+\item original messages of size 32MB and 128MB;
+\item parallelism degrees 4 and 32.
+\end{itemize} 
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$ & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+
+\end{tabular}
+\caption{DAL$\_\lbrace send, scatter, alltoall \rbrace$ cost for messages of size 32MB and parallelism degree 4. The cost of a primitive is the time expressed in seconds.}
+\label{tsetup-pcm-n4-M32}
+\end{center}
+\end{table}
+
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+
+\end{tabular}
+\caption{DAL$\_\lbrace send, scatter, alltoall \rbrace$ cost for messages of size 32MB and parallelism degree 32. The cost of a primitive is the time expressed in seconds.}
+\label{tsetup-pcm-n32-M32}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+
+\end{tabular}
+\caption{DAL$\_\lbrace send, scatter, alltoall \rbrace$ cost for messages of size 128MB and parallelism degree 4. The cost of a primitive is the time expressed in seconds.}
+\label{tsetup-pcm-n4-M128}
+\end{center}
+\end{table}
+
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$ & $T\_gather$ &  $T\_alltoall$      \\\hline\hline
+
+\end{tabular}
+\caption{DAL$\_\lbrace send, scatter, alltoall \rbrace$ cost for messages of size 128MB and parallelism degree 32. The cost of a primitive is the time expressed in seconds.}
+\label{tsetup-pcm-n32-M128}
 \end{center}
 \end{table}

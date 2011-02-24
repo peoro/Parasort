@@ -48,7 +48,7 @@ As we said in section~\ref{DAL-impl} we are interested in estimating the \textit
 
 \paragraph{MPI on Pianosa}
 \label{test-env-pianosa}
-As stated in the previous paragraph, we focus on determining the \textit{optimum} size of the communication buffer on $Pianosa$. Table~\ref{tsetup-pianosa-n8-M32} shows the time spent by the most used communication primitives (DAL$\_\lbrace$send, scatter, gather, alltoall$\rbrace$) for a message of size 32MB. Each row $i$ of the table is relative to different sizes of the communication buffer. In this way the original message will be sent through $X$ MPI$\_\lbrace$send, scatter, gather, alltoall$\rbrace$ according to the size of the communication buffer ($X \in \lbrace 2^i : i = 0...18 \rbrace$). Table~\ref{tsetup-pianosa-n8-M128} shows another test in which the original message is of size 128MB. In both experiments the parallelism degree is set to 8 (Appendix~\ref{appendixB} shows results with different parallelism degrees). Notice that the parallelism degree is meaningful for scatter, gather and alltoall because it can impact on the overall time spent to carry out the collective communication. By means of these experiments we want to understand which sizes of the communication buffer cause overhead for sending a message with a specific DAL primitive. By looking at the tables we can notice that, from a certain row ahead, some columns are blank (filled with '-'). This mean that the overhead of a DAL primitive (column), for a specific size of the communication buffer (row), is become so high that is useless to perform further tests since they would be from one hand meaningless and from the other one a waste of time. Thanks both to these results and to a lot of experiments involving all Sorting Algorithms, we have set the value of the communication buffer to \textbf{32 MB}. 
+As stated in the previous paragraph, we focus on determining the \textit{optimum} size of the communication buffer on $Pianosa$. Table~\ref{tsetup-pianosa-n8-M32} shows the time spent by the most used communication primitives (DAL$\_\lbrace$send, scatter, gather, alltoall$\rbrace$) for a message of size 32MB. Each row $i$ of the table is relative to different sizes of the communication buffer. In this way the original message will be sent through $X$ MPI$\_\lbrace$send, scatter, gather, alltoall$\rbrace$ according to the size of the communication buffer ($X \in \lbrace 2^i : i = 0...18 \rbrace$). Table~\ref{tsetup-pianosa-n8-M128} shows another test in which the original message is of size 128MB. In both experiments the parallelism degree is set to 8 (Appendix~\ref{appendixB} shows results with different parallelism degrees). Notice that the parallelism degree is meaningful for scatter, gather and alltoall because it can impact on the overall time spent to carry out the collective communication. By means of these experiments we want to understand which sizes of the communication buffer cause overhead for sending a message with a specific DAL primitive. By looking at the tables we can notice that, from a certain row ahead, some columns are blank (filled with '-'). This means that the overhead of a DAL primitive (column), for a specific size of the communication buffer (row), is become so high that is useless to perform further tests since they would be from one hand meaningless and from the other one a waste of time. Thanks both to these results and to a lot of experiments involving all Sorting Algorithms, we have set the value of the communication buffer to \textbf{32 MB}. 
 
 \begin{table}[h]
 \begin{center}
@@ -133,8 +133,59 @@ We conclude this paragraph by showing (Figures~\ref{pianosa-mpi-1},~\ref{pianosa
 
 \clearpage
 
+\paragraph{MPI on IntelXeon X5670}
+Same experiments have been executed also on the $IntelXeon\ X5670$ CMP. Tables~\ref{tsetup-xeon-n8-M32} and~\ref{tsetup-xeon-n8-M128} show the time spent by the primitives DAL$\_\lbrace$send, scatter, gather, alltoall$\rbrace$ respectively for messages of size 32MB and 128MB (Appendix~\ref{appendixB} shows results for parallelism degree different from 8). Since the version of MPI that we have used exploits the shared memory to implement (part of) the run-time support of MPI, the latencies of most of MPI primitives is some order magnitude lower that the ones obtained on $Pianosa$.
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+
+\end{tabular}
+\caption{\textit{IntelXeon X5670.} DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 32MB. The cost of a primitive is the time expressed in seconds. }
+\label{tsetup-xeon-n8-M32}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+
+\end{tabular}
+\caption{\textit{IntelXeon X5670.} DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 128MB. The cost of a primitive is the time expressed in seconds.}
+\label{tsetup-xeon-n8-M128}
+\end{center}
+\end{table}
+
 \paragraph{MPI on PCM}
-We did the same experiment also on the cluster $PCM$. TODO
+$PCM$ is a cluster of $IntelXeon\ X5670$ machines interconnected by means of $Infiniband$. It is interesting to show the cost of the DAL's primitives on this architecture. Tables~\ref{tsetup-pcm-n64-M32} and~\ref{tsetup-pcm-n64-M128} show the time spent by the primitives DAL$\_\lbrace$send, scatter, gather, alltoall$\rbrace$ respectively for messages of size 32MB and 128MB with parallelism degree 64 (Appendix~\ref{appendixB} shows the results for further parallelism degree). Thanks to $Infiniband$, the time elapsed both for exchanging a message and by a collective communication is \textit{at least} two order magnitude lower than the one of $Pianosa$. Moreover, we must notice that the run-time support on $Infiniband$ keeps the cost of a collective communication really close to the one obtained when the run-time support exploits the shared memory, for every parallelism degree; this can be noticed, for instance, by comparing table~\ref{tsetup-pcm-n64-M32} with table~\ref{tsetup-xeon-n8-M32}. In light of what we have shown with these results, the size of the DAL communication buffer can be easily kept to \textbf{32MB}, exactly as on $Pianosa$.
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+
+\end{tabular}
+\caption{\textit{PCM.} DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 32MB. The cost of a primitive is the time expressed in seconds. }
+\label{tsetup-pcm-n64-M32}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+
+\end{tabular}
+\caption{\textit{PCM.} DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 128MB. The cost of a primitive is the time expressed in seconds.}
+\label{tsetup-pcm-n64-M128}
+\end{center}
+\end{table}
 
 \begin{figure}[h]
     \centering
