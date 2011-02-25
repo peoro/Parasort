@@ -4,8 +4,8 @@ We said in~\ref{sort-fram} that sorting a data set is a computation described by
 
 In order to analyze the performance of the algorithms from different perspective (e.g.: scalability of the specific algorithm, comparison of the time completion required by different algorithms to sort a specific data set and so on) we are going to show different types of graphics. Each graphic is defined by a 3-tuple $\langle x, y, plot \rangle $, where $x$ is the variable on the X axis, $y$ the variable on the Y axis and $plot$ a parameter that identifies a specific shape of that graphic. In particular, given $T$ the time completion of a computation, we will focus on the following graphics:
 \begin{enumerate}
-\item fixed $M$, a graphic $\langle n, T, \Lambda \rangle $ is necessary to see which is \textit{the ''best'' algorithm} for sorting a data set of a certain $M$ on a specific architecture. Here, we refer to the ''best'' algorithm(s) as the one(s) that is able either to sort faster a specific data set, to scale better or a combination of them. 
-\item fixed $\Lambda$, a graphic $\langle n, T, M \rangle$ is useful to see the \textit{scalability} of $\Lambda$ on a specific architecture. Different shapes shows the scalability of $\Lambda$ for different sizes of the data set.
+\item fixed $M$, a graphic $\langle n, T, \Lambda \rangle $ is necessary to see which is \textit{the ''best'' algorithm} for sorting a data set of a certain size $M$ on a specific architecture. Here, we refer to the ''best'' algorithm(s) as the one(s) that is able either to sort faster a specific data set, to scale better or a combination of them. 
+\item fixed $\Lambda$, a graphic $\langle n, T, M \rangle$ is useful to see the \textit{scalability} of $\Lambda$, on a specific architecture, for different sizes of the data set.
 \item fixed $\Lambda$, a graphic $\langle M, T, n \rangle$ to show (as before) the behaviour of $\Lambda$ on a specific architecture, but from a different perspective. 
 \item a graphic $\langle M, T, \Lambda \rangle$ to understand which algorithm \textit{should} be used if the target architecture allowed a parallelism degree of at most $n$. These graphics could be used as ''experimental cost models'', in sense that in principle they could predict the performance of a Sorting Algorithm on such architectures that are ''similar'' to our target architectures. Here, ''similar'' refers mainly to CPUs, memory hierarchies, I/O subsystem, interconnection structure.  
 \end{enumerate}
@@ -13,7 +13,7 @@ In order to analyze the performance of the algorithms from different perspective
 The parameters of the computations will take the following values:
 \begin{itemize}
 \item $\Lambda \in \lbrace$Sequentialsort, Bitonicsort, Samplesort, Bucketsort, Mergesort, Quicksort, K-Way Mergesort, Load-Balanced Mergesort, Load-Balanced Multi-Way Mergesort$\rbrace$;
-\item $n \in \lbrace$1, 2, 4, 8, 16, 32, 64, 128, 256$\rbrace$; notice that the maximum value that $n$ can take depends on the specific architecture. 
+\item $n \in \lbrace$1, 2, 4, 8, 16, 32, 64, 128$\rbrace$; notice that the maximum value that $n$ can take depends on the specific architecture. 
 \item $M \in \lbrace 2^{10 + i} : i = 0, ..., 25\rbrace$ elements (integers). So $M$ takes values from a few kilobytes to tens of gigabytes (recall that each integers is usually represented through 4 bytes).
 \end{itemize} 
 
