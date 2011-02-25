@@ -1,44 +1,117 @@
 \subsubsection{Intel Xeon X5670}
 In this section we analyze the behaviour of Sorting Algorithms on a Chip MultiProcessor (CMP), namely a Symmetric MultiProcessor (SMP) on chip. The CMP in question is a generic node of the cluster $PCM$, the Intel Xeon X5670 described in~\ref{PCM}. We will be able to test our algorithms for parallelism degrees up to 8. We expect that performance results on this architecture will be significantly different from the ones obtained on Pianosa, in particular from a \textit{qualitative} point of view. Indeed, there are at least two key factors that can drastically impact on the performance: first, the huge amount of primary memory will diminish the overhead due to I/Os; second, the communications now take place in shared memory thus they are less expensive.
 
+
 \begin{figure}[t]
-	\begin{center}
-		\includegraphics[scale=0.6]{plots/test_01_IntelXeonX5670/NxTxM/sequential_IntelXeonX5670_NxTxM}
-	\end{center}
-  	\caption{\textit{Intel Xeon X5670}. Completion Time for the Sequentialsort.}
-  	\label{sequential-IntelXeonX5670}
+    \begin{center}
+        \includegraphics[scale=0.6]{plots/test_01_IntelXeonX5670/NxTxM/sequential_IntelXeonX5670_NxTxM_small}
+    \end{center}
+    
+    \begin{center}
+        \includegraphics[scale=0.6]{plots/test_01_IntelXeonX5670/NxTxM/sequential_IntelXeonX5670_NxTxM_large}
+    \end{center}
+    
+    \begin{center}
+        \includegraphics[scale=0.6]{plots/test_01_IntelXeonX5670/NxTxM/sequential_IntelXeonX5670_NxTxM_huge}
+    \end{center}
+    \caption{\textit{IntelXeonX5670}. Completion Time for the Sequentialsort.}
+    \label{sequential-IntelXeonX5670}
 \end{figure}
 
 \paragraph{Scalability of Sorting Algorithms} Figure~\ref{IntelXeonX5670-NxTxM} and~\ref{IntelXeonX5670-MxTxN} show the time completion of Sorting Algorithms for data sets up to 2 GB. Exactly as on $Pianosa$, due to the fine grain computation, there is not any Sorting Algorithm that shows a good scalability for \textbf{small} data sets. On the other hand, the previous considerations on the primary memory size and the cost of communications justify intuitively why, for \textbf{large} data sets, most Sorting Algorithms scale better than on $Pianosa$ (even if still far away from the ideality). Figure~\ref{IntelXeonX5670-NxTxM} shows that increasing the parallelism degree from 2 to 4, a lot of Sorting Algorithms scale really close to the ideality, while from 4 to 8 there is still a gain, but in general lower. Exactly as on $Pianosa$, \textit{Bucketsort}, \textit{Samplesort} and \textit{Load-Balanced Multi-Way Mergesort} exhibit the best performance in terms of both scalability and time completion. \textit{Mergesort} (Figure~\ref{IntelXeonX5670-NxTxM-mergesort}) was bad on $Pianosa$ because of both the communications overhead and the unbalanced workload, but now exhibit a great scalability up to parallelism degree 8; this is thanks also to the faster hardware which let the last sequential phase of merging to become less incisive on the overall time completion. Figure~\ref{IntelXeonX5670-NxTxM-quicksort} shows \textit{Quicksort}; this algorithm exhibit the worst performance for what concern both the scalability and the absolute Time Completion. This is likely due to the fact that the load gets unbalanced between the processes of the computation (see Appendix~\ref{appendix} for more details). Figure~\ref{IntelXeonX5670-NxTxM-kmerge} shows the bad performance of \textit{4-Way Mergesort}; this algorithm suffers the last phase of merging that, since it is made by a single process (see~\ref{kmerge}), becomes predominant with respect to the gain of the parallelization. 
 
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Small data set %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[h]
-	\centering
-	\subfloat[Quicksort.]{\label{IntelXeonX5670-NxTxM-quicksort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/quicksort_IntelXeonX5670_NxTxM}} 
-	\hspace*{20pt}	
-  	\subfloat[Bitonicsort.]{\label{IntelXeonX5670-NxTxM-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/bitonicsort_IntelXeonX5670_NxTxM}} 
-	
-	\centering
-	\subfloat[Bucketsort.]{\label{IntelXeonX5670-NxTxM-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/bucketsort_IntelXeonX5670_NxTxM}} 
-  	\hspace*{20pt}
-  	\subfloat[Samplesort.]{\label{IntelXeonX5670-NxTxM-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/samplesort_IntelXeonX5670_NxTxM}} 
-	
-	\centering
-  	\subfloat[Mergesort.]{\label{IntelXeonX5670-NxTxM-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/mergesort_IntelXeonX5670_NxTxM}}   
-  	\hspace*{20pt}  
-  	\subfloat[4-Way Mergesort.]{\label{IntelXeonX5670-NxTxM-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/kmerge_IntelXeonX5670_NxTxM}} 
-	
-	\centering
-  	\subfloat[Load-Balanced Mergesort.]{\label{IntelXeonX5670-NxTxM-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/lbmergesort_IntelXeonX5670_NxTxM}} 
-  	\hspace*{20pt}  
-  	\subfloat[Load-Balanced Multi-Way Mergesort.]{\label{IntelXeonX5670-NxTxM-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/lbkmergesort_IntelXeonX5670_NxTxM}} 	
-  	
-	\caption{\textit{Intel Xeon X5670}. Time Completion of Sorting Algorithms by varying the parallelism degree. Each shape on a graphic represents the Time Completion of a certain Sorting Algorithm for a data set of specific size.}
-	\label{IntelXeonX5670-NxTxM}
+    \centering
+    \subfloat[Quicksort.]{\label{NxTxM_small-quicksort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/quicksort_IntelXeonX5670_NxTxM_small}} 
+    \hspace*{20pt}  
+    \subfloat[Bitonicsort.]{\label{NxTxM_small-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/bitonicsort_IntelXeonX5670_NxTxM_small}} 
+    
+    \centering
+    \subfloat[Bucketsort.]{\label{NxTxM_small-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/bucketsort_IntelXeonX5670_NxTxM_small}} 
+    \hspace*{20pt}
+    \subfloat[Samplesort.]{\label{NxTxM_small-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/samplesort_IntelXeonX5670_NxTxM_small}} 
+    
+    \centering
+    \subfloat[Mergesort.]{\label{NxTxM_small-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/mergesort_IntelXeonX5670_NxTxM_small}}   
+    \hspace*{20pt}  
+    \subfloat[4-Way Mergesort.]{\label{NxTxM_small-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/kmerge_IntelXeonX5670_NxTxM_small}} 
+    
+    \centering
+    \subfloat[Load-Balanced Mergesort.]{\label{NxTxM_small-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/lbmergesort_IntelXeonX5670_NxTxM_small}} 
+    \hspace*{20pt}  
+    \subfloat[Load-Balanced Multi-Way Mergesort.]{\label{NxTxM_small-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/lbkmergesort_IntelXeonX5670_NxTxM_small}}  
+    
+    \caption{\textit{IntelXeonX5670}. Time Completion of Sorting Algorithms by varying the parallelism degree. Each shape on a graphic represents the Time Completion of a certain Sorting Algorithm for a data set of specific size.}
+    \label{NxTxM_small}
 \end{figure}
- 
+
+
+
+  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Large data set %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+    \centering
+    \subfloat[Quicksort.]{\label{NxTxM_large-quicksort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/quicksort_IntelXeonX5670_NxTxM_large}} 
+    \hspace*{20pt}  
+    \subfloat[Bitonicsort.]{\label{NxTxM_large-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/bitonicsort_IntelXeonX5670_NxTxM_large}} 
+    
+    \centering
+    \subfloat[Bucketsort.]{\label{NxTxM_large-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/bucketsort_IntelXeonX5670_NxTxM_large}} 
+    \hspace*{20pt}
+    \subfloat[Samplesort.]{\label{NxTxM_large-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/samplesort_IntelXeonX5670_NxTxM_large}} 
+    
+    \centering
+    \subfloat[Mergesort.]{\label{NxTxM_large-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/mergesort_IntelXeonX5670_NxTxM_large}}   
+    \hspace*{20pt}  
+    \subfloat[4-Way Mergesort.]{\label{NxTxM_large-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/kmerge_IntelXeonX5670_NxTxM_large}} 
+    
+    \centering
+    \subfloat[Load-Balanced Mergesort.]{\label{NxTxM_large-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/lbmergesort_IntelXeonX5670_NxTxM_large}} 
+    \hspace*{20pt}  
+    \subfloat[Load-Balanced Multi-Way Mergesort.]{\label{NxTxM_large-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/lbkmergesort_IntelXeonX5670_NxTxM_large}}  
+    
+    \caption{\textit{Intel Xeon X5670}. Time Completion of Sorting Algorithms by varying the parallelism degree. Each shape on a graphic represents the Time Completion of a certain Sorting Algorithm for a data set of specific size.}
+    \label{NxTxM_large}
+\end{figure}
+  
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Huge data set %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+    \centering
+    \subfloat[Quicksort.]{\label{NxTxM_huge-quicksort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/quicksort_IntelXeonX5670_NxTxM_huge}} 
+    \hspace*{20pt}  
+    \subfloat[Bitonicsort.]{\label{NxTxM_huge-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/bitonicsort_IntelXeonX5670_NxTxM_huge}} 
+    
+    \centering
+    \subfloat[Bucketsort.]{\label{NxTxM_huge-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/bucketsort_IntelXeonX5670_NxTxM_huge}} 
+    \hspace*{20pt}
+    \subfloat[Samplesort.]{\label{NxTxM_huge-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/samplesort_IntelXeonX5670_NxTxM_huge}} 
+    
+    \centering
+    \subfloat[Mergesort.]{\label{NxTxM_huge-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/mergesort_IntelXeonX5670_NxTxM_huge}}   
+    \hspace*{20pt}  
+    \subfloat[4-Way Mergesort.]{\label{NxTxM_huge-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/kmerge_IntelXeonX5670_NxTxM_huge}} 
+    
+    \centering
+    \subfloat[Load-Balanced Mergesort.]{\label{NxTxM_huge-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/lbmergesort_IntelXeonX5670_NxTxM_huge}} 
+    \hspace*{20pt}  
+    \subfloat[Load-Balanced Multi-Way Mergesort.]{\label{NxTxM_huge-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/NxTxM/lbkmergesort_IntelXeonX5670_NxTxM_huge}}  
+    
+    \caption{\textit{Intel Xeon X5670}. Time Completion of Sorting Algorithms by varying the parallelism degree. Each shape on a graphic represents the Time Completion of a certain Sorting Algorithm for a data set of specific size.}
+    \label{NxTxM_huge}
+\end{figure}
+
+
+
 \begin{figure}[!ht]
 	\centering
-	\subfloat[Quicksort.]{\label{IntelXeonX5670-MxTxN-sequential}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/MxTxN/quicksort_IntelXeonX5670_MxTxN}} 
+	\subfloat[Quicksort.]{\label{IntelXeonX5670-MxTxN-quicksort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/MxTxN/quicksort_IntelXeonX5670_MxTxN}} 
 	\hspace*{20pt}	
   	\subfloat[Bitonicsort.]{\label{IntelXeonX5670-MxTxN-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_IntelXeonX5670/MxTxN/bitonicsort_IntelXeonX5670_MxTxN}} 
   		

@@ -7,12 +7,21 @@ $PCM$ is a cluster of shared memory machines, thus all considerations reguarding
 \end{itemize}
 In the following, we will consider only the \textit{sequential mapping} because we have practically experienced that collective communications (in particular, the \textit{gather}) are \textit{extremely} more cost-effective than for other mappings. For more informations about the results obtained with other mappings the reader could refer to the specific material attached to this report.
 
+
 \begin{figure}[t]
-	\begin{center}
-		\includegraphics[scale=0.6]{plots/test_01_pianosa/NxTxM/sequential_pianosa_NxTxM}
-	\end{center}
-  	\caption{\textit{PCM}. Completion Time for the Sequentialsort.}
-  	\label{sequential-PCM}
+    \begin{center}
+        \includegraphics[scale=0.6]{plots/test_01_PCM/NxTxM/sequential_PCM_NxTxM_small}
+    \end{center}
+    
+    \begin{center}
+        \includegraphics[scale=0.6]{plots/test_01_PCM/NxTxM/sequential_PCM_NxTxM_large}
+    \end{center}
+    
+    \begin{center}
+        \includegraphics[scale=0.6]{plots/test_01_PCM/NxTxM/sequential_PCM_NxTxM_huge}
+    \end{center}
+    \caption{\textit{PCM}. Completion Time for the Sequentialsort.}
+    \label{sequential-PCM}
 \end{figure}
 
 \paragraph{Scalability of Sorting Algorithms}
@@ -24,34 +33,95 @@ Another interesting aspect is the behaviour of the algorithms when the paralleli
 
 
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Small data set %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[h]
-	\centering
-	\subfloat[Quicksort.]{\label{NxTxM-sequential}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/quicksort_PCM_NxTxM}} 
-	\hspace*{20pt}	
-  	\subfloat[Bitonicsort.]{\label{NxTxM-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/bitonicsort_PCM_NxTxM}} 
-	
-	\centering
-	\subfloat[Bucketsort.]{\label{NxTxM-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/bucketsort_PCM_NxTxM}} 
-  	\hspace*{20pt}
-  	\subfloat[Samplesort.]{\label{NxTxM-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/samplesort_PCM_NxTxM}} 
-	
-	\centering
-  	\subfloat[Mergesort.]{\label{NxTxM-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/mergesort_PCM_NxTxM}}   
-  	\hspace*{20pt}  
-  	\subfloat[4-Way Mergesort.]{\label{NxTxM-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/kmerge_PCM_NxTxM}} 
-	
-	\centering
-  	\subfloat[Load-Balanced Mergesort.]{\label{NxTxM-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/lbmergesort_PCM_NxTxM}} 
-  	\hspace*{20pt}  
-  	\subfloat[Load-Balanced Multi-Way Mergesort.]{\label{NxTxM-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/lbkmergesort_PCM_NxTxM}} 	
-  	
-	\caption{\textit{PCM}. Time Completion of Sorting Algorithms by varying the parallelism degree. Each shape on a graphic represents the Time Completion of a certain Sorting Algorithm for a data set of specific size.}
-	\label{NxTxM}
+    \centering
+    \subfloat[Quicksort.]{\label{NxTxM_small-quicksort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/quicksort_PCM_NxTxM_small}} 
+    \hspace*{20pt}  
+    \subfloat[Bitonicsort.]{\label{NxTxM_small-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/bitonicsort_PCM_NxTxM_small}} 
+    
+    \centering
+    \subfloat[Bucketsort.]{\label{NxTxM_small-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/bucketsort_PCM_NxTxM_small}} 
+    \hspace*{20pt}
+    \subfloat[Samplesort.]{\label{NxTxM_small-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/samplesort_PCM_NxTxM_small}} 
+    
+    \centering
+    \subfloat[Mergesort.]{\label{NxTxM_small-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/mergesort_PCM_NxTxM_small}}   
+    \hspace*{20pt}  
+    \subfloat[4-Way Mergesort.]{\label{NxTxM_small-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/kmerge_PCM_NxTxM_small}} 
+    
+    \centering
+    \subfloat[Load-Balanced Mergesort.]{\label{NxTxM_small-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/lbmergesort_PCM_NxTxM_small}} 
+    \hspace*{20pt}  
+    \subfloat[Load-Balanced Multi-Way Mergesort.]{\label{NxTxM_small-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/lbkmergesort_PCM_NxTxM_small}}  
+    
+    \caption{\textit{PCM}. Time Completion of Sorting Algorithms by varying the parallelism degree. Each shape on a graphic represents the Time Completion of a certain Sorting Algorithm for a data set of specific size.}
+    \label{NxTxM_small}
 \end{figure}
- 
+
+
+
+  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Large data set %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+    \centering
+    \subfloat[Quicksort.]{\label{NxTxM_large-quicksort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/quicksort_PCM_NxTxM_large}} 
+    \hspace*{20pt}  
+    \subfloat[Bitonicsort.]{\label{NxTxM_large-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/bitonicsort_PCM_NxTxM_large}} 
+    
+    \centering
+    \subfloat[Bucketsort.]{\label{NxTxM_large-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/bucketsort_PCM_NxTxM_large}} 
+    \hspace*{20pt}
+    \subfloat[Samplesort.]{\label{NxTxM_large-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/samplesort_PCM_NxTxM_large}} 
+    
+    \centering
+    \subfloat[Mergesort.]{\label{NxTxM_large-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/mergesort_PCM_NxTxM_large}}   
+    \hspace*{20pt}  
+    \subfloat[4-Way Mergesort.]{\label{NxTxM_large-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/kmerge_PCM_NxTxM_large}} 
+    
+    \centering
+    \subfloat[Load-Balanced Mergesort.]{\label{NxTxM_large-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/lbmergesort_PCM_NxTxM_large}} 
+    \hspace*{20pt}  
+    \subfloat[Load-Balanced Multi-Way Mergesort.]{\label{NxTxM_large-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/lbkmergesort_PCM_NxTxM_large}}  
+    
+    \caption{\textit{PCM}. Time Completion of Sorting Algorithms by varying the parallelism degree. Each shape on a graphic represents the Time Completion of a certain Sorting Algorithm for a data set of specific size.}
+    \label{NxTxM_large}
+\end{figure}
+  
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Huge data set %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+    \centering
+    \subfloat[Quicksort.]{\label{NxTxM_huge-quicksort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/quicksort_PCM_NxTxM_huge}} 
+    \hspace*{20pt}  
+    \subfloat[Bitonicsort.]{\label{NxTxM_huge-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/bitonicsort_PCM_NxTxM_huge}} 
+    
+    \centering
+    \subfloat[Bucketsort.]{\label{NxTxM_huge-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/bucketsort_PCM_NxTxM_huge}} 
+    \hspace*{20pt}
+    \subfloat[Samplesort.]{\label{NxTxM_huge-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/samplesort_PCM_NxTxM_huge}} 
+    
+    \centering
+    \subfloat[Mergesort.]{\label{NxTxM_huge-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/mergesort_PCM_NxTxM_huge}}   
+    \hspace*{20pt}  
+    \subfloat[4-Way Mergesort.]{\label{NxTxM_huge-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/kmerge_PCM_NxTxM_huge}} 
+    
+    \centering
+    \subfloat[Load-Balanced Mergesort.]{\label{NxTxM_huge-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/lbmergesort_PCM_NxTxM_huge}} 
+    \hspace*{20pt}  
+    \subfloat[Load-Balanced Multi-Way Mergesort.]{\label{NxTxM_huge-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/NxTxM/lbkmergesort_PCM_NxTxM_huge}}  
+    
+    \caption{\textit{PCM}. Time Completion of Sorting Algorithms by varying the parallelism degree. Each shape on a graphic represents the Time Completion of a certain Sorting Algorithm for a data set of specific size.}
+    \label{NxTxM_huge}
+\end{figure}
+  
+  
 \begin{figure}[!ht]
 	\centering
-	\subfloat[Quicksort.]{\label{MxTxN-sequential}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/MxTxN/quicksort_PCM_MxTxN}} 
+	\subfloat[Quicksort.]{\label{MxTxN-quicksort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/MxTxN/quicksort_PCM_MxTxN}} 
 	\hspace*{20pt}	
   	\subfloat[Bitonicsort.]{\label{MxTxN-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_PCM/MxTxN/bitonicsort_PCM_MxTxN}} 
   		

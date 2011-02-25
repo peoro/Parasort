@@ -12,64 +12,133 @@ Summarizing, we have just seen that Sorting Algorithms do not scale with data se
 
 Finally, we observe an interesting behaviour. We consider again the Time Completion of Sorting Algorithms in case of huge data sets. Figure~\ref{NxTxM} shows that algorithms like \textit{Samplesort} (Figure~\ref{NxTxM-samplesort}) and \textit{Load-Balanced Multi-Way Mergesort} (Figure~\ref{NxTxM-lbkmergesort}) exhibit the best gain when the parallelism degree grows from 2 to 4, while by passing to 8 and even worse to 16 the gain tends to diminish. There are no valid reasons to think that with higher parallelism degree the gain restarts to grow. On the other hand, \textit{Bitonicsort} (Figure~\ref{NxTxM-bitonicsort}) does not obtain a significative gain with parallelism degrees up to 8, while passing from 8 to 16 the gain nearly halves. Therefore, it would be interesting to study the behaviour of \textit{Bitonicsort} for higher parallelism degree; this will be our matter of study on another target architecture.
 
+
 \begin{figure}[t]
-	\begin{center}
-		\includegraphics[scale=0.6]{plots/test_01_pianosa/NxTxM/sequential_pianosa_NxTxM}
-	\end{center}
-  	\caption{\textit{Pianosa}. Completion Time for the Sequentialsort.}
-  	\label{sequential-pianosa}
+    \begin{center}
+        \includegraphics[scale=0.6]{plots/test_01_pianosa/NxTxM/sequential_pianosa_NxTxM_small}
+    \end{center}
+    
+    \begin{center}
+        \includegraphics[scale=0.6]{plots/test_01_pianosa/NxTxM/sequential_pianosa_NxTxM_large}
+    \end{center}
+    
+    \begin{center}
+        \includegraphics[scale=0.6]{plots/test_01_pianosa/NxTxM/sequential_pianosa_NxTxM_huge}
+    \end{center}
+    \caption{\textit{Pianosa}. Completion Time for the Sequentialsort.}
+    \label{sequential-pianosa}
 \end{figure}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Small data set %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[h]
-	\centering
-	\subfloat[Quicksort.]{\label{NxTxM-sequential}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/quicksort_pianosa_NxTxM}} 
-	\hspace*{20pt}	
-  	\subfloat[Bitonicsort.]{\label{NxTxM-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/bitonicsort_pianosa_NxTxM}} 
-	
-	\centering
-	\subfloat[Bucketsort.]{\label{NxTxM-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/bucketsort_pianosa_NxTxM}} 
-  	\hspace*{20pt}
-  	\subfloat[Samplesort.]{\label{NxTxM-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/samplesort_pianosa_NxTxM}} 
-	
-	\centering
-  	\subfloat[Mergesort.]{\label{NxTxM-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/mergesort_pianosa_NxTxM}}   
-  	\hspace*{20pt}  
-  	\subfloat[4-Way Mergesort.]{\label{NxTxM-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/kmerge_pianosa_NxTxM}} 
-	
-	\centering
-  	\subfloat[Load-Balanced Mergesort.]{\label{NxTxM-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/lbmergesort_pianosa_NxTxM}} 
-  	\hspace*{20pt}  
-  	\subfloat[Load-Balanced Multi-Way Mergesort.]{\label{NxTxM-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/lbkmergesort_pianosa_NxTxM}} 	
-  	
-	\caption{\textit{Pianosa}. Time Completion of Sorting Algorithms by varying the parallelism degree. Each shape on a graphic represents the Time Completion of a certain Sorting Algorithm for a data set of specific size.}
-	\label{NxTxM}
+    \centering
+    \subfloat[Quicksort.]{\label{NxTxM_small-quicksort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/quicksort_pianosa_NxTxM_small}} 
+    \hspace*{20pt}  
+    \subfloat[Bitonicsort.]{\label{NxTxM_small-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/bitonicsort_pianosa_NxTxM_small}} 
+    
+    \centering
+    \subfloat[Bucketsort.]{\label{NxTxM_small-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/bucketsort_pianosa_NxTxM_small}} 
+    \hspace*{20pt}
+    \subfloat[Samplesort.]{\label{NxTxM_small-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/samplesort_pianosa_NxTxM_small}} 
+    
+    \centering
+    \subfloat[Mergesort.]{\label{NxTxM_small-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/mergesort_pianosa_NxTxM_small}}   
+    \hspace*{20pt}  
+    \subfloat[4-Way Mergesort.]{\label{NxTxM_small-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/kmerge_pianosa_NxTxM_small}} 
+    
+    \centering
+    \subfloat[Load-Balanced Mergesort.]{\label{NxTxM_small-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/lbmergesort_pianosa_NxTxM_small}} 
+    \hspace*{20pt}  
+    \subfloat[Load-Balanced Multi-Way Mergesort.]{\label{NxTxM_small-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/lbkmergesort_pianosa_NxTxM_small}}  
+    
+    \caption{\textit{Pianosa}. Time Completion of Sorting Algorithms by varying the parallelism degree. Each shape on a graphic represents the Time Completion of a certain Sorting Algorithm for a data set of specific size.}
+    \label{NxTxM_small}
 \end{figure}
+
+
+
+  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Large data set %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+    \centering
+    \subfloat[Quicksort.]{\label{NxTxM_large-quicksort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/quicksort_pianosa_NxTxM_large}} 
+    \hspace*{20pt}  
+    \subfloat[Bitonicsort.]{\label{NxTxM_large-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/bitonicsort_pianosa_NxTxM_large}} 
+    
+    \centering
+    \subfloat[Bucketsort.]{\label{NxTxM_large-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/bucketsort_pianosa_NxTxM_large}} 
+    \hspace*{20pt}
+    \subfloat[Samplesort.]{\label{NxTxM_large-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/samplesort_pianosa_NxTxM_large}} 
+    
+    \centering
+    \subfloat[Mergesort.]{\label{NxTxM_large-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/mergesort_pianosa_NxTxM_large}}   
+    \hspace*{20pt}  
+    \subfloat[4-Way Mergesort.]{\label{NxTxM_large-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/kmerge_pianosa_NxTxM_large}} 
+    
+    \centering
+    \subfloat[Load-Balanced Mergesort.]{\label{NxTxM_large-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/lbmergesort_pianosa_NxTxM_large}} 
+    \hspace*{20pt}  
+    \subfloat[Load-Balanced Multi-Way Mergesort.]{\label{NxTxM_large-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/lbkmergesort_pianosa_NxTxM_large}}  
+    
+    \caption{\textit{Pianosa}. Time Completion of Sorting Algorithms by varying the parallelism degree. Each shape on a graphic represents the Time Completion of a certain Sorting Algorithm for a data set of specific size.}
+    \label{NxTxM_large}
+\end{figure}
+  
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Huge data set %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+    \centering
+    \subfloat[Quicksort.]{\label{NxTxM_huge-quicksort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/quicksort_pianosa_NxTxM_huge}} 
+    \hspace*{20pt}  
+    \subfloat[Bitonicsort.]{\label{NxTxM_huge-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/bitonicsort_pianosa_NxTxM_huge}} 
+    
+    \centering
+    \subfloat[Bucketsort.]{\label{NxTxM_huge-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/bucketsort_pianosa_NxTxM_huge}} 
+    \hspace*{20pt}
+    \subfloat[Samplesort.]{\label{NxTxM_huge-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/samplesort_pianosa_NxTxM_huge}} 
+    
+    \centering
+    \subfloat[Mergesort.]{\label{NxTxM_huge-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/mergesort_pianosa_NxTxM_huge}}   
+    \hspace*{20pt}  
+    \subfloat[4-Way Mergesort.]{\label{NxTxM_huge-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/kmerge_pianosa_NxTxM_huge}} 
+    
+    \centering
+    \subfloat[Load-Balanced Mergesort.]{\label{NxTxM_huge-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/lbmergesort_pianosa_NxTxM_huge}} 
+    \hspace*{20pt}  
+    \subfloat[Load-Balanced Multi-Way Mergesort.]{\label{NxTxM_huge-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/NxTxM/lbkmergesort_pianosa_NxTxM_huge}}  
+    
+    \caption{\textit{Pianosa}. Time Completion of Sorting Algorithms by varying the parallelism degree. Each shape on a graphic represents the Time Completion of a certain Sorting Algorithm for a data set of specific size.}
+    \label{NxTxM_huge}
+\end{figure}
+  
  
 \begin{figure}[!ht]
-	\centering
-	\subfloat[Quicksort.]{\label{MxTxN-sequential}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/quicksort_pianosa_MxTxN}} 
-	\hspace*{20pt}	
-  	\subfloat[Bitonicsort.]{\label{MxTxN-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/bitonicsort_pianosa_MxTxN}} 
-  		
-	\centering
-	\subfloat[Bucketsort.]{\label{MxTxN-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/bucketsort_pianosa_MxTxN}} 
-  	\hspace*{20pt}
-  	\subfloat[Samplesort.]{\label{MxTxN-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/samplesort_pianosa_MxTxN}} 
-	
-	\centering
-  	\subfloat[Mergesort.]{\label{MxTxN-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/mergesort_pianosa_MxTxN}}   
-  	\hspace*{20pt}  
-  	\subfloat[4-Way Mergesort.]{\label{MxTxN-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/kmerge_pianosa_MxTxN}} 
-	
-	\centering
-  	\subfloat[Load-Balanced Mergesort.]{\label{MxTxN-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/lbmergesort_pianosa_MxTxN}} 
-  	\hspace*{20pt}  
-  	\subfloat[Load-Balanced Multi-Way Mergesort.]{\label{MxTxN-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/lbkmergesort_pianosa_MxTxN}} 
-  	
-	\caption{\textit{Pianosa}. Time Completion of Sorting Algorithms for increasing sizes of the data set. }
-	\label{MxTxN}
+    \centering
+    \subfloat[Quicksort.]{\label{MxTxN-quicksort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/quicksort_pianosa_MxTxN}} 
+    \hspace*{20pt}  
+    \subfloat[Bitonicsort.]{\label{MxTxN-bitonicsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/bitonicsort_pianosa_MxTxN}} 
+        
+    \centering
+    \subfloat[Bucketsort.]{\label{MxTxN-bucketsort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/bucketsort_pianosa_MxTxN}} 
+    \hspace*{20pt}
+    \subfloat[Samplesort.]{\label{MxTxN-samplesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/samplesort_pianosa_MxTxN}} 
+    
+    \centering
+    \subfloat[Mergesort.]{\label{MxTxN-mergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/mergesort_pianosa_MxTxN}}   
+    \hspace*{20pt}  
+    \subfloat[4-Way Mergesort.]{\label{MxTxN-kmerge}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/kmerge_pianosa_MxTxN}} 
+    
+    \centering
+    \subfloat[Load-Balanced Mergesort.]{\label{MxTxN-lbmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/lbmergesort_pianosa_MxTxN}} 
+    \hspace*{20pt}  
+    \subfloat[Load-Balanced Multi-Way Mergesort.]{\label{MxTxN-lbkmergesort}\includegraphics[width=0.4\textwidth]{plots/test_01_pianosa/MxTxN/lbkmergesort_pianosa_MxTxN}} 
+    
+    \caption{\textit{Pianosa}. Time Completion of Sorting Algorithms for increasing sizes of the data set. }
+    \label{MxTxN}
 \end{figure} 
-  
+
 \paragraph{Comparison between Sorting Algorithms}
 In the previous section we have analyzed the scalability of singles Sorting Algorithms for different sizes of the data set. Now, we focus on determining the best Sorting Algorithm, in terms of Time Completion, for different sizes of the data set. First of all, recall that whether a data set fits the primary memory, a call to \textit{Sequentialsort} is simply a call to the standard \textit{ANSI qsort} (see chapter~\ref{sort-fram}). Therefore, in case of \textbf{small} data sets, the \textit{Sequentialsort} is the best algorithm we can use. Indeed, as we have already anticipated, in these cases the overhead of the parallelization is greater than the time that we would spend in a sequential, optimized computation, like the one of \textit{qsort}. On the other hand, things are obvioulsy different for larger data sets. Figures~\ref{NxTxA-large} and~\ref{NxTxA-huge} can be used to derive which algorithms exhibit the best Time Completions respectively for large and huge data sets. First, we consider the case of \textbf{large} data sets. 
 Aside the \textit{Quicksort}, which suffers the unbalancing of the load among processes (see Appendix~\ref{appendix} for more details), most of the Sorting Algorithms outperform \textit{Sequentialsort}, at least when the size of the data set is greater than 4M integers. At least up to parallelism degree 16, the best algorithm is \textit{Mergesort}: in the best case, it is able to lower the Time Completion of \textit{qsort} of roughly 25$\%$ (see Figure~\ref{NxTxA-32M}). Now, we move to \textit{huge} data sets. It has been a great pleasure to see that the \textit{Load-Balanced Multi-Way Mergesort} (the Sorting Algorithm we designed and implemented by taking cue from \textit{Load-Balanced Mergesort}) is the algorithm that shows \textit{always} the best Time Completion (see also Figures~\ref{MxTxA-n4},~\ref{MxTxA-n8} and~\ref{MxTxA-n16}). Unfortunately, the lack of further machines to increase the parallelism degree at least up to 32 prevents the possibility of claiming deeper conclusions on these aspects. 
