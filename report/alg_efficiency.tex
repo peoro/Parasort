@@ -25,8 +25,8 @@ In this section we want to give an idea of how many of the $N$ processes with wh
 \end{enumerate}
 
 \item \textbf{Bitonicsort.} $\varphi = \frac{\sum_{i=0}^{(\log_2{N})^2} N}{N \times (\log_2{N})^2} = 1 $
-\item \textbf{Bucketsort, Samplesort.} In these algorithms steps have the characteristic of being heterogenous: a first step is the local sorting of datas, than a step of sampling and finally a step for building buckets. A process will never sleep, so we trivialy have: $\varphi = 1$.
+\item \textbf{Bucketsort, Samplesort.} In these algorithms steps have the characteristic of being heterogeneous: a first step is the local sorting, than a step of sampling and finally a step for building buckets. A process will never sleep, so we trivially have: $\varphi = 1$.
 
-\item \textbf{Load Balanced Mergesort, K-Way Load Balanced Mergesort.} Trivialy, $\varphi = 1$. Indeed, these algorithms have been conceived exactly for maximizing the number of processes which contributes to the sorting during all the computation.
+\item \textbf{Load Balanced Mergesort, K-Way Load Balanced Mergesort.} Trivially, $\varphi = 1$. Indeed, these algorithms have been conceived exactly for maximizing the number of processes which contributes to the sorting during all the computation.
 
 \end{itemize}
