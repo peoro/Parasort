@@ -141,7 +141,25 @@ Same experiments have been executed also on the $IntelXeon\ X5670$ CMP. Tables~\
 \begin{tabular}{|c|c|c|c|c|c|}\hline
 \hline
 $\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
-
+1 & 32MB & 0.016 & 0.015 & 0.031 & 0.044 \\\hline
+2 & 16MB & 0.020 & 0.018 & 0.025 & 0.052 \\\hline
+4 & 8MB & 0.014 & 0.013 & 0.022 & 0.056 \\\hline
+8 & 4MB & 0.018 & 0.015 & 0.016 & 0.058 \\\hline
+16 & 2MB & 0.015 & 0.015 & 0.016 & 0.058 \\\hline
+32 & 1MB & 0.018 & 0.012 & 0.021 & 0.060 \\\hline
+64 & 512KB & 0.016 & 0.012 & 0.025 & 0.061 \\\hline
+128 & 256KB & 0.016 & 0.013 & 0.021 & 0.060 \\\hline
+256 & 128KB & 0.016 & 0.014 & 0.023 & 0.066 \\\hline
+512 & 64KB & 0.020 & 0.016 & 0.019 & 0.038 \\\hline
+1024 & 32KB & 0.018 & 0.013 & 0.028 & 0.041 \\\hline
+2048 & 16KB & 0.021 & 0.011 & 0.055 & 0.046 \\\hline
+4096 & 8KB & 0.024 & 0.012 & 0.201 & 0.060 \\\hline
+8192 & 4KB & 0.026 & 0.017 & 1.875 & 0.093 \\\hline
+16384 & 2KB & 0.015 & 0.039 & 3.3369 & 0.162 \\\hline
+32768 & 1KB & 0.019 & 0.057 & 13.12836 & 0.279 \\\hline
+65536 & 512B & 0.029 & 0.096 & 88.88473 & 0.477 \\\hline
+131072 & 256B & 0.061 & 0.133 & 502.501637 & 1.912 \\\hline
+262144 & 128B & 0.076 & 0.241 & 2294.2294324 & 2.1774 \\\hline
 \end{tabular}
 \caption{\textit{IntelXeon X5670.} DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 32MB. The cost of a primitive is the time expressed in seconds. }
 \label{tsetup-xeon-n8-M32}
@@ -168,7 +186,22 @@ $PCM$ is a cluster of $IntelXeon\ X5670$ machines interconnected by means of $In
 \begin{tabular}{|c|c|c|c|c|c|}\hline
 \hline
 $\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
-
+1 & 32MB & 0.014 & 0.037 & 0.038 & 0.092 \\\hline
+2 & 16MB & 0.015 & 0.119 & 0.028 & 0.105 \\\hline
+4 & 8MB & 0.013 & 0.064 & 0.023 & 0.111 \\\hline
+8 & 4MB & 0.016 & 0.039 & 0.026 & 0.114 \\\hline
+16 & 2MB & 0.026 & 0.107 & 0.020 & 0.093 \\\hline
+32 & 1MB & 0.016 & 0.120 & 0.021 & 0.096 \\\hline
+64 & 512KB & 0.017 & 0.056 & 0.023 & 0.133 \\\hline
+128 & 256KB & 0.022 & 0.042 & 0.026 & 0.117 \\\hline
+256 & 128KB & 0.029 & 0.039 & 0.028 & 0.114 \\\hline
+512 & 64KB & 0.031 & 0.032 & 0.103 & 0.122 \\\hline
+1024 & 32KB & 0.031 & 0.029 & 0.136 & 0.151 \\\hline
+2048 & 16KB & 0.042 & 0.049 & 0.319 & 0.465 \\\hline
+4096 & 8KB & 0.022 & 0.029 & 1.1113 & 0.483 \\\hline
+8192 & 4KB & 0.022 & 0.050 & 5.4655 & 0.454 \\\hline
+16384 & 2KB & 0.025 & 0.057 & 19.19419 & 1.648 \\\hline
+32768 & 1KB & 0.031 & 0.081 & 88.88148 & 1.1109 \\\hline
 \end{tabular}
 \caption{\textit{PCM.} DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 32MB. The cost of a primitive is the time expressed in seconds. }
 \label{tsetup-pcm-n64-M32}
@@ -180,7 +213,23 @@ $\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_sc
 \begin{tabular}{|c|c|c|c|c|c|}\hline
 \hline
 $\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
-
+1 & 128MB & 0.051 & 0.062 & 0.142 & 0.364 \\\hline
+2 & 64MB & 0.049 & 0.058 & 0.116 & 0.400 \\\hline
+4 & 32MB & 0.090 & 0.059 & 0.089 & 0.422 \\\hline
+8 & 16MB & 0.053 & 0.124 & 0.080 & 0.441 \\\hline
+16 & 8MB & 0.051 & 0.124 & 0.077 & 0.455 \\\hline
+32 & 4MB & 0.050 & 0.058 & 0.097 & 0.463 \\\hline
+64 & 2MB & 0.061 & 0.120 & 0.080 & 0.375 \\\hline
+128 & 1MB & 0.053 & 0.082 & 0.084 & 0.382 \\\hline
+256 & 512KB & 0.057 & 0.082 & 0.093 & 1.523 \\\hline
+512 & 256KB & 0.075 & 0.140 & 0.111 & 0.470 \\\hline
+1024 & 128KB & 0.111 & 0.106 & 0.159 & 0.457 \\\hline
+2048 & 64KB & 0.124 & 0.103 & 0.324 & 0.492 \\\hline
+4096 & 32KB & 0.114 & 0.106 & 1.1180 & 1.585 \\\hline
+8192 & 16KB & 0.157 & 0.099 & 5.5049 & 2.1855 \\\hline
+16384 & 8KB & 0.134 & 0.106 & 19.18628 & 2.1918 \\\hline
+32768 & 4KB & 0.089 & 0.118 & 110.110325 & 2.1822 \\\hline
+65536 & 2KB & 0.094 & 0.179 & 717.716849 & 3.2593 \\\hline
 \end{tabular}
 \caption{\textit{PCM.} DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 128MB. The cost of a primitive is the time expressed in seconds.}
 \label{tsetup-pcm-n64-M128}
@@ -211,5 +260,3 @@ $\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_sc
 
 \input{alg_efficiency}
 \input{performance}
-
-\subsection{Comparing the results}
