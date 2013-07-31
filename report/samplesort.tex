@@ -1,0 +1,24 @@
+\subsubsection{Sample Sort}
+\label{Samplesort}
+The main problem in bucket sort is that the range of numbers for each bucket is fixed a priori. Thus, if numbers are not equally distributed, more numbers will fall into some buckets than others.
+The goal of \textit{sample sort} is to determine the ranges so that each bucket will have approximately the same number of elements. To achieve this it uses a sampling scheme which picks out $n-1$ numbers, $s_1$, $s_2$, \dots, $s_{n-1}$, from the input sequence $S$ of $M$ elements as \textit{splitters}, that define the range of numbers for each of the $n$ buckets. Bucket $i$ gets the elements $e$ for which $s_{i-1} \leq e < s_i$. The selection of these splitters is a crucial issue. These can be found by the following method:
+\begin{enumerate}	
+	\item the input sequence $S$ is divided into $n$ partition each of $\frac{M}{n}$ elements;
+	\item each partition is sorted and a sample of $n-1$ evenly spaced numbers is chosen from each of them;
+	\item the obtained $n \cdot (n-1)$ samples are then sorted, and again $n-1$ equally spaced numbers are selected as global splitters;
+\end{enumerate}
+It is shown that no bucket will receive more than $4 \cdot \frac{M}{n}$ elements with probability at least $1/2$ ~\cite{SAN}.
+
+After the range of each bucket is set by the splitters, the algorithm continues in the same fashion as bucket sort, with the only difference in placing the numbers in small buckets, operation that now requires for each element a binary search on the array of splitters.
+
+The parallel version of the algorithm works as follows:
+\begin{enumerate}	
+	\item the input sequence $S$ is scattered among processes;
+	\item each process sorts its partition and selects a sample of $n-1$ evenly spaced numbers;
+	\item the obtained $n \cdot (n-1)$ samples are gathered to the root process and then sorted;
+	\item the root process selects $n-1$ equally spaced numbers as global splitters and broadcast them;
+	\item each process separates the numbers in its partition into $n$ ``small'' buckets by performing a binary search on the array of splitters;
+	\item each process sends the numbers in the ``small'' bucket $i$ to the process with rank $i$ (where $0 \leq i < n$);
+	\item each process sorts locally its own bucket;
+	\item the sorted sequence is gathered to the root process.
+\end{enumerate}

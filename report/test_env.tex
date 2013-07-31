@@ -1,0 +1,262 @@
+\section{Performance evaluation}
+
+\subsection{Performance measurement approach}
+\label{test-env}
+There are two different common approaches to evaluate performance: profiling and benchmarking.
+
+Profiling is used to measure the performance of a given application by adding time measuring and logging code. After the execution has been completed, one can retrace and check how much time had been spent in which function call. This is useful for application developers to find potential bottlenecks and inefficient implemented functions.
+
+Benchmarking addresses mainly the levels underneath the application level, for instance the performance
+of the MPI-implementation, the performance of the network and devices. Most interesting results are latencies and bandwidths and their course for various packet or messages sizes. Benchmarking is done by performing numerous iterations of computation and/or communication and measuring the elapsed time.
+
+We used the latter technique to measure the performance of MPI on our test environments, and a combination of both benchmarking and profiling techniques to measure the performance of the different sorting algorithms.
+
+\subsection{Test Environment}
+In this section we briefly discuss the architecture of our test environments. 
+
+\paragraph{Pianosa}
+\textit{Pianosa} is an old cluster of 30 nodes located at the Department of Computer Science, University of Pisa. Nodes are Intel Pentium III 800 Mhz with a L1 cache of 512KB. The primary memory is of size 1 GB. The operative system is an old distribution of Linux, the Fedora Core 1. On average, the available space on disk in each machine is roughly 15 GB; this capacity obviously limits our tests to data sets of relatively small size. The interconnection network between nodes is a Fast Ethernet, so the MPI support is built on top of the stack TCP/IP. The main weakness of the whole architecture is that the interconnection network is based on a hub: the conflicts at network level becomes not negligible, specially for messages of significant size. This is not just an hypothesis, but something concrete which has been experienced by the group of Parallel Architectures when attempting to define a cost model of MPI. Anyway, even if the architecture has a lot of limitations that can \textit{significantly} affect the performance, Pianosa is a good starting point for testing our algorithms (even from a functional point of view) and to conjecture which architectural characteristics could impair the performance of a Parallel Sorting Algorithm.
+
+\paragraph{PCM}
+\label{PCM}
+The second target architecture is a cluster of Intel Xeon X5670 (2,93 Ghz) machines located at the Department of Physics, University of Pisa. Each node has 12 cores split in 2 chips (6 cores/chip) and each core allows the execution of two simultaneous threads. Each core has both a L1 cache of 64KB (32 KB dedicated to instructions, 32KB to datas) and L2 cache of 256KB. Each chip has also a L3 cache of 12MB, thus shared by 6 cores. The primary memory is of size 48GB. The disk subsystem is 1x1000 GB SATA II, 7200 RPM, surely faster than the one of Pianosa. The operative system is SUSE Linux Enterprise Server 11. Nodes are interconnected by means of Infiniband. We will use \textit{mvapich2}, a special version of \textit{mpich2} that supports Infiniband. It is clear that the comparison between the old Pianosa and this cluster is unfair: the newer powerful hardware of this architecture will play a key role for the performance of our Sorting Algorithms, both from a quantitative (absolute time completion) and qualitative (scalability) point of view. We will detail all these aspects in the following sections.
+
+\subsection{Cost Model of MPI on the Test Environment}
+\label{MPI-cost-model}
+\paragraph{The cost of sending a message: the T$\_$send model}
+We are interested in evaluating the cost of communications in the test environments because it can help us in understanding the performance behavior of the Sorting Algorithms. Indeed, depending on both the specific architecture and the algorithm, communications may significantly impact the completion time (and so even the scalability) of the algorithm itself. In a simplified view, the cost of sending a message between two tasks located on different processors can be represented by two parameters: the message startup time $T_{setup}$, which is the time required to initiate the communication, and the transmission time $T_{trasm}$ per word, which is mainly determined by the physical bandwidth of the communication channel linking the source and destination processors~\cite{VANN}. In this model, the time required to send a message of size $L$ (that is, for performing a $DAL\_send$ of size $L$) words is then
+\[
+T_{send}(L) = T_{setup} + L \times T_{trasm}
+\]
+While accurate for some algorithms and on very simple architectures, this model generally breaks down due to a lot of factors: for instance, the communication pattern of the application, the bandwidth of the interconnection network and, more in general, due to the complexity of the parallel architectures. Despite its weakness, for practical reasons we will refer to the $T\_send$-model to explain the results we achieved.  
+The following experimental analysis will try to estimate $T\_send$ on our test architectures by varying the size of the messages and by changing the communication pattern (we will perform the so called ''bisection test'', in which there are two sets of processes, with same cardinality, that exchange messages each other). 
+
+In order to benchmark the performance of the two environments, we decided to use the \textit{Perftest} benchmark suite.
+
+The perftest-package is provided along with the MPI-implementation MPICH, although it can be used in combination with any MPI-implementation. The package contains a few tools to measure the performance of a message passing environment. The two major programs are \textit{mpptest} for measuring point-to-point communication and \textit{goptest} for measuring collective communication. In addition to the classic ping-pong test, mpptest can measure performance with many participating processes (exposing contention and scalability problems) and can adaptively choose the message sizes in order to isolate sudden changes in performance. 
+
+The following test were performed:
+\begin{itemize}
+	\item Round-trip times between 2 nodes using blocking methods
+	\item Blocking bisection times involving from 4 to $n$ nodes
+	\item Broadcast times involving from 2 to $n$ nodes
+\end{itemize}
+In the bisection test the complete system is logically divided into two subsystems and the aggregated bandwidth and latency between the two subsystems is measured. An example of this is splitting the system in two vertically and letting each node in the left half communicate with a node in the right part on a one-to-one basis.
+
+\paragraph{Optimum size of the DAL's communication buffer}
+As we said in section~\ref{DAL-impl} we are interested in estimating the \textit{optimum size} for the communication buffer of the DAL layer. In particular, assume that we are performing a $DAL\_send$ of $L$ words. We could send these $L$ words either by performing a single $MPI\_Send$ or, more in general, by performing $X$ $MPI\_Send$. The latter situation is typical in our framework due to the structure of the DAL. Indeed, from section~\ref{DAL-impl}, we remind that each process has its own buffer dedicated to communications; this buffer is of fixed size, let's say $K$ words. Since in general $K < L$, assuming without loss of generality that $L = K \times X$, the cost of sending $L$ words is equal to the cost of performing $X$ $MPI\_Send$ each of size $K$. For each architecture, we have to choose the best value of $K$: indeed, a low value may negatively impact on $T\_send$ (for instance, because of the setup cost of each $MPI\_Send$); a high value could be useless because a too large communication buffer may not give any benefit, rather it may only be a waste of important memory. In order to find the optimal value of $K$, namely the size of the ''static'' communication buffer, we have developed a set of utilities (a program and scripts that share the same prefix  \textit{Tsetup}) that practically estimates the various $T\_send$, $T\_scatter$ and $T\_alltoall$ as functions of $L$ and $X$. 
+
+\paragraph{MPI on Pianosa}
+\label{test-env-pianosa}
+As stated in the previous paragraph, we focus on determining the \textit{optimum} size of the communication buffer on $Pianosa$. Table~\ref{tsetup-pianosa-n8-M32} shows the time spent by the most used communication primitives (DAL$\_\lbrace$send, scatter, gather, alltoall$\rbrace$) for a message of size 32MB. Each row $i$ of the table is relative to different sizes of the communication buffer. In this way the original message will be sent through $X$ MPI$\_\lbrace$send, scatter, gather, alltoall$\rbrace$ according to the size of the communication buffer ($X \in \lbrace 2^i : i = 0...18 \rbrace$). Table~\ref{tsetup-pianosa-n8-M128} shows another test in which the original message is of size 128MB. In both experiments the parallelism degree is set to 8 (Appendix~\ref{appendixB} shows results with different parallelism degrees). Notice that the parallelism degree is meaningful for scatter, gather and alltoall because it can impact on the overall time spent to carry out the collective communication. By means of these experiments we want to understand which sizes of the communication buffer cause overhead for sending a message with a specific DAL primitive. By looking at the tables we can notice that, from a certain row ahead, some columns are blank (filled with '-'). This means that the overhead of a DAL primitive (column), for a specific size of the communication buffer (row), is become so high that is useless to perform further tests since they would be from one hand meaningless and from the other one a waste of time. Thanks both to these results and to a lot of experiments involving all Sorting Algorithms, we have set the value of the communication buffer to \textbf{32 MB}. 
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+1 & 32 MB & 3.2885 & 3.2538 & 3.2533 & 4.4369 \\\hline
+2 & 16 MB & 3.2846 & 3.2551 & 3.2524 & 5.4570 \\\hline
+4 & 8 MB & 3.2847 & 3.2543 & 3.2529 & 5.4825 \\\hline
+8 & 4 MB & 3.2851 & 3.2550 & 3.2550 & 5.5014 \\\hline
+16 & 2 MB & 3.2862 & 3.2560 & 3.2573 & 5.5177 \\\hline
+32 & 1 MB & 3.2867 & 3.2579 & 3.3236 & 19.19259 \\\hline
+64 & 512 KB & 3.2918 & 3.2915 & 3.3222 & 25.24587 \\\hline
+128 & 256 KB & 3.3006 & 3.2766 & 3.2989 & 27.27086 \\\hline
+256 & 128 KB & 3.2847 & 3.2535 & 3.2972 & 40.39969 \\\hline
+512 & 64 KB & 3.2848 & 3.2536 & 3.3068 & 69.68816 \\\hline
+1024 & 32 KB & 3.2887 & 3.2539 & 3.2965 & 116.116458 \\\hline
+2048 & 16 KB & 3.2887 & 3.2558 & 3.3272 & 266.266317 \\\hline
+4096 & 8 KB & 3.2894 & 3.2580 & 4.3730 & - \\\hline
+8192 & 4 KB & 3.2903 & 3.2645 & 14.13722 & - \\\hline
+16384 & 2 KB & 3.2890 & 3.2746 & 39.38740 & - \\\hline
+32768 & 1 KB & 3.2938 & 3.3331 & 209.208522 & - \\\hline
+65536 & 512 B & 3.3155 & 4.4322 & 353.353234 & - \\\hline
+131072 & 256 B & 3.3479 & 5.5415 & - & - \\\hline
+262144 & 128 & 6.5900 & 15.15130 & - & - \\\hline
+\end{tabular}
+\caption{DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 32MB. The cost of a primitive is the time expressed in seconds. }
+\label{tsetup-pianosa-n8-M32}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+1 & 128 MB & 11.11400 & 10.10070 & 10.10043 & 17.17266 \\\hline
+2 & 64 MB & 11.11402 & 10.10094 & 10.10051 & 18.18033 \\\hline
+4 & 32 MB & 11.11405 & 10.10100 & 10.10071 & 20.19710 \\\hline
+8 & 16 MB & 11.11410 & 10.10082 & 10.10079 & 19.19299 \\\hline
+16 & 8 MB & 11.11418 & 10.10045 & 10.10081 & 20.20120 \\\hline
+32 & 4 MB & 11.11422 & 10.10075 & 10.10153 & 20.20133 \\\hline
+64 & 2 MB & 11.11471 & 10.10116 & 10.10247 & 21.20900 \\\hline
+128 & 1 MB & 11.11491 & 10.10205 & 11.10832 & 74.73857 \\\hline
+256 & 512 KB & 12.11698 & 12.11658 & 11.10849 & 102.101612 \\\hline
+512 & 256 KB & 12.12053 & 11.11130 & 11.10812 & 113.112904 \\\hline
+1024 & 128 KB & 11.11405 & 10.10025 & 11.10711 & 174.173785 \\\hline
+2048 & 64 KB & 11.11410 & 10.10042 & 11.10515 & 286.285505 \\\hline
+4096 & 32 KB & 11.11454 & 10.10067 & 11.11336 & 481.481320 \\\hline
+8192 & 16 KB & 11.11424 & 10.10119 & 16.16036 & 1060.1060080 \\\hline
+16384 & 8 KB & 11.11446 & 10.10249 & 65.64964 & - \\\hline
+32768 & 4 KB & 12.11526 & 10.10489 & 174.173768 & - \\\hline
+65536 & 2 KB & 12.11582 & 11.11229 & 692.691751 & - \\\hline
+131072 & 1 KB & 12.11758 & 13.13273 & 1196.1195668 & - \\\hline
+\end{tabular}
+\caption{DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 128MB. The cost of a primitive is the time expressed in seconds.}
+\label{tsetup-pianosa-n8-M128}
+\end{center}
+\end{table}
+
+We conclude this paragraph by showing (Figures~\ref{pianosa-mpi-1},~\ref{pianosa-mpi-2},~\ref{pianosa-mpi-3}) the cost of $DAL\_send$ for small messages. We will have to refer to these figures in the following, when we will show the performance analisys of the algorithms.
+
+\begin{figure}[h]
+	\centering
+  	\subfloat[Messages of length from 0 to 32 bytes (stride 4 bytes).]{\label{tsend_32}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/pianosa/tsend_4}}  
+	\hspace*{20pt}
+  	\subfloat[Messages of length from 0 to 1024 bytes (stride 32 bytes).]{\label{tsend_32}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/pianosa/tsend_32}}  
+	\caption{Performance of blocking send between two processes.}
+	\label{pianosa-mpi-1}
+	
+	\centering
+  	\subfloat[Messages of length from 0 to 32768 bytes (stride $2^i$ bytes).]{\label{tsend_logscale}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/pianosa/tsend_logscale}}  
+	\hspace*{20pt}
+  	\subfloat[Bisection test with 4, 8 and 16 processors.]{\label{bisect_logscale}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/pianosa/bisect_logscale}}  
+	\caption{Performance of blocking send and bisection test.}
+	\label{pianosa-mpi-2}	
+	
+	\centering {\label{bcast}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/pianosa/bcast}}  
+	\caption{Performance of broadcast with 4, 8 and 16 processors.}
+	\label{pianosa-mpi-3}
+\end{figure}
+
+\clearpage
+
+\paragraph{MPI on IntelXeon X5670}
+Same experiments have been executed also on the $IntelXeon\ X5670$ CMP. Tables~\ref{tsetup-xeon-n8-M32} and~\ref{tsetup-xeon-n8-M128} show the time spent by the primitives DAL$\_\lbrace$send, scatter, gather, alltoall$\rbrace$ respectively for messages of size 32MB and 128MB (Appendix~\ref{appendixB} shows results for parallelism degree different from 8). Since the version of MPI that we have used exploits the shared memory to implement (part of) the run-time support of MPI, the latencies of most of MPI primitives is some order magnitude lower that the ones obtained on $Pianosa$.
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+1 & 32MB & 0.016 & 0.015 & 0.031 & 0.044 \\\hline
+2 & 16MB & 0.020 & 0.018 & 0.025 & 0.052 \\\hline
+4 & 8MB & 0.014 & 0.013 & 0.022 & 0.056 \\\hline
+8 & 4MB & 0.018 & 0.015 & 0.016 & 0.058 \\\hline
+16 & 2MB & 0.015 & 0.015 & 0.016 & 0.058 \\\hline
+32 & 1MB & 0.018 & 0.012 & 0.021 & 0.060 \\\hline
+64 & 512KB & 0.016 & 0.012 & 0.025 & 0.061 \\\hline
+128 & 256KB & 0.016 & 0.013 & 0.021 & 0.060 \\\hline
+256 & 128KB & 0.016 & 0.014 & 0.023 & 0.066 \\\hline
+512 & 64KB & 0.020 & 0.016 & 0.019 & 0.038 \\\hline
+1024 & 32KB & 0.018 & 0.013 & 0.028 & 0.041 \\\hline
+2048 & 16KB & 0.021 & 0.011 & 0.055 & 0.046 \\\hline
+4096 & 8KB & 0.024 & 0.012 & 0.201 & 0.060 \\\hline
+8192 & 4KB & 0.026 & 0.017 & 1.875 & 0.093 \\\hline
+16384 & 2KB & 0.015 & 0.039 & 3.3369 & 0.162 \\\hline
+32768 & 1KB & 0.019 & 0.057 & 13.12836 & 0.279 \\\hline
+65536 & 512B & 0.029 & 0.096 & 88.88473 & 0.477 \\\hline
+131072 & 256B & 0.061 & 0.133 & 502.501637 & 1.912 \\\hline
+262144 & 128B & 0.076 & 0.241 & 2294.2294324 & 2.1774 \\\hline
+\end{tabular}
+\caption{\textit{IntelXeon X5670.} DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 32MB. The cost of a primitive is the time expressed in seconds. }
+\label{tsetup-xeon-n8-M32}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+
+\end{tabular}
+\caption{\textit{IntelXeon X5670.} DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 128MB. The cost of a primitive is the time expressed in seconds.}
+\label{tsetup-xeon-n8-M128}
+\end{center}
+\end{table}
+
+\paragraph{MPI on PCM}
+$PCM$ is a cluster of $IntelXeon\ X5670$ machines interconnected by means of $Infiniband$. It is interesting to show the cost of the DAL's primitives on this architecture. Tables~\ref{tsetup-pcm-n64-M32} and~\ref{tsetup-pcm-n64-M128} show the time spent by the primitives DAL$\_\lbrace$send, scatter, gather, alltoall$\rbrace$ respectively for messages of size 32MB and 128MB with parallelism degree 64 (Appendix~\ref{appendixB} shows the results for further parallelism degree). Thanks to $Infiniband$, the time elapsed both for exchanging a message and by a collective communication is \textit{at least} two order magnitude lower than the one of $Pianosa$. Moreover, we must notice that the run-time support on $Infiniband$ keeps the cost of a collective communication really close to the one obtained when the run-time support exploits the shared memory, for every parallelism degree; this can be noticed, for instance, by comparing table~\ref{tsetup-pcm-n64-M32} with table~\ref{tsetup-xeon-n8-M32}. In light of what we have shown with these results, the size of the DAL communication buffer can be easily kept to \textbf{32MB}, exactly as on $Pianosa$.
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+1 & 32MB & 0.014 & 0.037 & 0.038 & 0.092 \\\hline
+2 & 16MB & 0.015 & 0.119 & 0.028 & 0.105 \\\hline
+4 & 8MB & 0.013 & 0.064 & 0.023 & 0.111 \\\hline
+8 & 4MB & 0.016 & 0.039 & 0.026 & 0.114 \\\hline
+16 & 2MB & 0.026 & 0.107 & 0.020 & 0.093 \\\hline
+32 & 1MB & 0.016 & 0.120 & 0.021 & 0.096 \\\hline
+64 & 512KB & 0.017 & 0.056 & 0.023 & 0.133 \\\hline
+128 & 256KB & 0.022 & 0.042 & 0.026 & 0.117 \\\hline
+256 & 128KB & 0.029 & 0.039 & 0.028 & 0.114 \\\hline
+512 & 64KB & 0.031 & 0.032 & 0.103 & 0.122 \\\hline
+1024 & 32KB & 0.031 & 0.029 & 0.136 & 0.151 \\\hline
+2048 & 16KB & 0.042 & 0.049 & 0.319 & 0.465 \\\hline
+4096 & 8KB & 0.022 & 0.029 & 1.1113 & 0.483 \\\hline
+8192 & 4KB & 0.022 & 0.050 & 5.4655 & 0.454 \\\hline
+16384 & 2KB & 0.025 & 0.057 & 19.19419 & 1.648 \\\hline
+32768 & 1KB & 0.031 & 0.081 & 88.88148 & 1.1109 \\\hline
+\end{tabular}
+\caption{\textit{PCM.} DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 32MB. The cost of a primitive is the time expressed in seconds. }
+\label{tsetup-pcm-n64-M32}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}\hline
+\hline
+$\sharp$ MPI calls & MPI size ($\frac{L}{\sharp Sends}$)  & $T\_send$   & $T\_scatter$  & $T\_gather$ & $T\_alltoall$      \\\hline\hline
+1 & 128MB & 0.051 & 0.062 & 0.142 & 0.364 \\\hline
+2 & 64MB & 0.049 & 0.058 & 0.116 & 0.400 \\\hline
+4 & 32MB & 0.090 & 0.059 & 0.089 & 0.422 \\\hline
+8 & 16MB & 0.053 & 0.124 & 0.080 & 0.441 \\\hline
+16 & 8MB & 0.051 & 0.124 & 0.077 & 0.455 \\\hline
+32 & 4MB & 0.050 & 0.058 & 0.097 & 0.463 \\\hline
+64 & 2MB & 0.061 & 0.120 & 0.080 & 0.375 \\\hline
+128 & 1MB & 0.053 & 0.082 & 0.084 & 0.382 \\\hline
+256 & 512KB & 0.057 & 0.082 & 0.093 & 1.523 \\\hline
+512 & 256KB & 0.075 & 0.140 & 0.111 & 0.470 \\\hline
+1024 & 128KB & 0.111 & 0.106 & 0.159 & 0.457 \\\hline
+2048 & 64KB & 0.124 & 0.103 & 0.324 & 0.492 \\\hline
+4096 & 32KB & 0.114 & 0.106 & 1.1180 & 1.585 \\\hline
+8192 & 16KB & 0.157 & 0.099 & 5.5049 & 2.1855 \\\hline
+16384 & 8KB & 0.134 & 0.106 & 19.18628 & 2.1918 \\\hline
+32768 & 4KB & 0.089 & 0.118 & 110.110325 & 2.1822 \\\hline
+65536 & 2KB & 0.094 & 0.179 & 717.716849 & 3.2593 \\\hline
+\end{tabular}
+\caption{\textit{PCM.} DAL$\_\lbrace send, scatter, gather, alltoall \rbrace$ cost for messages of size 128MB. The cost of a primitive is the time expressed in seconds.}
+\label{tsetup-pcm-n64-M128}
+\end{center}
+\end{table}
+
+\begin{figure}[h]
+    \centering
+    \subfloat[Messages of length from 0 to 32 bytes (stride 4 bytes).]{\label{tsend_1}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/PCM/tsend_1}}  
+    \hspace*{20pt}
+    \subfloat[Messages of length from 0 to 1024 bytes (stride 32 bytes).]{\label{tsend_2}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/PCM/tsend_2}}  
+    \caption{Performance of blocking send between two processes.}
+    \label{PCM-mpi-1}
+    
+    \centering
+    \subfloat[Messages of length from 0 to 32768 bytes (stride $2^i$ bytes).]{\label{tsend_logscale}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/PCM/tsend_logscale}}  
+    \hspace*{20pt}
+    \subfloat[Bisection test with 4, 8, 16, 32 and 64 processors.]{\label{bisect_logscale}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/PCM/bisect_logscale}}  
+    \caption{Performance of blocking send and bisection test.}
+    \label{PCM-mpi-2}   
+    
+    \centering {\label{bcast}\includegraphics[width=0.4\textwidth]{../tests/mpi_comm_perf/PCM/bcast}}  
+    \caption{Performance of broadcast with 4, 8, 16, 32 and 64 processors.}
+    \label{PCM-mpi-3}
+\end{figure}
+
+\clearpage
+
+\input{alg_efficiency}
+\input{performance}

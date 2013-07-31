@@ -1,0 +1,81 @@
+\documentclass[a4paper,12pt,oneside,openright]{article}
+\usepackage[pdftex] {graphicx}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\usepackage{subfig}
+\usepackage{chapterbib}
+
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{wrapfig}
+
+\addtolength{\hoffset}{-1cm}
+\addtolength{\textwidth}{2.5cm}
+
+\lstdefinelanguage{J}[]{C}
+{morekeywords={},
+sensitive=false}
+\lstset{language=C}
+% shadowbox come frame
+% rulesepcolor=\color{Gray}
+\lstset{tabsize=3, breaklines, commentstyle=\texttt}
+\lstset{showstringspaces=false}
+\lstset{basicstyle=\small}
+\lstset{emph={},emphstyle=\textit}
+
+\title{Performance evaluation of parallel sorting algorithms for large data sets}
+\author{Nicola Desogus, Paolo Giangrandi, Fabio Luporini}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\pagebreak
+
+\include{state_art}
+
+\input{algorithms}
+
+\section{Structuring the project: a top-down approach}
+\subsection{Abstraction Layers}
+\input{framework}
+\subsection{Sorting Algorithms}
+\input{terminology}
+\input{mergesort}
+\input{kmerge}
+\input{lbmergesort}
+\input{lbkmergesort}
+\input{quicksort}
+\input{bitonicsort}
+\input{bucketsort}
+\input{samplesort}
+\subsection{Sorting Framework}
+\input{sorting_framework}
+\subsection{DAL: Data Abstraction Layer}
+\input{data}
+
+\input{test_env}
+
+\input{futureworks}
+
+\pagebreak
+
+\begin{thebibliography}{13}
+\bibitem{FERR}{Paolo Ferragina. \textit{The magic of Algorithms!.} Lectures notes in Algorithm Engineering, 2010}
+\bibitem{CPSA}{Nancy M. Amato	 and Ravishankar Iyer and Sharad Sundaresan and Yan Wu.\textit{A Comparison of Parallel Sorting Algorithms on Different Architectures.} Technical Report 98-029, Department of Computer Science, Texas A$\&$M University, January 1996. }
+\bibitem{CSPA2}{Marc Moreno Maza. \textit{CS855: Parallel Sorting Algorithms.} Technical Report, Department of Computer Science, The University of Western Ontario, February 2008.}
+\bibitem{NPSA}{David R. Cheng and Alan Edelman and John R. Gilbert and Viral Shah. \textit{A Novel Parallel Sorting Algorithm for Contemporary Architectures.} In ALENEX06, May 2007.}
+\bibitem{VANN}{Marco Vanneschi. \textit{Architettura degli Elaboratori.} Plus-Pisa University Press, 2009.}
+\bibitem{MPI}{http://www.mpi-forum.org/docs/mpi-11-html/node41.html$\#$Node41}
+\bibitem{SAN}{Kurt Mehlhorn and Peter Sanders. \textit{Algorithms and Data Structures: The Basic Toolbox.} Springer-Verlag, June 2008.}
+\bibitem{MVAPICH2-MAPPING}{http://mvapich.cse.ohio-state.edu/support/user$\_$guide$\_$mvapich2-1.5.1.html$\#$x1-330006.2}
+\end{thebibliography}
+
+\pagebreak
+
+\appendix
+\include{appendix}
+\include{appendixB}
+
+\end{document}

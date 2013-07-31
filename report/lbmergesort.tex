@@ -1,0 +1,10 @@
+\subsubsection{Load-Balanced Merge Sort}
+When we refer to load balancing, we ideally want all the processes to be operating continuously in the overall computation, which would lead to the minimum execution time. Achieving this goal by spreading the work evenly across processes is called load balancing.
+
+The main limit of the classic approach in parallelizing merge sort is due to the number of idle processes that keeps growing during the merging phase. The active processes are halved at each step. Therefore, the maximum achievable efficiency is severely limited. The aim of the \textit{Load-Balanced Merge Sort} we implemented is to force each process to participate in the entire merging phase in order to obtain higher parallelism and increase efficiency.
+
+To define the range of numbers on which a process will operate during the merge, a preprocessing phase is required. A regular sampling scheme is exploited to picks out $n-1$ numbers, $s_1$, $s_2$, \dots, $s_{n-1}$, from the input sequence $S$ as \textit{splitters}. At the end of the overall computation, the partition of process $i$ will contain elements $e$ for which $s_{i-1} \leq e < s_i$.
+
+At this point, a loop of $\log (n)$ steps starts. At each step $i$, groups of processors of size $2^i$ (where $0 \leq i \leq \log(n)$) are defined. Each group is assigned a partner group and all processes of a group will exchange data only with processes of the paired one. The \textit{Send-and-Receive} MPI routine is exploited to decrease communication latency (ideally, only a $T_{setup}$ is paid) and avoid deadlocks. A different partner process from which to start exchanging data is defined for each process inside a group. At step $i$, a subset of $2^{i+1}-1$ splitters are used to identify which elements must be sent to the paired-group processes. Once a process has exchanged data with the partner group, a merge operation on the received data and the local data is performed.
+
+A final gather operation is required to retrieve the whole sorted sequence at the root process.

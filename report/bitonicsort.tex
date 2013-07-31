@@ -1,0 +1,43 @@
+\subsubsection{Bitonic Sort}
+\textit{Bitonic sort} is based on repeatedly merging two bitonic sequences to form a larger bitonic sequence. A bitonic sequence is a sequence of $M$ values, $a_0, a_1, a_2, \dots, a_{M-2}, a_{M-1}$, that can be divided into two subsequences, one monotonically increasing and the other monotonically decreasing
+\[
+a_0 < a_1 < a_2 < \dots < a_i > a_{i+1} > \dots > a_{M-2} > a_{M-1}
+\]
+where $0 \leq i < M$.
+A sequence is also considered bitonic if the preceding can be achieved by shifting the values cyclically.
+
+On a bitonic sequence can be applied the operation called \textit{bitonic split} which halves the sequence in two bitonic sequences such that all the elements of one sequence are smaller than all the elements of the other sequence. Thus, given a bitonic sequence we can recursively obtain shorter bitonic sequences using bitonic splits, until we obtain sequences of size one, at which point the input sequence is sorted. The bitonic split is just a \textit{compare-and-exchange} operation on the $a_i$ and $a_{i+M/2}$ values (where $0 \le i < M$).
+
+To sort an unordered sequence, the first step is to convert the $M$ numbers into a bitonic sequence with $\frac{M}{2}$ numbers in ascending order and $\frac{M}{2}$ numbers in descending order. This is done recursively by a compare-and-exchange operation on pairs of adjacent sequences (initially formed by only one element) obtaining bitonic sequences of larger and larger lengths. In the final step, a single bitonic sequence is sorted into a single increasing sequence.
+
+This algorithm can be parallelized using $n$ processors as follows:
+\begin{enumerate}
+	\item the input sequence $S$ is scattered among processes;
+	\item each process $A$ sorts locally its own partition of $\frac{M}{n}$ elements of the input sequence;
+	\item at this point a loop of $\log(n)$ steps starts; at the $i$-th step:
+		\begin{itemize}
+			\item process $A$ communicates with the process $B$ whose rank differs from $A$'s rank only at the $j$-th bit;
+			\item $A$ sends its own partition to $B$ and viceversa;			
+			\item both processes perform a \textit{compare-and-exchange} operation on the received partition and the local one to produce two sequences of $\frac{M}{n}$ elements in which all the elements of one sequence are smaller than all the elements of the other sequence;			
+		\end{itemize}
+	\item the sorted sequence is gathered to the root process.
+\end{enumerate}
+Two auxiliary arrays (one to receive data and one to temporary hold the merging result) of size $\frac{M}{n}$ will be necessary.
+
+
+%The pseudocode of the algorithm follows:
+%\lstinputlisting{bitonicsort.code}
+
+
+
+%\newtheorem{prop}{Propiet\'a}
+%
+%\begin{prop}
+%asd
+%\end{prop}
+%
+%
+%
+%\begin{description}
+%	\item Esiste un indice $i$ (dove $0 \leq i \leq n-1$ ) tale che
+%\end{description}

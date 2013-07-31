@@ -1,0 +1,32 @@
+\subsection{Algorithms Efficiency}
+In this section, we are going to analyze the theoretical Algorithm Efficiency defined in~\ref{terminology}. For the sake of commodity, we report here the definition. Given
+\begin{itemize}
+\item $N$, the parallelism degree; 
+\item $m$, the number of steps of the algorithm;
+\item $X_i$, a random variable which counts the number of active processes that contribute to the calculation during the step $i$.
+\end{itemize}
+We defined the Algorithm Efficiency $\varphi$ as:
+\begin{center}
+$\varphi = \frac{\sum_{i=0}^m E[X_i]}{N \times m} $
+\end{center}
+In this section we want to give an idea of how many of the $N$ processes with which a Sorting Algorithm is executed are actually exploited by the parallel logic of the algorithm. In the following we show the Algorithm Efficiency of each Sorting Algorithm.
+
+\begin{itemize}
+\item \textbf{Mergesort, Quicksort.} $\varphi = \frac{\sum_{i=0}^{ \lceil \log_2{N} \rceil} 2^i}{N \times \lfloor \log_2{N} + 1 \rfloor} $
+\begin{enumerate}
+\item $N = 16 \rightarrow \frac{31}{80} \approx 0.39$
+\item $N = 32 \rightarrow \frac{63}{192} \approx 0.33$
+\end{enumerate}
+
+\item \textbf{K-Way Mergesort.} $\varphi = \frac{\sum_{i=0}^{ \lceil \log_k{N} \rceil} min ( k^i, N )}{N \times \lfloor \log_k{N} + 1 \rfloor } $
+\begin{enumerate}
+\item $N = 16, k = 4 \rightarrow \frac{21}{48} \approx 0.44$
+\item $N = 16, k = 8 \rightarrow \frac{25}{48} \approx 0.52$
+\end{enumerate}
+
+\item \textbf{Bitonicsort.} $\varphi = \frac{\sum_{i=0}^{(\log_2{N})^2} N}{N \times (\log_2{N})^2} = 1 $
+\item \textbf{Bucketsort, Samplesort.} In these algorithms steps have the characteristic of being heterogeneous: a first step is the local sorting, than a step of sampling and finally a step for building buckets. A process will never sleep, so we trivially have: $\varphi = 1$.
+
+\item \textbf{Load Balanced Mergesort, K-Way Load Balanced Mergesort.} Trivially, $\varphi = 1$. Indeed, these algorithms have been conceived exactly for maximizing the number of processes which contributes to the sorting during all the computation.
+
+\end{itemize}
